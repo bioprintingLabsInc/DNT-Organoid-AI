@@ -1,0 +1,352 @@
+schema_version: "0.2.0"
+contract_name: dnt_organoid_experiment_metadata
+description: >-
+  Canonical metadata contract for public and in-house human brain-organoid
+  experiments. This contract standardizes identity, context, relationships,
+  missingness, and provenance; it does not define scientific processing rules.
+
+record_conventions:
+  identifiers:
+    type: string
+    rules:
+      - Must be non-empty and unique within its entity collection.
+      - Must remain stable across metadata revisions.
+  value_record:
+    description: Wrapper for a source-derived metadata assertion.
+    type: object
+    required: [value_status, assertion_provenance_ids]
+    fields:
+      original_value:
+        type: [string, number, boolean, "null"]
+        description: Exact source value without normalization.
+      normalized_value:
+        type: [string, number, boolean, "null"]
+        description: Canonical value when normalization is approved and performed.
+      value_status:
+        type: string
+        allowed: [reported, missing_not_reported, unknown, not_applicable]
+      assertion_provenance_ids:
+        type: "array[string]"
+        description: References to provenance records supporting the assertion.
+  validation_status:
+    type: string
+    allowed: [not_validated, valid, valid_with_warnings, invalid]
+  accession:
+    type: object
+    required: [namespace, identifier]
+    fields:
+      namespace:
+        type: string
+        examples: [GSE, GSM, SRA, BioProject, ArrayExpress, internal]
+      identifier:
+        type: string
+      url:
+        type: [string, "null"]
+  evidence_scope_assertion:
+    description: A source-supported limitation or applicability statement for DNT reference evidence.
+    type: object
+    required: [dimension, value]
+    fields:
+      dimension:
+        type: string
+        allowed_ref: dnt_evidence_scope_dimension
+      value:
+        type: value_record
+
+controlled_vocabularies:
+  source_type: [public, in_house]
+  biological_sex: [female, male, mixed, intersex, other]
+  biological_source_type: [iPSC, hESC, other]
+  treatment_control_status: [treatment, control]
+  control_type: [vehicle, untreated, positive_reference, negative_reference, other]
+  rna_seq_modality: [bulk_rna_seq, scRNA_seq, snRNA_seq]
+  strandedness: [unstranded, forward, reverse]
+  read_layout: [single_end, paired_end]
+  input_data_format:
+    - FASTQ
+    - SRA
+    - raw_counts
+    - UMI_counts
+    - H5AD
+    - RDS
+    - processed_expression_matrix
+    - other
+  dnt_reference_state: [positive, negative_reference, unresolved_uncertain]
+  asset_availability: [available, restricted, unavailable]
+  exposure_scope: [condition_planned, sample_deviation]
+  dnt_evidence_scope_type: [agent_general, context_limited, unspecified]
+  dnt_evidence_scope_dimension:
+    - species
+    - biological_source_type
+    - organoid_type
+    - brain_region_or_model_identity
+    - developmental_age_or_stage_at_exposure
+    - concentration_or_dose
+    - concentration_or_dose_unit
+    - exposure_duration
+    - exposure_duration_unit
+    - other
+
+relationships:
+  - "study 1 -> many experiments"
+  - "experiment 1 -> many conditions"
+  - "condition 1 -> many samples"
+  - "biological_source 1 -> many samples"
+  - "organoid_context 1 -> many samples"
+  - "condition 1 -> many planned exposures"
+  - "sample 1 -> many explicit exposure deviations when needed"
+  - "treatment_control_relationship many treatment conditions -> many matched control conditions"
+  - "sample_comparison_exception documents exceptions to a condition-level comparison"
+  - "sample many <-> many sequencing_assays"
+  - "sequencing_assay many <-> many input_data_assets"
+  - "provenance records support field assertions across all entities"
+  - "DNT reference evidence describes an agent independently of expression results"
+
+integrity_rules:
+  - A sample's condition and experiment must reference the same experiment.
+  - A condition_planned exposure must have a null sample_id and deviation_from_exposure_id.
+  - A sample_deviation exposure must reference a sample assigned to its condition.
+  - A sample_deviation exposure supplements the planned condition and must not overwrite it.
+  - A referenced deviation_from_exposure_id must identify a condition_planned exposure for the same condition.
+  - Treatment condition IDs in a comparison must identify treatment conditions.
+  - Matched control condition IDs in a comparison must identify control conditions.
+  - Sample comparison exceptions qualify but do not replace their condition-level relationship.
+  - DNT evidence scope assertions must come from the independent evidence source and must not be inferred from expression results.
+
+entities:
+  studies:
+    type: array
+    item_required: [study_id, source_type, metadata_validation_status]
+    fields:
+      study_id: {type: string}
+      study_title: {type: value_record, requirement: optional}
+      source_type: {type: string, allowed_ref: source_type}
+      public_accessions: {type: "array[accession]", requirement: conditionally_required_for_public}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  experiments:
+    type: array
+    item_required:
+      - experiment_id
+      - study_id
+      - metadata_validation_status
+    fields:
+      experiment_id: {type: string}
+      study_id: {type: string, foreign_key: studies.study_id}
+      internal_experiment_id: {type: value_record, requirement: optional}
+      experiment_title: {type: value_record, requirement: optional}
+      experimental_batch_id: {type: value_record, requirement: optional}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  conditions:
+    type: array
+    item_required:
+      - condition_id
+      - experiment_id
+      - condition_label
+      - treatment_control_status
+      - metadata_validation_status
+    fields:
+      condition_id: {type: string}
+      experiment_id: {type: string, foreign_key: experiments.experiment_id}
+      condition_label: {type: value_record, requirement: required}
+      treatment_control_status: {type: value_record, allowed_ref: treatment_control_status, requirement: required}
+      control_type: {type: value_record, allowed_ref: control_type, requirement: conditionally_required_for_control}
+      condition_notes: {type: value_record, requirement: optional}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  biological_sources:
+    type: array
+    item_required:
+      - biological_source_id
+      - species
+      - source_material_type
+      - cell_line_or_source_identifier
+      - metadata_validation_status
+    fields:
+      biological_source_id: {type: string}
+      species: {type: value_record, requirement: required}
+      biological_sex: {type: value_record, allowed_ref: biological_sex, requirement: optional}
+      source_material_type: {type: value_record, allowed_ref: biological_source_type, requirement: required}
+      cell_line_or_source_identifier: {type: value_record, requirement: required}
+      donor_identifier: {type: value_record, requirement: optional_when_available_and_appropriate}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  organoid_contexts:
+    type: array
+    item_required:
+      - organoid_context_id
+      - organoid_type
+      - brain_region_or_model_identity
+      - metadata_validation_status
+    fields:
+      organoid_context_id: {type: string}
+      organoid_type: {type: value_record, requirement: required}
+      brain_region_or_model_identity: {type: value_record, requirement: required}
+      differentiation_protocol_identifier: {type: value_record, requirement: optional_when_available}
+      differentiation_protocol_version: {type: value_record, requirement: optional_when_available}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  samples:
+    type: array
+    item_required:
+      - sample_id
+      - experiment_id
+      - condition_id
+      - biological_source_id
+      - organoid_context_id
+      - biological_replicate_id
+      - developmental_age_or_stage_at_collection
+      - metadata_validation_status
+    fields:
+      sample_id: {type: string}
+      experiment_id: {type: string, foreign_key: experiments.experiment_id}
+      condition_id: {type: string, foreign_key: conditions.condition_id}
+      public_accessions: {type: "array[accession]", requirement: optional}
+      biological_source_id: {type: string, foreign_key: biological_sources.biological_source_id}
+      organoid_context_id: {type: string, foreign_key: organoid_contexts.organoid_context_id}
+      biological_replicate_id: {type: value_record, requirement: required}
+      technical_replicate_id: {type: value_record, requirement: conditionally_required_when_applicable}
+      developmental_age_or_stage_at_collection: {type: value_record, requirement: required}
+      collection_time_relative_to_exposure: {type: value_record, requirement: conditionally_required_for_exposed_samples}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  exposures:
+    type: array
+    item_required:
+      - exposure_id
+      - condition_id
+      - exposure_scope
+      - developmental_age_or_stage_at_exposure
+      - metadata_validation_status
+    fields:
+      exposure_id: {type: string}
+      condition_id: {type: string, foreign_key: conditions.condition_id}
+      exposure_scope: {type: string, allowed_ref: exposure_scope}
+      sample_id: {type: [string, "null"], foreign_key: samples.sample_id, requirement: conditionally_required_for_sample_deviation}
+      deviation_from_exposure_id: {type: [string, "null"], foreign_key: exposures.exposure_id, requirement: conditionally_required_for_sample_deviation_when_applicable}
+      deviation_reason: {type: value_record, requirement: conditionally_required_for_sample_deviation}
+      agent_name: {type: value_record, requirement: conditionally_required_when_agent_applies}
+      agent_identifier: {type: value_record, requirement: optional_when_available}
+      vehicle: {type: value_record, requirement: conditionally_required_when_applicable}
+      concentration_or_dose: {type: value_record, requirement: conditionally_required_when_agent_applies}
+      concentration_or_dose_unit: {type: value_record, requirement: conditionally_required_when_dose_reported}
+      exposure_start_time_or_stage: {type: value_record, requirement: conditionally_required_when_reported}
+      developmental_age_or_stage_at_exposure: {type: value_record, requirement: required}
+      exposure_duration: {type: value_record, requirement: conditionally_required_when_exposure_duration_applies}
+      exposure_duration_unit: {type: value_record, requirement: conditionally_required_when_duration_reported}
+      washout_or_recovery_duration: {type: value_record, requirement: conditionally_required_when_applicable}
+      washout_or_recovery_duration_unit: {type: value_record, requirement: conditionally_required_when_duration_reported}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  treatment_control_relationships:
+    type: array
+    item_required:
+      - relationship_id
+      - treatment_condition_ids
+      - matched_control_condition_ids
+      - matching_basis
+      - metadata_validation_status
+    fields:
+      relationship_id: {type: string}
+      treatment_condition_ids: {type: "array[string]", foreign_key: conditions.condition_id}
+      matched_control_condition_ids: {type: "array[string]", foreign_key: conditions.condition_id}
+      matching_basis: {type: value_record, requirement: required}
+      relationship_notes: {type: value_record, requirement: optional}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  sample_comparison_exceptions:
+    type: array
+    item_required:
+      - exception_id
+      - relationship_id
+      - affected_sample_ids
+      - exception_reason
+      - metadata_validation_status
+    fields:
+      exception_id: {type: string}
+      relationship_id: {type: string, foreign_key: treatment_control_relationships.relationship_id}
+      affected_sample_ids: {type: "array[string]", foreign_key: samples.sample_id}
+      replacement_control_sample_ids: {type: "array[string]", foreign_key: samples.sample_id, requirement: optional_when_applicable}
+      exception_reason: {type: value_record, requirement: required}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  sequencing_assays:
+    type: array
+    item_required: [assay_id, sample_ids, rna_seq_modality, metadata_validation_status]
+    fields:
+      assay_id: {type: string}
+      sample_ids: {type: "array[string]", foreign_key: samples.sample_id}
+      rna_seq_modality: {type: value_record, allowed_ref: rna_seq_modality, requirement: required}
+      library_strategy: {type: value_record, requirement: optional_when_available}
+      sequencing_platform: {type: value_record, requirement: optional_when_available}
+      strandedness: {type: value_record, allowed_ref: strandedness, requirement: conditionally_required_when_applicable}
+      read_layout: {type: value_record, allowed_ref: read_layout, requirement: conditionally_required_when_applicable}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  input_data_assets:
+    type: array
+    item_required:
+      - asset_id
+      - assay_ids
+      - input_data_format
+      - source_file_identifier_or_reference
+      - availability
+      - metadata_validation_status
+    fields:
+      asset_id: {type: string}
+      assay_ids: {type: "array[string]", foreign_key: sequencing_assays.assay_id}
+      input_data_format: {type: value_record, allowed_ref: input_data_format, requirement: required}
+      gene_identifier_type: {type: value_record, requirement: conditionally_required_for_expression_matrices}
+      source_file_identifier_or_reference: {type: value_record, requirement: required}
+      source_url_or_accession_reference: {type: value_record, requirement: optional_when_applicable}
+      checksum_algorithm: {type: value_record, requirement: conditionally_required_when_checksum_available}
+      checksum_value: {type: value_record, requirement: conditionally_required_when_checksum_available}
+      availability: {type: string, allowed_ref: asset_availability}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
+
+  provenance:
+    type: array
+    item_required:
+      - provenance_id
+      - entity_type
+      - entity_id
+      - field_path
+      - source_kind
+      - source_reference
+    fields:
+      provenance_id: {type: string}
+      entity_type: {type: string}
+      entity_id: {type: string}
+      field_path: {type: string}
+      source_kind: {type: string, allowed: [public_repository, publication, source_file, in_house_record, curator_assertion, other]}
+      source_reference: {type: string}
+      original_metadata_key: {type: [string, "null"]}
+      recorded_by: {type: [string, "null"]}
+      recorded_at: {type: [string, "null"], format: ISO_8601_datetime}
+      notes: {type: [string, "null"]}
+
+  dnt_reference_evidence:
+    type: array
+    independence_rule: Must not be derived from experimental gene-expression results.
+    item_required:
+      - evidence_id
+      - agent_name
+      - reference_state
+      - evidence_source
+      - evidence_version
+      - scope_type
+      - scope_assertions
+      - metadata_validation_status
+    fields:
+      evidence_id: {type: string}
+      agent_name: {type: value_record, requirement: required}
+      agent_identifier: {type: value_record, requirement: optional_when_available}
+      reference_state: {type: string, allowed_ref: dnt_reference_state}
+      evidence_source: {type: string}
+      evidence_version: {type: string}
+      evidence_reference: {type: [string, "null"]}
+      scope_type: {type: string, allowed_ref: dnt_evidence_scope_type}
+      scope_assertions: {type: "array[evidence_scope_assertion]"}
+      scope_notes: {type: [string, "null"]}
+      metadata_validation_status: {type: string, allowed_ref: validation_status}
