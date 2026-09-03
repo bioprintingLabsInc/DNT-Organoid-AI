@@ -1,0 +1,25 @@
+rules_version: "0.1.0"
+ruleset_name: bulk_raw_count_qc
+scope: {route: BULK_RAW_COUNT_PIPELINE, modality: bulk_rna_seq, input_format: raw_counts}
+structural_rules:
+  numeric_counts_required: ERROR
+  non_negative_counts_required: ERROR
+  integer_like_counts_required: ERROR
+  missing_counts_forbidden: ERROR
+  unique_sample_identifiers_required: ERROR
+  empty_gene_identifiers: ERROR
+  ambiguous_sample_mapping: ERROR
+  duplicate_gene_identifiers: REVIEW
+  zero_only_samples: REVIEW
+  unexpected_matrix_samples: REVIEW
+  missing_expected_samples: REVIEW
+  zero_only_genes: INFO
+warning_thresholds:
+  minimum_library_size: null
+  minimum_detected_genes: null
+  maximum_zero_gene_fraction: null
+  relative_library_size_lower_ratio: null
+  relative_library_size_upper_ratio: null
+  minimum_replicate_correlation: null
+outlier_rules: {method: null, threshold: null, automatic_exclusion: false}
+replicate_correlation: {method: spearman, implementation: average_rank_pearson_v1}
