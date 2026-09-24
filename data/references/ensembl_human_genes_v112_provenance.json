@@ -1,0 +1,47 @@
+{
+  "builder_version": "2.0.0",
+  "generation_timestamp": "2026-09-24T17:29:01.416726+00:00",
+  "canonical_gene_universe": {
+    "source_authority": "Ensembl / EMBL-EBI",
+    "release": "112",
+    "genome_build": "GRCh38.p14",
+    "release_date": "2024-05",
+    "source_url": "https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/Homo_sapiens.GRCh38.112.gtf.gz",
+    "source_checksum_sha256": "8c87436bab973c871447743c2f5cbb2b557be0523fe6efe3ff33307a4c836002",
+    "total_canonical_genes": 63140
+  },
+  "nomenclature_cross_reference": {
+    "source_authority": "HUGO Gene Nomenclature Committee (HGNC)",
+    "snapshot_date": "2026-09-24",
+    "source_url": "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt",
+    "source_checksum_sha256": "69bb5722d5a42bb355580deb2c9f197ce3d7f7d13807173b9674a7db65e52191",
+    "records_with_ensembl_ids": 42396
+  },
+  "coverage_metrics": {
+    "total_canonical_genes": 63140,
+    "genes_with_hgnc_cross_reference": 42076,
+    "genes_without_hgnc_cross_reference": 21064,
+    "genes_with_approved_symbol": 42076,
+    "genes_with_hgnc_id": 42076,
+    "genes_with_entrez_id": 41578,
+    "genes_with_synonyms": 25060,
+    "top_biotypes": {
+      "protein_coding": 20089,
+      "lncRNA": 19258,
+      "processed_pseudogene": 10144,
+      "unprocessed_pseudogene": 2602,
+      "misc_RNA": 2217,
+      "snRNA": 1910,
+      "miRNA": 1879,
+      "TEC": 1052,
+      "transcribed_unprocessed_pseudogene": 962,
+      "snoRNA": 942
+    }
+  },
+  "production_reference_asset": {
+    "file_path": "data/references/ensembl_human_genes_v112.tsv",
+    "file_size_bytes": 5144042,
+    "record_count": 63140,
+    "sha256_checksum": "3054aa734c15bb0a9cc64b67a8ead2a023e7dfd2cc0d0d6b7706372f4b13940e"
+  }
+}

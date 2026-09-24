@@ -22,6 +22,7 @@ Thumbs.db
 *.temp
 *.log
 ~$*
+scratch/
 
 # Raw sequencing data and generated datasets
 data/raw/*

@@ -1,0 +1,180 @@
+ensembl_gene_id	gene_symbol	entrez_gene_id	hgnc_id	gene_biotype	synonyms	chromosome	description
+ENSG00000000003	TSPAN6	7105	HGNC:11858	gene with protein product	T245|TSPAN-6|TM4SF6	X	tetraspanin 6
+ENSG00000000005	TNMD	64102	HGNC:17757	gene with protein product	myodulin|ChM1L|tendin|TEM|BRICD4	X	tenomodulin
+ENSG00000000419	DPM1	8813	HGNC:3005	gene with protein product	MPDS|CDGIE	20	dolichyl-phosphate mannosyltransferase subunit 1, catalytic
+ENSG00000000457	SCYL3	57147	HGNC:19285	gene with protein product	PACE-1|PACE1	1	SCY1 like pseudokinase 3
+ENSG00000000460	FIRRM	55732	HGNC:25565	gene with protein product	FLJ10706|Apolo1|FLIP|MEICA1|C1orf112	1	FIGNL1 interacting regulator of recombination and mitosis
+ENSG00000000938	FGR	2268	HGNC:3697	gene with protein product	c-fgr|p55c-fgr|SRC2	1	FGR proto-oncogene, Src family tyrosine kinase
+ENSG00000000971	CFH	3075	HGNC:4883	gene with protein product	HUS|FHL1|ARMS1|ARMD4|HF|HF1|HF2	1	complement factor H
+ENSG00000001036	FUCA2	2519	HGNC:4008	gene with protein product	MGC1314|dJ20N2.5	6	alpha-L-fucosidase 2
+ENSG00000001084	GCLC	2729	HGNC:4311	gene with protein product	GCS|GLCLC|GLCL	6	glutamate-cysteine ligase catalytic subunit
+ENSG00000001167	NFYA	4800	HGNC:7804	gene with protein product	HAP2|CBF-B|NF-YA	6	nuclear transcription factor Y subunit alpha
+ENSG00000001460	STPG1	90529	HGNC:28070	gene with protein product	FLJ33340|MAPO2|C1orf201	1	sperm tail PG-rich repeat containing 1
+ENSG00000001461	NIPAL3	57185	HGNC:25233	gene with protein product	DJ462O23.2|SLC57A5|NPAL3	1	NIPA like domain containing 3
+ENSG00000001497	LAS1L	81887	HGNC:25726	gene with protein product	FLJ12525|Las1	X	LAS1 like ribosome biogenesis factor
+ENSG00000001561	ENPP4	22875	HGNC:3359	gene with protein product	NPP4|KIAA0879|AP3Aase	6	ectonucleotide pyrophosphatase/phosphodiesterase 4
+ENSG00000001617	SEMA3F	6405	HGNC:10728	gene with protein product	SEMAK|Sema4	3	semaphorin 3F
+ENSG00000001626	CFTR	1080	HGNC:1884	gene with protein product	MRP7|ABC35|TNR-CFTR|dJ760C5.1|CFTR/MRP|CF|ABCC7	7	CF transmembrane conductance regulator
+ENSG00000001629	ANKIB1	54467	HGNC:22215	gene with protein product	DKFZP434A0225|KIAA1386	7	ankyrin repeat and IBR domain containing 1
+ENSG00000001630	CYP51A1	1595	HGNC:2649	gene with protein product	CP51|CYPL1|P450L1|LDM|P450-14DM|CYP51	7	cytochrome P450 family 51 subfamily A member 1
+ENSG00000001631	KRIT1	889	HGNC:1573	gene with protein product	CAM|CCM1	7	KRIT1 ankyrin repeat containing
+ENSG00000002016	RAD52	5893	HGNC:9824	gene with protein product		12	RAD52 DNA repair protein
+ENSG00000002330	BAD	572	HGNC:936	gene with protein product	BCL2L8|BBC2	11	BCL2 associated agonist of cell death
+ENSG00000002549	LAP3	51056	HGNC:18449	gene with protein product	LAPEP|LAP|PEPS	4	leucine aminopeptidase 3
+ENSG00000002586	CD99	4267	HGNC:7082	gene with protein product	MIC2|MIC2X|MIC2Y	X	CD99 molecule (Xg blood group)
+ENSG00000002587	HS3ST1	9957	HGNC:5194	gene with protein product	3OST1	4	heparan sulfate-glucosamine 3-sulfotransferase 1
+ENSG00000002726	AOC1	26	HGNC:80	gene with protein product	DAO|ABP1|ABP	7	amine oxidase copper containing 1
+ENSG00000002745	WNT16	51384	HGNC:16267	gene with protein product		7	Wnt family member 16
+ENSG00000002746	HECW1	23072	HGNC:22195	gene with protein product	KIAA0322|NEDL1	7	HECT, C2 and WW domain containing E3 ubiquitin protein ligase 1
+ENSG00000002822	MAD1L1	8379	HGNC:6762	gene with protein product	HsMAD1|TXBP181|MAD1|PIG9|TP53I9	7	mitotic arrest deficient 1 like 1
+ENSG00000002834	LASP1	3927	HGNC:6513	gene with protein product	MLN50|Lasp-1	17	LIM and SH3 protein 1
+ENSG00000002919	SNX11	29916	HGNC:14975	gene with protein product		17	sorting nexin 11
+ENSG00000002933	TMEM176A	55365	HGNC:24930	gene with protein product	HCA112|MS4B1	7	transmembrane protein 176A
+ENSG00000003056	M6PR	4074	HGNC:6752	gene with protein product	CD-MPR|CD-M6PR	12	mannose-6-phosphate receptor, cation dependent
+ENSG00000003096	KLHL13	90293	HGNC:22931	gene with protein product	FLJ10262|BKLHD2|KIAA1309	X	kelch like family member 13
+ENSG00000003137	CYP26B1	56603	HGNC:20581	gene with protein product	P450RAI-2	2	cytochrome P450 family 26 subfamily B member 1
+ENSG00000003147	ICA1	3382	HGNC:5343	gene with protein product	ICAp69|ICA69	7	islet cell autoantigen 1
+ENSG00000003249	DBNDD1	79007	HGNC:28455	gene with protein product	MGC3101|FLJ12582	16	dysbindin domain containing 1
+ENSG00000003393	ALS2	57679	HGNC:443	gene with protein product	ALS2CR6	2	alsin Rho guanine nucleotide exchange factor ALS2
+ENSG00000003400	CASP10	843	HGNC:1500	gene with protein product	MCH4|FLICE-2	2	caspase 10
+ENSG00000003402	CFLAR	8837	HGNC:1876	gene with protein product	CASH|Casper|CLARP|FLAME|FLIP|I-FLICE|MRIT|c-FLIP|cFLIP|CASP8AP1	2	CASP8 and FADD like apoptosis regulator
+ENSG00000003436	TFPI	7035	HGNC:11760	gene with protein product	EPI|TFI|TFPI1|LACI	2	tissue factor pathway inhibitor
+ENSG00000003509	NDUFAF7	55471	HGNC:28816	gene with protein product	PRO1853|MidA|C2orf56	2	NADH:ubiquinone oxidoreductase complex assembly factor 7
+ENSG00000003756	RBM5	10181	HGNC:9902	gene with protein product	LUCA15|LUCA-15|H37	3	RNA binding motif protein 5
+ENSG00000003987	MTMR7	9108	HGNC:7454	gene with protein product		8	myotubularin related protein 7
+ENSG00000003989	SLC7A2	6542	HGNC:11060	gene with protein product	CAT-2|HCAT2|SLC7A2A|SLC7A2B|CAT-2A|CAT-2B|ATRC2	8	solute carrier family 7 member 2
+ENSG00000004059	ARF5	381	HGNC:658	gene with protein product		7	ARF GTPase 5
+ENSG00000004139	SARM1	23098	HGNC:17074	gene with protein product	SARM|SAMD2|KIAA0524	17	sterile alpha and TIR motif containing 1
+ENSG00000004142	POLDIP2	26073	HGNC:23781	gene with protein product	PDIP38|DKFZP586F1524	17	DNA polymerase delta interacting protein 2
+ENSG00000004399	PLXND1	23129	HGNC:9107	gene with protein product	KIAA0620	3	plexin D1
+ENSG00000004455	AK2	204	HGNC:362	gene with protein product		1	adenylate kinase 2
+ENSG00000004468	CD38	952	HGNC:1667	gene with protein product	cADPR1	4	CD38 molecule
+ENSG00000004478	FKBP4	2288	HGNC:3720	gene with protein product	FKBP59|FKBP52	12	FKBP prolyl isomerase 4
+ENSG00000004487	KDM1A	23028	HGNC:29079	gene with protein product	KIAA0601|BHC110|LSD1|AOF2|KDM1	1	lysine demethylase 1A
+ENSG00000004534	RBM6	10180	HGNC:9903	gene with protein product	DEF-3|3G2|NY-LU-12|g16|DEF3	3	RNA binding motif protein 6
+ENSG00000004660	CAMKK1	84254	HGNC:1469	gene with protein product	DKFZp761M0423|CAMKKA|MGC34095	17	calcium/calmodulin dependent protein kinase kinase 1
+ENSG00000004700	RECQL	5965	HGNC:9948	gene with protein product	RecQ1|RecQL1	12	RecQ like helicase
+ENSG00000004766	VPS50	55610	HGNC:25956	gene with protein product	KIAA1861|FLJ20097|DKFZp313I2429|VPS54L|CCDC132	7	VPS50 subunit of EARP/GARPII complex
+ENSG00000004776	HSPB6	126393	HGNC:26511	gene with protein product	FLJ32389|Hsp20|PPP1R91	19	heat shock protein family B (small) member 6
+ENSG00000004777	ARHGAP33	115703	HGNC:23085	gene with protein product	FLJ39019|TCGAP|SNX26	19	Rho GTPase activating protein 33
+ENSG00000004779	NDUFAB1	4706	HGNC:7694	gene with protein product	mtACP|mt-ACP|SDAP|FASN2A|ACP|ACP1	16	NADH:ubiquinone oxidoreductase subunit AB1
+ENSG00000004799	PDK4	5166	HGNC:8812	gene with protein product		7	pyruvate dehydrogenase kinase 4
+ENSG00000004809	SLC22A16	85413	HGNC:20302	gene with protein product	FLIPT2|CT2|OKB1|OAT6	6	solute carrier family 22 member 16
+ENSG00000004838	ZMYND10	51364	HGNC:19412	gene with protein product	BLU|CILD22|DNAAF7	3	zinc finger MYND-type containing 10
+ENSG00000004846	ABCB5	340273	HGNC:46	gene with protein product	EST422562|ABCB5beta|ABCB5alpha	7	ATP binding cassette subfamily B member 5
+ENSG00000004848	ARX	170302	HGNC:18060	gene with protein product	ISSX|CT121|EIEE1|MRXS1|PRTS|MRX76|MRX54|MRX43|MRX36|MRX29|MRX32|MRX33|MRX38|MRX87	X	aristaless related homeobox
+ENSG00000004864	SLC25A13	10165	HGNC:10983	gene with protein product	CITRIN|ARALAR2|CTLN2	7	solute carrier family 25 member 13
+ENSG00000004866	ST7	7982	HGNC:11351	gene with protein product	TSG7|SEN4|ETS7q|HELG|RAY1|FAM4A|FAM4A1	7	suppression of tumorigenicity 7
+ENSG00000004897	CDC27	996	HGNC:1728	gene with protein product	APC3|ANAPC3|NUC2|D0S1430E|D17S978E	17	cell division cycle 27
+ENSG00000004939	SLC4A1	6521	HGNC:11027	gene with protein product	RTA1A|CD233|FR|SW|WR|EMPB3|EPB3|AE1|DI|WD	17	solute carrier family 4 member 1 (Diego blood group)
+ENSG00000004948	CALCR	799	HGNC:1440	gene with protein product	CTR|CT-R	7	calcitonin receptor
+ENSG00000004961	HCCS	3052	HGNC:4837	gene with protein product	CCHL|MLS	X	holocytochrome c synthase
+ENSG00000004975	DVL2	1856	HGNC:3086	gene with protein product		17	dishevelled segment polarity protein 2
+ENSG00000005001	PRSS22	64063	HGNC:14368	gene with protein product	TPSE1|hBSSP-4|BSSP-4|SP001LA	16	serine protease 22
+ENSG00000005007	UPF1	5976	HGNC:9962	gene with protein product	HUPF1|KIAA0221|NORF1|pNORF1|smg-2|RENT1	19	UPF1 RNA helicase and ATPase
+ENSG00000005020	SKAP2	8935	HGNC:15687	gene with protein product	RA70|SKAP-HOM|SKAP55R|SAPS|SCAP2	7	src kinase associated phosphoprotein 2
+ENSG00000005022	SLC25A5	292	HGNC:10991	gene with protein product	T2|2F1|T3|ANT2	X	solute carrier family 25 member 5
+ENSG00000005059	MCUB	55013	HGNC:26076	gene with protein product	FLJ20647|CCDC109B	4	mitochondrial calcium uniporter dominant negative subunit beta
+ENSG00000005073	HOXA11	3207	HGNC:5101	gene with protein product	HOX1I|HOX1	7	homeobox A11
+ENSG00000005075	POLR2J	5439	HGNC:9197	gene with protein product	RPB11|hRPB14|RPB11A|RPB11m|POLR2J1	7	RNA polymerase II subunit J
+ENSG00000005100	DHX33	56919	HGNC:16718	gene with protein product	FLJ21972|DKFZp762F2011|DDX33	17	DEAH-box helicase 33
+ENSG00000005102	MEOX1	4222	HGNC:7013	gene with protein product	MOX1	17	mesenchyme homeobox 1
+ENSG00000005108	THSD7A	221981	HGNC:22207	gene with protein product	KIAA0960	7	thrombospondin type 1 domain containing 7A
+ENSG00000005156	LIG3	3980	HGNC:6600	gene with protein product	LIG3alpha|LIG2	17	DNA ligase 3
+ENSG00000005175	RPAP3	79657	HGNC:26151	gene with protein product	FLJ21908|spag|hSpagh|Tah1	12	RNA polymerase II associated protein 3
+ENSG00000005187	ACSM3	6296	HGNC:10522	gene with protein product	SA|SAH	16	acyl-CoA synthetase medium chain family member 3
+ENSG00000005189	REXO5	81691	HGNC:24661	gene with protein product	NEF-sp	16	RNA exonuclease 5
+ENSG00000005194	CIAPIN1	57019	HGNC:28050	gene with protein product	CIAE2	16	cytokine induced apoptosis inhibitor 1
+ENSG00000005206	SPPL2B	56928	HGNC:30627	gene with protein product	IMP4|PSL1|KIAA1532	19	signal peptide peptidase like 2B
+ENSG00000005238	ATOSB	80256	HGNC:25666	gene with protein product	FLJ11560|bA182N22.6|KIAA1539|FAM214B	9	atos homolog B
+ENSG00000005243	COPZ2	51226	HGNC:19356	gene with protein product	MGC23008	17	coat protein complex I subunit zeta 2
+ENSG00000005249	PRKAR2B	5577	HGNC:9392	gene with protein product	PRKAR2	7	protein kinase cAMP-dependent type II regulatory subunit beta
+ENSG00000005302	MSL3	10943	HGNC:7370	gene with protein product	MSL3L1	X	MSL complex subunit 3
+ENSG00000005339	CREBBP	1387	HGNC:2348	gene with protein product	RTS|CBP|KAT3A|RSTS	16	CREB binding lysine acetyltransferase
+ENSG00000005379	TSPOAP1	9256	HGNC:16831	gene with protein product	PRAX-1|KIAA0612|RIM-BP1|RIMBP1|BZRAP1	17	TSPO associated protein 1
+ENSG00000005381	MPO	4353	HGNC:7218	gene with protein product		17	myeloperoxidase
+ENSG00000005421	PON1	5444	HGNC:9204	gene with protein product	ESA|PON	7	paraoxonase 1
+ENSG00000005436	GCFC2	6936	HGNC:1317	gene with protein product	DNABF|GCF|TCF9|C2orf3	2	GC-rich sequence DNA-binding factor 2
+ENSG00000005448	WDR54	84058	HGNC:25770	gene with protein product	FLJ12953	2	WD repeat domain 54
+ENSG00000005469	CROT	54677	HGNC:2366	gene with protein product	COT	7	carnitine O-octanoyltransferase
+ENSG00000005471	ABCB4	5244	HGNC:45	gene with protein product	MDR2|PFIC-3|GBD1|PGY3|MDR3	7	ATP binding cassette subfamily B member 4
+ENSG00000005483	KMT2E	55904	HGNC:18541	gene with protein product	HDCMC04P|SETD5B|MLL5	7	lysine methyltransferase 2E (inactive)
+ENSG00000005486	RHBDD2	57414	HGNC:23082	gene with protein product	NPD007|RHBDL7	7	rhomboid domain containing 2
+ENSG00000005513	SOX8	30812	HGNC:11203	gene with protein product		16	SRY-box transcription factor 8
+ENSG00000005700	IBTK	25998	HGNC:17853	gene with protein product	DKFZP564B116|BTBD26|BTKI	6	inhibitor of Bruton tyrosine kinase
+ENSG00000005801	ZNF195	7748	HGNC:12986	gene with protein product		11	zinc finger protein 195
+ENSG00000005810	MYCBP2	23077	HGNC:23386	gene with protein product	PAM|KIAA0916|FLJ10106|PHR1	13	MYC binding protein 2
+ENSG00000005812	FBXL3	26224	HGNC:13599	gene with protein product	FBL3|FBL3A|FBXL3A	13	F-box and leucine rich repeat protein 3
+ENSG00000005844	ITGAL	3683	HGNC:6148	gene with protein product	HNA-5|LFA-1|LFA1A|CD11A	16	integrin subunit alpha L
+ENSG00000005882	PDK2	5164	HGNC:8810	gene with protein product	PDHK2	17	pyruvate dehydrogenase kinase 2
+ENSG00000005884	ITGA3	3675	HGNC:6139	gene with protein product	CD49c|VLA3a|VCA-2|GAP-B3|MSK18	17	integrin subunit alpha 3
+ENSG00000005889	ZFX	7543	HGNC:12869	gene with protein product	ZNF926	X	zinc finger protein X-linked
+ENSG00000005893	LAMP2	3920	HGNC:6501	gene with protein product	CD107b	X	lysosome associated membrane protein 2
+ENSG00000005961	ITGA2B	3674	HGNC:6138	gene with protein product	CD41B|CD41|PPP1R93|GPIIb|GP2B	17	integrin subunit alpha 2b
+ENSG00000005981	ASB4	51666	HGNC:16009	gene with protein product	ASB-4	7	ankyrin repeat and SOCS box containing 4
+ENSG00000006007	GDE1	51573	HGNC:29644	gene with protein product	MIR16	16	glycerophosphodiester phosphodiesterase 1
+ENSG00000006015	REX1BD	55049	HGNC:26098	gene with protein product	FLJ20850|FLJ30108|FLJ34606|FLJ37391|C19orf60	19	required for excision 1-B domain containing
+ENSG00000006016	CRLF1	9244	HGNC:2364	gene with protein product	CLF-1|CLF|CISS|CISS1	19	cytokine receptor like factor 1
+ENSG00000006025	OSBPL7	114881	HGNC:16387	gene with protein product	ORP7|MGC71150	17	oxysterol binding protein like 7
+ENSG00000006042	TMEM98	26022	HGNC:24529	gene with protein product	DKFZP564K1964	17	transmembrane protein 98
+ENSG00000006047	YBX2	51087	HGNC:17948	gene with protein product	MSY2|CSDA3|Contrin	17	Y-box binding protein 2
+ENSG00000006059	KRT33A	3883	HGNC:6450	gene with protein product	Ha-3I|Krt1-3|KRTHA3A	17	keratin 33A
+ENSG00000006062	MAP3K14	9020	HGNC:6853	gene with protein product	NIK|HSNIK|FTDCR1B|HS	17	mitogen-activated protein kinase kinase kinase 14
+ENSG00000006071	ABCC8	6833	HGNC:59	gene with protein product	HI|PHHI|SUR1|MRP8|ABC36|HHF1|TNDM2|SUR|HRINS	11	ATP binding cassette subfamily C member 8
+ENSG00000006116	CACNG3	10368	HGNC:1407	gene with protein product		16	calcium voltage-gated channel auxiliary subunit gamma 3
+ENSG00000006118	TMEM132A	54972	HGNC:31092	gene with protein product	GBP|FLJ20539|HSPA5BP1	11	transmembrane protein 132A
+ENSG00000006125	AP2B1	163	HGNC:563	gene with protein product	ADTB2|CLAPB1	17	adaptor related protein complex 2 subunit beta 1
+ENSG00000006128	TAC1	6863	HGNC:11517	gene with protein product	NPK|TAC2|NKNA	7	tachykinin precursor 1
+ENSG00000006194	ZNF263	10127	HGNC:13056	gene with protein product	FPM315|ZKSCAN12|ZSCAN44	16	zinc finger protein 263
+ENSG00000006210	CX3CL1	6376	HGNC:10647	gene with protein product	NTN|C3Xkine|ABCD-3|CXC3C|CXC3|SCYD1	16	C-X3-C motif chemokine ligand 1
+ENSG00000006282	SPATA20	64847	HGNC:26125	gene with protein product	FLJ21347|SSP411|Tisp78	17	spermatogenesis associated 20
+ENSG00000006283	CACNA1G	8913	HGNC:1394	gene with protein product	Cav3.1|NBR13	17	calcium voltage-gated channel subunit alpha1 G
+ENSG00000006327	TNFRSF12A	51330	HGNC:18152	gene with protein product	FN14|TweakR|CD266	16	TNF receptor superfamily member 12A
+ENSG00000006377	DLX6	1750	HGNC:2919	gene with protein product		7	distal-less homeobox 6
+ENSG00000006432	MAP3K9	4293	HGNC:6861	gene with protein product	PRKE1|MEKK9|MLK1	14	mitogen-activated protein kinase kinase kinase 9
+ENSG00000006451	RALA	5898	HGNC:9839	gene with protein product	RAL	7	RAS like proto-oncogene A
+ENSG00000006453	BAIAP2L1	55971	HGNC:21649	gene with protein product	IRTKS	7	BAR/IMD domain containing adaptor protein 2 like 1
+ENSG00000006459	KDM7A	80853	HGNC:22224	gene with protein product	KIAA1718|JHDM1D	7	lysine demethylase 7A
+ENSG00000006468	ETV1	2115	HGNC:3490	gene with protein product	ER81	7	ETS variant transcription factor 1
+ENSG00000006530	AGK	55750	HGNC:21869	gene with protein product	FLJ10842|MULK	7	acylglycerol kinase
+ENSG00000006534	ALDH3B1	221	HGNC:410	gene with protein product	ALDH7	11	aldehyde dehydrogenase 3 family member B1
+ENSG00000006555	TTC22	55001	HGNC:26067	gene with protein product	FLJ20619	1	tetratricopeptide repeat domain 22
+ENSG00000006576	PHTF2	57157	HGNC:13411	gene with protein product	DKFZp434D166	7	putative homeodomain transcription factor 2
+ENSG00000006606	CCL26	10344	HGNC:10625	gene with protein product	MIP-4alpha|eotaxin-3|IMAC|MIP-4a|TSC-1|SCYA26	7	C-C motif chemokine ligand 26
+ENSG00000006607	FARP2	9855	HGNC:16460	gene with protein product	KIAA0793|FIR|PLEKHC3|FRG	2	FERM, ARH/RhoGEF and pleckstrin domain protein 2
+ENSG00000006611	USH1C	10083	HGNC:12597	gene with protein product	PDZ73|harmonin|NY-CO-37|NY-CO-38|PDZ-73|AIE-75|PDZD7C|DFNB18	11	USH1 protein network component harmonin
+ENSG00000006625	GGCT	79017	HGNC:21705	gene with protein product	MGC3077|CRF21|Ggc|C7orf24|GCTG	7	gamma-glutamylcyclotransferase
+ENSG00000006634	DBF4	10926	HGNC:17364	gene with protein product	ASK|chif|ZDBF1|DBF4A	7	DBF4-CDC7 kinase regulatory subunit
+ENSG00000006638	TBXA2R	6915	HGNC:11608	gene with protein product		19	thromboxane A2 receptor
+ENSG00000006652	IFRD1	3475	HGNC:5456	gene with protein product	PC4|TIS7	7	interferon related developmental regulator 1
+ENSG00000006659	LGALS14	56891	HGNC:30054	gene with protein product	PPL13|CLC2	19	galectin 14
+ENSG00000007372	PAX6	5080	HGNC:8620	gene with protein product	D11S812E|AN|WAGR|AN1|AN2	11	paired box 6
+ENSG00000008056	SYN1	6853	HGNC:11494	gene with protein product	MRX50	X	synapsin I
+ENSG00000026025	VIM	7431	HGNC:12692	gene with protein product		10	vimentin
+ENSG00000075624	ACTB	60	HGNC:132	gene with protein product		7	actin beta
+ENSG00000077279	DCX	1641	HGNC:2714	gene with protein product	SCLH|DC|LISX|DBCN|XLIS	X	doublecortin
+ENSG00000078018	MAP2	4133	HGNC:6839	gene with protein product	MAP2A|MAP2B|MAP2C	2	microtubule associated protein 2
+ENSG00000100292	HMOX1	3162	HGNC:5013	gene with protein product	bK286B10|HO-1	22	heme oxygenase 1
+ENSG00000101438	SLC32A1	140679	HGNC:11018	gene with protein product	VGAT|bA122O1.1|VIAAT	20	solute carrier family 32 member 1
+ENSG00000102003	SYP	6855	HGNC:11506	gene with protein product	MRX96	X	synaptophysin
+ENSG00000104888	SLC17A7	57030	HGNC:16704	gene with protein product	BNPI|VGLUT1	19	solute carrier family 17 member 7
+ENSG00000111640	GAPDH	2597	HGNC:4141	gene with protein product	GAPD	12	glyceraldehyde-3-phosphate dehydrogenase
+ENSG00000131095	GFAP	2670	HGNC:4235	gene with protein product	FLJ45472	17	glial fibrillary acidic protein
+ENSG00000132535	DLG4	1742	HGNC:2903	gene with protein product	PSD-95|PSD95|SAP90|SAP-90	17	discs large MAGUK scaffold protein 4
+ENSG00000132688	NES	10763	HGNC:7756	gene with protein product	FLJ21841	1	nestin
+ENSG00000141510	TP53	7157	HGNC:11998	gene with protein product	p53|LFS1	17	tumor protein p53
+ENSG00000148773	MKI67	4288	HGNC:7107	gene with protein product	MIB-1|PPP1R105|Ki-67	10	marker of proliferation Ki-67
+ENSG00000163508	EOMES	8320	HGNC:3372	gene with protein product	TBR2	3	eomesodermin
+ENSG00000164305	CASP3	836	HGNC:1504	gene with protein product	CPP32|CPP32B|Yama|apopain	4	caspase 3
+ENSG00000171885	AQP4	361	HGNC:637	gene with protein product	MIWC|AQP-4|hAQP4	18	aquaporin 4
+ENSG00000176165	FOXG1	2290	HGNC:3811	gene with protein product	HFK2|QIN|BF1|HFK1|HFK3|HBF-3|FKHL2|FOXG1B|FKHL4|FKH2|FKHL1|FOXG1C|FKHL3|FOXG1A	14	forkhead box G1
+ENSG00000181449	SOX2	6657	HGNC:11195	gene with protein product		3	SRY-box transcription factor 2
+ENSG00000187608	ISG15	9636	HGNC:4053	gene with protein product	IFI15|UCRP|G1P2	1	ISG15 ubiquitin like modifier
+ENSG00000187634	SAMD11	148398	HGNC:28706	gene with protein product	MGC45873	1	sterile alpha motif domain containing 11
+ENSG00000187961	KLHL17	339451	HGNC:24023	gene with protein product		1	kelch like family member 17
+ENSG00000188157	AGRN	375790	HGNC:329	gene with protein product	AGRIN	1	agrin
+ENSG00000188976	NOC2L	26155	HGNC:24517	gene with protein product	DKFZP564C186|NET7|NET15|NIR|PPP1R112	1	NOC2 like nucleolar associated transcriptional repressor
+ENSG00000204531	POU5F1	5460	HGNC:9221	gene with protein product	OCT3|Oct4|MGC22487|OCT-4|Oct3/4|OTF3	6	POU class 5 homeobox 1
+ENSG00000212993	POU5F1B	5462	HGNC:9223	gene with protein product	OTF3C|OTF3P1|POU5F1P1	8	POU class 5 homeobox 1B
+ENSG00000258947	TUBB3	10381	HGNC:20772	gene with protein product	beta-4|CFEOM3|CFEOM3A|FEOM3	16	tubulin beta 3 class III
+ENSG00000260596	DUX4	100288687	HGNC:50800	gene with protein product		4	double homeobox 4

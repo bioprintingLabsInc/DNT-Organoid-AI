@@ -1,0 +1,81 @@
+config_version: "0.1.0"
+stage_name: "gene_harmonization"
+scope:
+  species: "Homo sapiens"
+  taxonomy_id: 9606
+  modality: "bulk_rna_seq"
+  input_format: "raw_counts"
+
+reference:
+  reference_id: "ensembl_human_genes"
+  reference_version: "112"
+  genome_build: "GRCh38.p14"
+  release_date: "2024-05"
+  canonical_source_authority: "Ensembl / EMBL-EBI"
+  canonical_source_url: "https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/Homo_sapiens.GRCh38.112.gtf.gz"
+  canonical_source_checksum: "8c87436bab973c871447743c2f5cbb2b557be0523fe6efe3ff33307a4c836002"
+  nomenclature_source_authority: "HUGO Gene Nomenclature Committee (HGNC)"
+  nomenclature_snapshot_date: "2026-09-24"
+  nomenclature_source_url: "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"
+  nomenclature_source_checksum: "69bb5722d5a42bb355580deb2c9f197ce3d7f7d13807173b9674a7db65e52191"
+  file_path: "data/references/ensembl_human_genes_v112.tsv"
+  expected_checksum: "3054aa734c15bb0a9cc64b67a8ead2a023e7dfd2cc0d0d6b7706372f4b13940e"
+
+supported_identifier_types:
+  ensembl_gene_id:
+    display_name: "Ensembl Gene ID"
+    aliases:
+      - "ensembl"
+      - "ensembl_gene_id"
+      - "ensembl_id"
+      - "ENSG"
+      - "Ensembl Gene ID"
+      - "Ensembl"
+    pattern: "^ENSG\\d{11}(\\.\\d+)?$"
+  gene_symbol:
+    display_name: "Gene Symbol"
+    aliases:
+      - "gene_symbol"
+      - "symbol"
+      - "gene symbol"
+      - "Gene Symbol"
+      - "HGNC symbol"
+      - "HGNC Symbol"
+      - "Hugo_Symbol"
+    pattern: "^[A-Za-z0-9_.-]+$"
+  entrez_gene_id:
+    display_name: "Entrez Gene ID"
+    aliases:
+      - "entrez"
+      - "entrez_gene_id"
+      - "entrez_id"
+      - "Entrez Gene ID"
+      - "NCBI Gene ID"
+      - "NCBI"
+    pattern: "^\\d+$"
+  hgnc_id:
+    display_name: "HGNC ID"
+    aliases:
+      - "hgnc"
+      - "hgnc_id"
+      - "HGNC ID"
+      - "HGNC"
+    pattern: "^HGNC:\\d+$"
+
+structural_rules:
+  empty_gene_identifiers: "ERROR"
+  unsupported_identifier_type: "ERROR"
+  qc_status_failure: "ERROR"
+  unauthorized_upstream_qc_needs_review: "ERROR"
+  upstream_qc_needs_review_authorized: "REVIEW"
+  upstream_qc_pass_with_warnings: "WARNING"
+  canonical_gene_collision: "REVIEW"
+  ambiguous_gene_identifier: "REVIEW"
+  unmapped_gene_identifier: "INFO"
+  ambiguous_identifier_type: "REVIEW"
+  identifier_type_mismatch: "REVIEW"
+  duplicate_source_gene_identifiers: "REVIEW"
+  low_mapping_coverage: "REVIEW"
+
+coverage_thresholds:
+  minimum_mapping_coverage_percentage: null

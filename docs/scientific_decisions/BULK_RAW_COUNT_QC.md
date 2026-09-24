@@ -13,8 +13,8 @@ metadata contract
 → metadata validation
 → ingestion / format routing
 → bulk raw-count QC
-→ normalization
 → gene harmonization
+→ normalization
 → treatment-vs-control response
 → model-ready dataset
 → AI training / calibration / validation
