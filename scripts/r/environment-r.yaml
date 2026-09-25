@@ -1,0 +1,9 @@
+name: dnt-organoid-r-normalization
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - r-base=4.4.3
+  - bioconductor-deseq2=1.46.0
+  - r-jsonlite=1.8.9

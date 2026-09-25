@@ -1,0 +1,19 @@
+# Bulk RNA-seq Normalization v1 Configuration
+# All scientific pass/fail/review thresholds default to null (unset) to prevent invented thresholds.
+
+config_version: "1.0.0"
+size_factor_method: "ratio"
+
+# Scientific QC thresholds (null until formally approved by scientific consensus)
+min_evaluable_genes: null
+max_size_factor_ratio: null
+min_size_factor: null
+max_size_factor: null
+
+# Official R / DESeq2 Execution Bridge
+r_binary_path: "Rscript"
+r_timeout_seconds: 300
+expected_r_version: "4.4.3"
+expected_bioc_version: "3.20"
+expected_deseq2_version: "1.46.0"
+strict_version_check: false

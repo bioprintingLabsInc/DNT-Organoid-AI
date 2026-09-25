@@ -49,3 +49,11 @@ outputs/*/*
 *.pt
 *.pth
 *.ckpt
+
+# R and renv
+.Rhistory
+.RData
+.Rproj.user/
+renv/library/
+renv/python/
+renv/staging/
