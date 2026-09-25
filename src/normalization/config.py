@@ -27,7 +27,7 @@ class NormalizationConfig:
     expected_r_version: str = "4.4.3"
     expected_bioc_version: str = "3.20"
     expected_deseq2_version: str = "1.46.0"
-    strict_version_check: bool = False
+    strict_version_check: bool = True
     config_version: str = "1.0.0"
 
     def to_dict(self) -> dict[str, Any]:

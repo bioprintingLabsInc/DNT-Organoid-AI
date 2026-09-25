@@ -88,12 +88,19 @@ def probe_r_environment(r_binary: str = "Rscript") -> REnvironmentInfo:
             error_message=f"R executable '{r_binary}' was not found on system PATH.",
         )
 
-    # 2. Run probe script in R
     probe_code = (
         "suppressPackageStartupMessages({"
         "r_v <- as.character(getRversion());"
         "d_v <- tryCatch(as.character(packageVersion('DESeq2')), error=function(e) 'missing');"
-        "b_v <- tryCatch(if(requireNamespace('BiocManager', quietly=TRUE)) as.character(BiocManager::version()) else if(d_v != 'missing') '3.20' else 'missing', error=function(e) 'missing');"
+        "b_v <- tryCatch({"
+        "if (requireNamespace('BiocManager', quietly=TRUE)) {"
+        "as.character(BiocManager::version())"
+        "} else if (requireNamespace('BiocVersion', quietly=TRUE)) {"
+        "sub('^([0-9]+\\\\.[0-9]+).*', '\\\\1', as.character(packageVersion('BiocVersion')))"
+        "} else {"
+        "'unavailable'"
+        "}"
+        "}, error=function(e) 'unavailable');"
         "cat(paste(r_v, b_v, d_v, sep='|'));"
         "})"
     )
@@ -218,7 +225,21 @@ def estimate_size_factors_r(
                 message=f"Runtime R version '{env_info.r_version}' differs from locked baseline '{cfg.expected_r_version}'.",
             )
         )
-    if env_info.bioc_version != cfg.expected_bioc_version:
+    if env_info.bioc_version in ("unavailable", "unknown", "missing"):
+        findings.append(
+            Finding(
+                severity=Severity.ERROR,
+                rule_id="bioc_version_undetermined",
+                entity_type="r_environment",
+                entity_id="Bioconductor",
+                path="bioc_version",
+                message=(
+                    f"Bioconductor version cannot be reliably determined from the runtime environment (reported '{env_info.bioc_version}'). "
+                    "Production normalization requires a verified programmatic Bioconductor 3.20 installation."
+                ),
+            )
+        )
+    elif env_info.bioc_version != cfg.expected_bioc_version:
         sev = Severity.ERROR if cfg.strict_version_check else Severity.WARNING
         findings.append(
             Finding(

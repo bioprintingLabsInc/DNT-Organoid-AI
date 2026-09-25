@@ -16,4 +16,4 @@ r_timeout_seconds: 300
 expected_r_version: "4.4.3"
 expected_bioc_version: "3.20"
 expected_deseq2_version: "1.46.0"
-strict_version_check: false
+strict_version_check: true

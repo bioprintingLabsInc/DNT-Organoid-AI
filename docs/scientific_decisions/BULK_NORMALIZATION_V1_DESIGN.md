@@ -191,11 +191,17 @@ The Normalization v1 reference environment is version-locked rather than specifi
    - Relevant dependency/environment identity (e.g. `renv` lockfile hash or conda prefix);
    - Operating system;
    - Execution timestamp.
-3. **Explicit Version Mismatch Gating:**
-   - A runtime version mismatch must be surfaced explicitly in execution findings (`r_version_mismatch`, `Severity.WARNING` or `Severity.ERROR`).
-   - The system will **not** silently execute an unrecorded alternative DESeq2 version.
-4. **Environment Availability Handling:**
-   - If R or DESeq2 is unavailable in the execution environment, the system does not substitute a Python approximation and does not claim full scientific validation. It reports the missing runtime requirement explicitly via `r_environment_missing` (`Severity.ERROR`). Unit tests that do not require R may still execute.
+3. **Strict Version Mismatch Gating by Default:**
+   - Runtime version checking is strict by default (`strict_version_check = True`).
+   - A mismatch in any of the three locked versions (R `4.4.3`, Bioconductor `3.20`, DESeq2 `1.46.0`) generates a `Severity.ERROR` finding and blocks production Normalization v1 execution (`Status.FAIL`).
+   - The system will **not** silently continue under an unrecorded, mismatched, or alternative software version.
+   - Future software-version upgrades require an explicitly versioned and revalidated normalization contract rather than being treated as equivalent to v1.
+4. **Programmatic Bioconductor Detection without Inferred Fallback:**
+   - The R environment probe must programmatically verify the Bioconductor version from the runtime (via `BiocManager::version()` or `BiocVersion`).
+   - The probe must **never** report Bioconductor 3.20 merely because DESeq2 is installed.
+   - If the Bioconductor version cannot be reliably determined, it is reported as `unavailable`, an explicit finding (`bioc_version_undetermined`, `Severity.ERROR`) is emitted, and strict Normalization v1 environment validation fails.
+5. **Environment Availability Handling:**
+   - If R or DESeq2 is unavailable in the execution environment, the system does not substitute a Python approximation and does not claim scientific validation. It reports the missing runtime requirement explicitly via `r_environment_missing` (`Severity.ERROR`). Unit tests that do not require R may still execute.
 
 ### 5.4 Execution Contract and Serialization
 

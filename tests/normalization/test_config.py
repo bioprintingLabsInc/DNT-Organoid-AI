@@ -22,6 +22,7 @@ def test_default_config_thresholds_are_none() -> None:
     assert cfg.expected_r_version == "4.4.3"
     assert cfg.expected_bioc_version == "3.20"
     assert cfg.expected_deseq2_version == "1.46.0"
+    assert cfg.strict_version_check is True
 
 
 def test_validate_config_rejects_invalid_method() -> None:

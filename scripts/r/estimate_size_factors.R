@@ -63,9 +63,9 @@ deseq2_ver <- if (deseq2_available) as.character(packageVersion("DESeq2")) else 
 bioc_ver <- "unavailable"
 if (suppressWarnings(requireNamespace("BiocManager", quietly = TRUE))) {
   bioc_ver <- as.character(BiocManager::version())
-} else if (deseq2_available) {
-  # Infer Bioconductor release from DESeq2 1.46.0 -> Bioc 3.20
-  bioc_ver <- "3.20"
+} else if (suppressWarnings(requireNamespace("BiocVersion", quietly = TRUE))) {
+  bv <- as.character(packageVersion("BiocVersion"))
+  bioc_ver <- sub("^([0-9]+\\.[0-9]+).*", "\\1", bv)
 }
 
 if (!deseq2_available) {

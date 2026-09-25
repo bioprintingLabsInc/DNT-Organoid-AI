@@ -175,3 +175,87 @@ def test_version_mismatch_surfacing(mock_probe: MagicMock) -> None:
     sfs, _, findings, _ = estimate_size_factors_r(cols, genes, samples, config=cfg_strict)
     assert sfs is None
     assert any(f.rule_id == "r_version_mismatch" and f.severity == Severity.ERROR for f in findings)
+
+
+@patch("src.normalization.r_bridge.probe_r_environment")
+def test_default_config_strict_mismatch_r_fails(mock_probe: MagicMock) -> None:
+    mock_probe.return_value = REnvironmentInfo(
+        r_version="4.3.3",
+        bioc_version="3.20",
+        deseq2_version="1.46.0",
+        operating_system="Windows",
+        execution_timestamp="2026-09-24T12:00:00Z",
+        environment_identity="renv:test",
+        is_available=True,
+    )
+    cols = ((10,), (20,))
+    genes = ("ENSG001",)
+    samples = ("s1", "s2")
+
+    # Default config has strict_version_check=True
+    cfg = NormalizationConfig()
+    sfs, _, findings, _ = estimate_size_factors_r(cols, genes, samples, config=cfg)
+    assert sfs is None
+    assert any(f.rule_id == "r_version_mismatch" and f.severity == Severity.ERROR and "4.3.3" in f.message for f in findings)
+
+
+@patch("src.normalization.r_bridge.probe_r_environment")
+def test_default_config_strict_mismatch_bioc_fails(mock_probe: MagicMock) -> None:
+    mock_probe.return_value = REnvironmentInfo(
+        r_version="4.4.3",
+        bioc_version="3.19",
+        deseq2_version="1.46.0",
+        operating_system="Windows",
+        execution_timestamp="2026-09-24T12:00:00Z",
+        environment_identity="renv:test",
+        is_available=True,
+    )
+    cols = ((10,), (20,))
+    genes = ("ENSG001",)
+    samples = ("s1", "s2")
+
+    cfg = NormalizationConfig()
+    sfs, _, findings, _ = estimate_size_factors_r(cols, genes, samples, config=cfg)
+    assert sfs is None
+    assert any(f.rule_id == "r_version_mismatch" and f.severity == Severity.ERROR and "3.19" in f.message for f in findings)
+
+
+@patch("src.normalization.r_bridge.probe_r_environment")
+def test_default_config_strict_mismatch_deseq2_fails(mock_probe: MagicMock) -> None:
+    mock_probe.return_value = REnvironmentInfo(
+        r_version="4.4.3",
+        bioc_version="3.20",
+        deseq2_version="1.44.0",
+        operating_system="Windows",
+        execution_timestamp="2026-09-24T12:00:00Z",
+        environment_identity="renv:test",
+        is_available=True,
+    )
+    cols = ((10,), (20,))
+    genes = ("ENSG001",)
+    samples = ("s1", "s2")
+
+    cfg = NormalizationConfig()
+    sfs, _, findings, _ = estimate_size_factors_r(cols, genes, samples, config=cfg)
+    assert sfs is None
+    assert any(f.rule_id == "r_version_mismatch" and f.severity == Severity.ERROR and "1.44.0" in f.message for f in findings)
+
+
+@patch("src.normalization.r_bridge.resolve_r_binary", return_value="Rscript")
+@patch("subprocess.run")
+def test_bioc_version_unavailable_does_not_silently_become_3_20(mock_subproc: MagicMock, mock_resolve: MagicMock) -> None:
+    # Simulate R probe returning unavailable Bioc version despite DESeq2 present
+    mock_subproc.return_value = MagicMock(returncode=0, stdout="4.4.3|unavailable|1.46.0\n", stderr="")
+
+    info = probe_r_environment("Rscript")
+    assert info.bioc_version == "unavailable"
+    assert info.bioc_version != "3.20"
+
+    cols = ((10,), (20,))
+    genes = ("ENSG001",)
+    samples = ("s1", "s2")
+
+    with patch("src.normalization.r_bridge.probe_r_environment", return_value=info):
+        sfs, _, findings, _ = estimate_size_factors_r(cols, genes, samples, config=NormalizationConfig())
+        assert sfs is None
+        assert any(f.rule_id == "bioc_version_undetermined" and f.severity == Severity.ERROR for f in findings)
