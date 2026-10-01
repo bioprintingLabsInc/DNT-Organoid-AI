@@ -22,6 +22,7 @@ from .design import DesignResolver
 from .models import (
     DifferentialExpressionContrastResult,
     DifferentialExpressionDataset,
+    ExcludedGeneAudit,
     GeneDifferentialExpressionResult,
 )
 from .r_bridge import execute_deseq2_contrast_r
@@ -210,37 +211,140 @@ def run_contrast_differential_expression(
 
     size_factors_used = {s: sf_by_sample[s] for s in all_contrast_samples}
 
-    # 5. Gene Harmonization Mapping
-    # Select UNIQUELY_MAPPED canonical genes without unresolved collisions
+    # 5. Gene Harmonization Mapping & Gene-Universe Conservation Audit
+    total_input_genes = len(raw_matrix.gene_ids)
     colliding_canonical_ids = {c.canonical_gene_id for c in harmonized_dataset.collisions}
-    symbol_map: dict[str, str | None] = {}
-    eligible_gene_map: dict[str, str] = {}  # orig_id -> canonical_id
-    canonical_to_orig: dict[str, str] = {}
 
+    # Count occurrences of uniquely mapped canonical gene IDs to catch any collisions
+    canonical_counts: dict[str, int] = {}
     for g in harmonized_dataset.genes:
-        if (
-            g.mapping_status == GeneMappingStatus.UNIQUELY_MAPPED
-            and g.canonical_gene_id is not None
-            and g.canonical_gene_id not in colliding_canonical_ids
-        ):
-            # Check 1:1 uniqueness
-            if g.canonical_gene_id in canonical_to_orig:
-                # collision detected; exclude
-                continue
-            eligible_gene_map[g.original_gene_id] = g.canonical_gene_id
-            canonical_to_orig[g.canonical_gene_id] = g.original_gene_id
-            symbol_map[g.canonical_gene_id] = g.approved_symbol
+        if g.mapping_status == GeneMappingStatus.UNIQUELY_MAPPED and g.canonical_gene_id:
+            canonical_counts[g.canonical_gene_id] = canonical_counts.get(g.canonical_gene_id, 0) + 1
 
-    # Filter to genes present in raw_matrix
-    raw_gene_idx_map = {gid: idx for idx, gid in enumerate(raw_matrix.gene_ids)}
-    valid_canonicals: list[str] = []
-    valid_orig_ids: list[str] = []
+    harm_by_idx = {g.source_index: g for g in harmonized_dataset.genes}
+    harm_by_orig = {g.original_gene_id: g for g in harmonized_dataset.genes}
 
-    for can_id in sorted(canonical_to_orig.keys()):
-        orig_id = canonical_to_orig[can_id]
-        if orig_id in raw_gene_idx_map:
-            valid_canonicals.append(can_id)
-            valid_orig_ids.append(orig_id)
+    raw_canonical_counts: dict[str, int] = {}
+    for idx, orig_id in enumerate(raw_matrix.gene_ids):
+        harm_gene = None
+        if idx in harm_by_idx and harm_by_idx[idx].original_gene_id == orig_id:
+            harm_gene = harm_by_idx[idx]
+        elif orig_id in harm_by_orig:
+            harm_gene = harm_by_orig[orig_id]
+        if harm_gene and harm_gene.mapping_status == GeneMappingStatus.UNIQUELY_MAPPED and harm_gene.canonical_gene_id:
+            raw_canonical_counts[harm_gene.canonical_gene_id] = raw_canonical_counts.get(harm_gene.canonical_gene_id, 0) + 1
+
+    all_colliding_canonicals = (
+        colliding_canonical_ids
+        | {cid for cid, count in canonical_counts.items() if count > 1}
+        | {cid for cid, count in raw_canonical_counts.items() if count > 1}
+    )
+
+    valid_entries: list[tuple[str, str, int]] = []
+    symbol_map: dict[str, str | None] = {}
+    excluded_gene_audits: list[ExcludedGeneAudit] = []
+
+    for idx, orig_id in enumerate(raw_matrix.gene_ids):
+        harm_gene = None
+        if idx in harm_by_idx and harm_by_idx[idx].original_gene_id == orig_id:
+            harm_gene = harm_by_idx[idx]
+        elif orig_id in harm_by_orig:
+            harm_gene = harm_by_orig[orig_id]
+
+        if harm_gene is None:
+            excluded_gene_audits.append(
+                ExcludedGeneAudit(
+                    original_gene_id=orig_id,
+                    source_index=idx,
+                    mapping_status="UNMAPPED",
+                    canonical_gene_id=None,
+                    exclusion_reason="Gene identifier not found in harmonized dataset.",
+                )
+            )
+        elif harm_gene.mapping_status == GeneMappingStatus.UNMAPPED:
+            excluded_gene_audits.append(
+                ExcludedGeneAudit(
+                    original_gene_id=orig_id,
+                    source_index=idx,
+                    mapping_status="UNMAPPED",
+                    canonical_gene_id=None,
+                    exclusion_reason=harm_gene.mapping_reason or "Unmapped gene identifier.",
+                )
+            )
+        elif harm_gene.mapping_status == GeneMappingStatus.AMBIGUOUS:
+            excluded_gene_audits.append(
+                ExcludedGeneAudit(
+                    original_gene_id=orig_id,
+                    source_index=idx,
+                    mapping_status="AMBIGUOUS",
+                    canonical_gene_id=harm_gene.canonical_gene_id,
+                    exclusion_reason=harm_gene.mapping_reason or "Ambiguous gene identifier mapping.",
+                )
+            )
+        elif harm_gene.mapping_status == GeneMappingStatus.INVALID:
+            excluded_gene_audits.append(
+                ExcludedGeneAudit(
+                    original_gene_id=orig_id,
+                    source_index=idx,
+                    mapping_status="INVALID",
+                    canonical_gene_id=None,
+                    exclusion_reason=harm_gene.mapping_reason or "Invalid gene identifier.",
+                )
+            )
+        elif harm_gene.mapping_status == GeneMappingStatus.UNIQUELY_MAPPED:
+            can_id = harm_gene.canonical_gene_id
+            if not can_id:
+                excluded_gene_audits.append(
+                    ExcludedGeneAudit(
+                        original_gene_id=orig_id,
+                        source_index=idx,
+                        mapping_status="INVALID",
+                        canonical_gene_id=None,
+                        exclusion_reason="Uniquely mapped status but canonical gene ID is null.",
+                    )
+                )
+            elif can_id in all_colliding_canonicals:
+                excluded_gene_audits.append(
+                    ExcludedGeneAudit(
+                        original_gene_id=orig_id,
+                        source_index=idx,
+                        mapping_status="COLLISION",
+                        canonical_gene_id=can_id,
+                        exclusion_reason=f"Excluded due to canonical collision: multiple source identifiers map to '{can_id}'.",
+                    )
+                )
+            else:
+                valid_entries.append((can_id, orig_id, idx))
+                symbol_map[can_id] = harm_gene.approved_symbol
+        else:
+            excluded_gene_audits.append(
+                ExcludedGeneAudit(
+                    original_gene_id=orig_id,
+                    source_index=idx,
+                    mapping_status=str(harm_gene.mapping_status),
+                    canonical_gene_id=harm_gene.canonical_gene_id,
+                    exclusion_reason=harm_gene.mapping_reason or f"Excluded due to unhandled mapping status: {harm_gene.mapping_status}",
+                )
+            )
+
+    if excluded_gene_audits:
+        findings.append(
+            Finding(
+                severity=Severity.INFO,
+                rule_id="gene_universe_harmonization_exclusions",
+                entity_type="gene_harmonization",
+                entity_id=contrast.cohort_id,
+                path="excluded_genes",
+                message=(
+                    f"Excluded {len(excluded_gene_audits)} of {total_input_genes} input gene rows from canonical DE analysis due to harmonization constraints."
+                ),
+            )
+        )
+
+    valid_entries.sort(key=lambda e: e[0])
+    valid_canonicals = [e[0] for e in valid_entries]
+    valid_orig_ids = [e[1] for e in valid_entries]
+    valid_row_indices = [e[2] for e in valid_entries]
 
     if not valid_canonicals:
         findings.append(
@@ -253,7 +357,15 @@ def run_contrast_differential_expression(
                 message="No uniquely mapped canonical genes found in raw count matrix.",
             )
         )
-        return _make_blocked_result(contrast, findings, config_version, de_version, "No eligible canonical genes.")
+        return _make_blocked_result(
+            contrast,
+            findings,
+            config_version,
+            de_version,
+            "No eligible canonical genes.",
+            excluded_genes=tuple(excluded_gene_audits),
+            total_input_genes_count=total_input_genes,
+        )
 
     # 6. Design Resolution via DesignResolver
     design_res = DesignResolver.resolve(contrast, sample_metadata)
@@ -298,6 +410,8 @@ def run_contrast_differential_expression(
             design_matrix_rank=design_res.rank,
             residual_degrees_of_freedom=design_res.residual_degrees_of_freedom,
             size_factors_used=size_factors_used,
+            excluded_genes=tuple(excluded_gene_audits),
+            total_input_genes_count=total_input_genes,
             status=design_res.status,
             findings=ordered_findings(findings),
             configuration_version=config_version,
@@ -337,13 +451,12 @@ def run_contrast_differential_expression(
     # Extract raw count columns for contrast samples
     # Mapping sample_id -> column in raw_matrix
     raw_sample_idx_map = {sid: idx for idx, sid in enumerate(raw_matrix.sample_ids)}
-    gene_row_indices = [raw_gene_idx_map[orig_id] for orig_id in valid_orig_ids]
 
     count_cols: list[tuple[int, ...]] = []
     for sid in ordered_samples:
         col_idx = raw_sample_idx_map[sid]
         raw_col = raw_matrix.columns[col_idx]
-        subset_col = tuple(raw_col[r_idx] for r_idx in gene_row_indices)
+        subset_col = tuple(raw_col[r_idx] for r_idx in valid_row_indices)
         count_cols.append(subset_col)
 
     # 8. Call official DESeq2 execution bridge
@@ -399,6 +512,8 @@ def run_contrast_differential_expression(
             design_matrix_rank=design_res.rank,
             residual_degrees_of_freedom=design_res.residual_degrees_of_freedom,
             size_factors_used=size_factors_used,
+            excluded_genes=tuple(excluded_gene_audits),
+            total_input_genes_count=total_input_genes,
             status=ContrastStatus.BLOCKED,
             findings=ordered_findings(findings),
             r_environment_info=env_info.to_dict(),
@@ -477,6 +592,8 @@ def run_contrast_differential_expression(
         residual_degrees_of_freedom=r_result.get("residual_degrees_of_freedom", design_res.residual_degrees_of_freedom),
         size_factors_used=size_factors_used,
         gene_results=tuple(gene_results),
+        excluded_genes=tuple(excluded_gene_audits),
+        total_input_genes_count=total_input_genes,
         status=ContrastStatus.ELIGIBLE,
         findings=ordered_findings(findings),
         r_environment_info=env_info.to_dict(),
@@ -541,6 +658,8 @@ def _make_blocked_result(
     config_version: str,
     de_version: str,
     rationale: str,
+    excluded_genes: tuple[ExcludedGeneAudit, ...] = (),
+    total_input_genes_count: int = 0,
 ) -> DifferentialExpressionContrastResult:
     return DifferentialExpressionContrastResult(
         contrast_id=contrast.contrast_id,
@@ -577,6 +696,8 @@ def _make_blocked_result(
         organoid_context_ids=contrast.organoid_context_ids,
         design_formula="",
         design_rationale=rationale,
+        excluded_genes=excluded_genes,
+        total_input_genes_count=total_input_genes_count,
         status=ContrastStatus.BLOCKED,
         findings=ordered_findings(findings),
         configuration_version=config_version,

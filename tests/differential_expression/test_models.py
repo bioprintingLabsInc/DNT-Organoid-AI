@@ -3,6 +3,7 @@
 from src.differential_expression.models import (
     DifferentialExpressionContrastResult,
     DifferentialExpressionDataset,
+    ExcludedGeneAudit,
     GeneDifferentialExpressionResult,
 )
 from src.response_builder.models import (
@@ -153,3 +154,53 @@ def test_differential_expression_dataset_model():
     d = dataset.to_dict()
     assert d["number_of_contrasts"] == 1
     assert d["number_of_eligible"] == 1
+
+
+def test_excluded_gene_audit_model():
+    """Test ExcludedGeneAudit model and gene universe conservation property."""
+    audit = ExcludedGeneAudit(
+        original_gene_id="OLD_GENE_1",
+        source_index=3,
+        mapping_status="UNMAPPED",
+        canonical_gene_id=None,
+        exclusion_reason="Not found in Ensembl reference.",
+    )
+    d = audit.to_dict()
+    assert d["original_gene_id"] == "OLD_GENE_1"
+    assert d["source_index"] == 3
+    assert d["mapping_status"] == "UNMAPPED"
+    assert d["canonical_gene_id"] is None
+    assert "Not found" in d["exclusion_reason"]
+
+    # Test conservation logic on contrast result
+    gene_res = GeneDifferentialExpressionResult(
+        canonical_gene_id="ENSG00000141510",
+        approved_symbol="TP53",
+        base_mean=100.0,
+        log2_fold_change=1.2,
+        lfc_standard_error=0.3,
+        wald_statistic=4.0,
+        p_value=0.001,
+        adjusted_p_value_bh=0.01,
+    )
+    cr = DifferentialExpressionContrastResult(
+        contrast_id="c_test",
+        study_id="s1",
+        experiment_id="e1",
+        cohort_id="co1",
+        relationship_id="r1",
+        treatment_condition_id="t1",
+        matched_control_condition_ids=("c0",),
+        treatment_sample_ids=("s1", "s2"),
+        control_sample_ids=("s3", "s4"),
+        treatment_biological_replicate_ids=("r1", "r2"),
+        control_biological_replicate_ids=("r3", "r4"),
+        treatment_replicate_count=2,
+        control_replicate_count=2,
+        gene_results=(gene_res,),
+        excluded_genes=(audit,),
+        total_input_genes_count=2,
+    )
+    assert cr.eligible_canonical_genes_count == 1
+    assert cr.excluded_genes_count == 1
+    assert cr.is_gene_universe_conserved is True

@@ -562,13 +562,20 @@ def test_acceptance_19_diagnostic_normalized_matrix_accidentally_supplied_reject
 
 def test_acceptance_20_raw_integer_counts_immutable():
     """20. Raw integer counts remain unchanged after DE."""
+    import hashlib
+
     contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
         n_treatment=3,
         n_control=3,
         n_genes=25,
     )
     cohort = norm_ds.cohort_results[0]
-    orig_cols = copy.deepcopy(cohort.raw_count_matrix.columns)
+    raw_mat = cohort.raw_count_matrix
+
+    orig_gene_ids = copy.deepcopy(raw_mat.gene_ids)
+    orig_sample_ids = copy.deepcopy(raw_mat.sample_ids)
+    orig_cols = copy.deepcopy(raw_mat.columns)
+    orig_hash = hashlib.sha256(str((orig_gene_ids, orig_sample_ids, orig_cols)).encode()).hexdigest()
 
     run_contrast_differential_expression(
         contrast=contrast,
@@ -576,7 +583,12 @@ def test_acceptance_20_raw_integer_counts_immutable():
         harmonized_dataset=harm_ds,
         sample_metadata=meta,
     )
-    assert cohort.raw_count_matrix.columns == orig_cols
+
+    post_hash = hashlib.sha256(str((raw_mat.gene_ids, raw_mat.sample_ids, raw_mat.columns)).encode()).hexdigest()
+    assert raw_mat.gene_ids == orig_gene_ids
+    assert raw_mat.sample_ids == orig_sample_ids
+    assert raw_mat.columns == orig_cols
+    assert post_hash == orig_hash
 
 
 def test_acceptance_21_dnt_labels_have_zero_effect_on_de_output():
@@ -697,6 +709,8 @@ def test_acceptance_25_ambiguous_and_colliding_genes_excluded_from_canonical_fea
         n_genes=25,
         include_unmapped_gene=True,
         include_colliding_gene=True,
+        include_ambiguous_gene=True,
+        include_invalid_gene=True,
     )
     res = run_contrast_differential_expression(
         contrast=contrast,
@@ -710,6 +724,142 @@ def test_acceptance_25_ambiguous_and_colliding_genes_excluded_from_canonical_fea
     can_ids = {g.canonical_gene_id for g in res.gene_results}
     assert "UNMAPPED_GENE" not in can_ids
     assert "ENSG_COLLISION_01" not in can_ids
+    assert "AMBIGUOUS_GENE" not in can_ids
+    assert "INVALID_GENE" not in can_ids
+
+    # Verify excluded_genes audit
+    assert len(res.excluded_genes) == 5
+    assert res.total_input_genes_count == 30
+    assert res.eligible_canonical_genes_count == 25
+    assert res.excluded_genes_count == 5
+    assert res.is_gene_universe_conserved is True
+
+
+def test_gene_universe_case_a_unmapped_gene_in_audit():
+    """Case A: unmapped gene is excluded from canonical DE but appears in audit."""
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+        include_unmapped_gene=True,
+    )
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+    assert res.status == ContrastStatus.ELIGIBLE
+    assert "UNMAPPED_GENE" not in {g.canonical_gene_id for g in res.gene_results}
+    audit = next(eg for eg in res.excluded_genes if eg.original_gene_id == "UNMAPPED_GENE")
+    assert audit.mapping_status == "UNMAPPED"
+    assert audit.canonical_gene_id is None
+    assert audit.source_index == 25
+    assert audit.exclusion_reason != ""
+
+
+def test_gene_universe_case_b_ambiguous_gene_in_audit():
+    """Case B: ambiguous gene is excluded but appears in audit."""
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+        include_ambiguous_gene=True,
+    )
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+    assert res.status == ContrastStatus.ELIGIBLE
+    assert "AMBIGUOUS_GENE" not in {g.canonical_gene_id for g in res.gene_results}
+    audit = next(eg for eg in res.excluded_genes if eg.original_gene_id == "AMBIGUOUS_GENE")
+    assert audit.mapping_status == "AMBIGUOUS"
+    assert audit.source_index == 25
+    assert "multiple candidate" in audit.exclusion_reason
+
+
+def test_gene_universe_case_c_collision_genes_in_audit():
+    """Case C: collision gene is excluded but appears in audit."""
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+        include_colliding_gene=True,
+    )
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+    assert res.status == ContrastStatus.ELIGIBLE
+    assert "ENSG_COLLISION_01" not in {g.canonical_gene_id for g in res.gene_results}
+    coll1 = next(eg for eg in res.excluded_genes if eg.original_gene_id == "COLLIDING_GENE_1")
+    coll2 = next(eg for eg in res.excluded_genes if eg.original_gene_id == "COLLIDING_GENE_2")
+    assert coll1.mapping_status == "COLLISION"
+    assert coll1.canonical_gene_id == "ENSG_COLLISION_01"
+    assert coll2.mapping_status == "COLLISION"
+    assert coll2.canonical_gene_id == "ENSG_COLLISION_01"
+
+
+def test_gene_universe_case_d_conservation_equation():
+    """Case D: conservation: total input rows = DE genes + all harmonization-excluded rows."""
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+        include_unmapped_gene=True,
+        include_colliding_gene=True,
+        include_ambiguous_gene=True,
+        include_invalid_gene=True,
+    )
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+    assert res.status == ContrastStatus.ELIGIBLE
+    raw_mat = norm_ds.cohort_results[0].raw_count_matrix
+    assert len(raw_mat.gene_ids) == 30
+    assert res.total_input_genes_count == 30
+    assert res.eligible_canonical_genes_count == 25
+    assert res.excluded_genes_count == 5
+    assert res.total_input_genes_count == (res.eligible_canonical_genes_count + res.excluded_genes_count)
+    assert res.is_gene_universe_conserved is True
+
+
+def test_gene_universe_exclusion_independent_of_outcome_and_dnt_labels():
+    """Exclusion decision must be independent of treatment outcome, log2FC, p-value, FDR, and DNT label."""
+    custom = {
+        "COLLIDING_GENE_1": ([50, 50, 50], [5000, 5000, 5000]),
+        "UNMAPPED_GENE": ([100, 100, 100], [0, 0, 0]),
+    }
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+        include_unmapped_gene=True,
+        include_colliding_gene=True,
+        custom_gene_counts=custom,
+    )
+    for sid in meta:
+        meta[sid]["dnt_label"] = "DNT_POSITIVE"
+
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+    assert res.status == ContrastStatus.ELIGIBLE
+    can_ids = {g.canonical_gene_id for g in res.gene_results}
+    assert "UNMAPPED_GENE" not in can_ids
+    assert "ENSG_COLLISION_01" not in can_ids
+    assert len(res.excluded_genes) == 3
+    assert res.is_gene_universe_conserved is True
 
 
 def test_acceptance_26_exact_r_deseq2_runtime_versions_verified():

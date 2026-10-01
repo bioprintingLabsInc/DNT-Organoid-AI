@@ -43,6 +43,26 @@ class GeneDifferentialExpressionResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ExcludedGeneAudit:
+    """Record of an input gene row excluded from canonical differential expression analysis."""
+
+    original_gene_id: str
+    source_index: int | None
+    mapping_status: str  # "UNMAPPED", "AMBIGUOUS", "INVALID", "COLLISION", "NOT_IN_MATRIX"
+    canonical_gene_id: str | None
+    exclusion_reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "original_gene_id": self.original_gene_id,
+            "source_index": self.source_index,
+            "mapping_status": self.mapping_status,
+            "canonical_gene_id": self.canonical_gene_id,
+            "exclusion_reason": self.exclusion_reason,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class DifferentialExpressionContrastResult:
     """Complete differential-expression response profile for one Step 7A contrast."""
 
@@ -103,6 +123,10 @@ class DifferentialExpressionContrastResult:
     # Gene-wise differential expression results
     gene_results: tuple[GeneDifferentialExpressionResult, ...] = ()
 
+    # Gene-universe conservation and audit
+    excluded_genes: tuple[ExcludedGeneAudit, ...] = ()
+    total_input_genes_count: int = 0
+
     # Contrast evaluation outcome
     status: ContrastStatus = ContrastStatus.BLOCKED
     findings: tuple[Finding, ...] = ()
@@ -122,6 +146,23 @@ class DifferentialExpressionContrastResult:
             and self.control_replicate_count >= 2
             and len(self.gene_results) > 0
         )
+
+    @property
+    def eligible_canonical_genes_count(self) -> int:
+        """Count of DE-eligible uniquely mapped canonical genes evaluated by DESeq2."""
+        return len(self.gene_results)
+
+    @property
+    def excluded_genes_count(self) -> int:
+        """Count of input gene rows excluded from canonical differential expression."""
+        return len(self.excluded_genes)
+
+    @property
+    def is_gene_universe_conserved(self) -> bool:
+        """Verify conservation law: total input rows == DE-eligible canonical genes + excluded genes."""
+        if self.total_input_genes_count == 0:
+            return True
+        return self.total_input_genes_count == (self.eligible_canonical_genes_count + self.excluded_genes_count)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -163,6 +204,11 @@ class DifferentialExpressionContrastResult:
             "residual_degrees_of_freedom": self.residual_degrees_of_freedom,
             "size_factors_used": dict(self.size_factors_used),
             "gene_results": [g.to_dict() for g in self.gene_results],
+            "excluded_genes": [eg.to_dict() for eg in self.excluded_genes],
+            "total_input_genes_count": self.total_input_genes_count,
+            "eligible_canonical_genes_count": self.eligible_canonical_genes_count,
+            "excluded_genes_count": self.excluded_genes_count,
+            "is_gene_universe_conserved": self.is_gene_universe_conserved,
             "status": str(self.status),
             "findings": [f.to_dict() for f in self.findings],
             "r_environment_info": self.r_environment_info,

@@ -50,6 +50,8 @@ def create_synthetic_de_fixtures(
     exposures: list[ContrastExposure] | None = None,
     include_unmapped_gene: bool = False,
     include_colliding_gene: bool = False,
+    include_ambiguous_gene: bool = False,
+    include_invalid_gene: bool = False,
     use_diagnostic_as_raw: bool = False,
     invalid_size_factor: float | None = None,
 ) -> tuple[MolecularResponseContrast, NormalizedDataset, HarmonizedDataset, dict[str, Any]]:
@@ -148,6 +150,44 @@ def create_synthetic_de_fixtures(
                 original_gene_ids=("COLLIDING_GENE_1", "COLLIDING_GENE_2"),
                 source_indices=(idx, idx + 1),
                 approved_symbol="COLL1",
+            )
+        )
+
+    if include_ambiguous_gene:
+        idx = len(gene_ids)
+        gene_ids.append("AMBIGUOUS_GENE")
+        harmonized_genes.append(
+            HarmonizedGene(
+                source_index=idx,
+                original_gene_id="AMBIGUOUS_GENE",
+                identifier_type=GeneIdentifierType.CUSTOM,
+                canonical_gene_id=None,
+                approved_symbol=None,
+                mapping_status=GeneMappingStatus.AMBIGUOUS,
+                mapping_reason="Identifier matches multiple candidate reference features.",
+                candidate_canonical_ids=("ENSG_AMBIG_01", "ENSG_AMBIG_02"),
+                reference_id="Ensembl",
+                reference_version="112",
+                source_asset_id="asset_01",
+            )
+        )
+
+    if include_invalid_gene:
+        idx = len(gene_ids)
+        gene_ids.append("INVALID_GENE")
+        harmonized_genes.append(
+            HarmonizedGene(
+                source_index=idx,
+                original_gene_id="INVALID_GENE",
+                identifier_type=GeneIdentifierType.CUSTOM,
+                canonical_gene_id=None,
+                approved_symbol=None,
+                mapping_status=GeneMappingStatus.INVALID,
+                mapping_reason="Identifier contains invalid characters.",
+                candidate_canonical_ids=(),
+                reference_id="Ensembl",
+                reference_version="112",
+                source_asset_id="asset_01",
             )
         )
 

@@ -134,6 +134,23 @@ To guarantee cross-experiment comparability and prevent false mappings:
 - **No Count-Summing:** Colliding features are never merged by summing raw counts.
 - **No Gene Pre-filtering:** Genes are **not** filtered prior to DESeq2 based on raw count thresholds, known DNT biology, or outcome expectations.
 
+### Gene-Universe Conservation Audit
+Genes excluded from model-ready canonical DE output because of Gene Harmonization v1 constraints are never silently dropped or lost. For every Step 7B execution, exact gene-universe conservation is strictly enforced:
+
+$$\text{total\_input\_genes\_count} = \text{eligible\_canonical\_genes\_count} + \text{excluded\_genes\_count}$$
+
+where:
+$$\text{excluded\_genes\_count} = N_{\text{unmapped}} + N_{\text{ambiguous}} + N_{\text{invalid}} + N_{\text{collision}}$$
+
+Every excluded feature is permanently recorded in an immutable `ExcludedGeneAudit` structure on the contrast result, preserving:
+- `original_gene_id`: Source identifier from the raw count matrix.
+- `source_index`: Zero-based row index in the raw count matrix.
+- `mapping_status`: Harmonization status (`UNMAPPED`, `AMBIGUOUS`, `INVALID`, `COLLISION`).
+- `canonical_gene_id`: Target Ensembl identifier if applicable.
+- `exclusion_reason`: Deterministic justification for exclusion from canonical DE analysis.
+
+The exclusion decision is completely independent of treatment outcome, $\log_2\text{FC}$, p-value, FDR, and DNT label.
+
 ---
 
 ## 11. DESeq2 Execution Parameters
