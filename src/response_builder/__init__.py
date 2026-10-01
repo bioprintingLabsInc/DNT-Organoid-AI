@@ -10,8 +10,10 @@ from .builder import (
     build_response_contrasts,
     extract_metadata_value,
     normalize_age_string,
+    resolve_developmental_age,
 )
 from .models import (
+    ContrastExposure,
     ContrastStatus,
     Finding,
     MolecularResponseContrast,
@@ -24,6 +26,7 @@ from .models import (
 
 __all__ = [
     "BUILDER_VERSION",
+    "ContrastExposure",
     "ContrastStatus",
     "Finding",
     "MolecularResponseContrast",
@@ -35,5 +38,6 @@ __all__ = [
     "extract_metadata_value",
     "normalize_age_string",
     "ordered_findings",
+    "resolve_developmental_age",
     "status_for",
 ]

@@ -5,7 +5,7 @@ preserving biological context, developmental age, replication invariants, and st
 """
 
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -89,6 +89,27 @@ def status_for(findings: Iterable[Finding]) -> Status:
 
 
 @dataclass(frozen=True, slots=True)
+class ContrastExposure:
+    """Condition-planned exposure record preserved deterministically."""
+
+    exposure_id: str
+    agent_name: str | None = None
+    agent_identifier: str | None = None
+    vehicle: str | None = None
+    concentration_or_dose: float | str | None = None
+    concentration_or_dose_unit: str | None = None
+    exposure_start_time_or_stage: str | None = None
+    developmental_age_or_stage_at_exposure: str | None = None
+    exposure_duration: float | str | None = None
+    exposure_duration_unit: str | None = None
+    washout_or_recovery_duration: float | str | None = None
+    washout_or_recovery_duration_unit: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class MolecularResponseContrast:
     """Scientifically validated contrast comparing one treatment condition to its matched controls."""
 
@@ -107,29 +128,39 @@ class MolecularResponseContrast:
     treatment_biological_replicate_ids: tuple[str, ...]
     control_biological_replicate_ids: tuple[str, ...]
 
-    agent_name: str | None
-    agent_identifier: str | None
-    vehicle: str | None
-    concentration_or_dose: float | str | None
-    concentration_or_dose_unit: str | None
+    # All condition-planned exposures preserved without flattening or silent truncation
+    treatment_exposures: tuple[ContrastExposure, ...] = ()
 
-    exposure_start_time_or_stage: str | None
-    developmental_age_or_stage_at_exposure: str | None
-    exposure_duration: float | str | None
-    exposure_duration_unit: str | None
-    washout_or_recovery_duration: float | str | None
-    washout_or_recovery_duration_unit: str | None
+    # Sample-level exposure deviations explicitly distinguished from condition-planned records
+    sample_level_exposure_deviations: tuple[dict[str, Any], ...] = ()
 
-    treatment_collection_age_or_stage: str | None
-    control_collection_age_or_stage: str | None
+    # Backward-compatible singular fields (only populated when len(treatment_exposures) == 1)
+    agent_name: str | None = None
+    agent_identifier: str | None = None
+    vehicle: str | None = None
+    concentration_or_dose: float | str | None = None
+    concentration_or_dose_unit: str | None = None
 
-    biological_source_ids: tuple[str, ...]
-    organoid_context_ids: tuple[str, ...]
+    exposure_start_time_or_stage: str | None = None
+    developmental_age_or_stage_at_exposure: str | None = None
+    exposure_duration: float | str | None = None
+    exposure_duration_unit: str | None = None
+    washout_or_recovery_duration: float | str | None = None
+    washout_or_recovery_duration_unit: str | None = None
 
-    sample_comparison_exception_ids: tuple[str, ...]
+    # Separately preserved developmental collection ages and normalized representations
+    treatment_collection_age_or_stage: str | None = None
+    control_collection_age_or_stage: str | None = None
+    treatment_collection_age_normalized: str | None = None
+    control_collection_age_normalized: str | None = None
 
-    status: ContrastStatus
-    findings: tuple[Finding, ...]
+    biological_source_ids: tuple[str, ...] = ()
+    organoid_context_ids: tuple[str, ...] = ()
+
+    sample_comparison_exception_ids: tuple[str, ...] = ()
+
+    status: ContrastStatus = ContrastStatus.BLOCKED
+    findings: tuple[Finding, ...] = ()
 
     @property
     def is_inferentially_eligible(self) -> bool:
@@ -166,6 +197,8 @@ class MolecularResponseContrast:
             "treatment_replicate_count": self.treatment_replicate_count,
             "control_replicate_count": self.control_replicate_count,
             "is_inferentially_eligible": self.is_inferentially_eligible,
+            "treatment_exposures": [e.to_dict() for e in self.treatment_exposures],
+            "sample_level_exposure_deviations": list(self.sample_level_exposure_deviations),
             "agent_name": self.agent_name,
             "agent_identifier": self.agent_identifier,
             "vehicle": self.vehicle,
@@ -179,6 +212,8 @@ class MolecularResponseContrast:
             "washout_or_recovery_duration_unit": self.washout_or_recovery_duration_unit,
             "treatment_collection_age_or_stage": self.treatment_collection_age_or_stage,
             "control_collection_age_or_stage": self.control_collection_age_or_stage,
+            "treatment_collection_age_normalized": self.treatment_collection_age_normalized,
+            "control_collection_age_normalized": self.control_collection_age_normalized,
             "biological_source_ids": list(self.biological_source_ids),
             "organoid_context_ids": list(self.organoid_context_ids),
             "sample_comparison_exception_ids": list(self.sample_comparison_exception_ids),
@@ -194,6 +229,7 @@ class ResponseContrastDataset:
     status: Status
     findings: tuple[Finding, ...]
     contrasts: tuple[MolecularResponseContrast, ...]
+    treatment_conditions_encountered: tuple[str, ...]
     source_asset_id: str
     reference_identity: str
     builder_version: str
@@ -214,14 +250,58 @@ class ResponseContrastDataset:
         """Contrasts that are scientifically blocked from downstream analysis."""
         return tuple(c for c in self.contrasts if c.status == ContrastStatus.BLOCKED)
 
+    @property
+    def treatment_condition_dispositions(self) -> dict[str, ContrastStatus]:
+        """Map each encountered treatment condition to its aggregated disposition status."""
+        dispositions: dict[str, ContrastStatus] = {}
+        for cid in self.treatment_conditions_encountered:
+            c_contrasts = [c for c in self.contrasts if c.treatment_condition_id == cid]
+            if not c_contrasts:
+                dispositions[cid] = ContrastStatus.BLOCKED
+            elif any(c.status == ContrastStatus.BLOCKED for c in c_contrasts):
+                dispositions[cid] = ContrastStatus.BLOCKED
+            elif any(c.status == ContrastStatus.NEEDS_REVIEW for c in c_contrasts):
+                dispositions[cid] = ContrastStatus.NEEDS_REVIEW
+            else:
+                dispositions[cid] = ContrastStatus.ELIGIBLE
+        return dispositions
+
+    @property
+    def eligible_dispositions_count(self) -> int:
+        return sum(1 for s in self.treatment_condition_dispositions.values() if s == ContrastStatus.ELIGIBLE)
+
+    @property
+    def needs_review_dispositions_count(self) -> int:
+        return sum(1 for s in self.treatment_condition_dispositions.values() if s == ContrastStatus.NEEDS_REVIEW)
+
+    @property
+    def blocked_dispositions_count(self) -> int:
+        return sum(1 for s in self.treatment_condition_dispositions.values() if s == ContrastStatus.BLOCKED)
+
+    def verify_treatment_condition_conservation(self) -> bool:
+        """Verify that every encountered treatment condition has an explicit auditable disposition."""
+        total_encountered = len(self.treatment_conditions_encountered)
+        total_dispositions = (
+            self.eligible_dispositions_count
+            + self.needs_review_dispositions_count
+            + self.blocked_dispositions_count
+        )
+        return total_encountered == total_dispositions
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "status": str(self.status),
             "findings": [f.to_dict() for f in self.findings],
+            "treatment_conditions_encountered": list(self.treatment_conditions_encountered),
+            "total_treatment_conditions_encountered_count": len(self.treatment_conditions_encountered),
             "total_contrasts_count": len(self.contrasts),
             "eligible_contrasts_count": len(self.eligible_contrasts),
             "needs_review_contrasts_count": len(self.needs_review_contrasts),
             "blocked_contrasts_count": len(self.blocked_contrasts),
+            "eligible_dispositions_count": self.eligible_dispositions_count,
+            "needs_review_dispositions_count": self.needs_review_dispositions_count,
+            "blocked_dispositions_count": self.blocked_dispositions_count,
+            "treatment_condition_conservation_verified": self.verify_treatment_condition_conservation(),
             "contrasts": [c.to_dict() for c in self.contrasts],
             "source_asset_id": self.source_asset_id,
             "reference_identity": self.reference_identity,
