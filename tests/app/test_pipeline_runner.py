@@ -274,3 +274,65 @@ def test_pipeline_runs_with_valid_explicit_metadata() -> None:
     ]
     for col in expected_cols:
         assert col in res.de_genes_df.columns
+
+
+# -----------------------------------------------------------------------------
+# 5. Verification of Single-Upload Flow & Editable Sample Assignment Table
+# -----------------------------------------------------------------------------
+def test_only_one_file_uploader_in_app() -> None:
+    """Verify that app.py has strictly ONE file uploader (raw counts only) and uses st.data_editor."""
+    app_path = Path(__file__).resolve().parents[2] / "app.py"
+    assert app_path.exists()
+    content = app_path.read_text(encoding="utf-8")
+
+    # Only one file uploader in app.py
+    assert content.count("st.file_uploader(") == 1, "There must be exactly one st.file_uploader in app.py"
+    assert "Upload raw count matrix" in content, "Raw count matrix uploader must be present"
+
+    # Separate sample metadata uploader removed
+    assert "Upload explicit sample metadata" not in content, "Separate sample metadata uploader must be removed"
+    assert "Sample Metadata Format Guide" not in content, "Separate sample metadata guide must be removed"
+
+    # Sample Assignment Table using st.data_editor
+    assert "st.data_editor(" in content, "st.data_editor must be used for sample assignments"
+    assert "sample_assignment_editor" in content, "sample_assignment_editor key must be present in app.py"
+    assert "condition_type" in content, "condition_type column must be present in data editor"
+    assert "biological_replicate_id" in content, "biological_replicate_id column must be present in data editor"
+
+
+def test_sample_assignments_frontend_conversion_and_validation() -> None:
+    """Verify manual sample assignment conversion and that missing condition or replicate fails safely."""
+    # Test valid assignment
+    sids = ["sample_ctrl_1", "sample_ctrl_2", "sample_trt_1", "sample_trt_2"]
+    valid_assignments = pd.DataFrame(
+        {
+            "sample_id": sids,
+            "condition_type": ["control", "control", "treatment", "treatment"],
+            "biological_replicate_id": ["rep_1", "rep_2", "rep_3", "rep_4"],
+        }
+    )
+    parsed = parse_sample_info(valid_assignments, sids)
+    assert len(parsed) == 4
+    assert list(parsed["condition_type"]) == ["control", "control", "treatment", "treatment"]
+
+    # Test unassigned / blank condition fails
+    blank_cond_assignments = pd.DataFrame(
+        {
+            "sample_id": sids,
+            "condition_type": ["control", "", "treatment", "treatment"],
+            "biological_replicate_id": ["rep_1", "rep_2", "rep_3", "rep_4"],
+        }
+    )
+    with pytest.raises(ValueError, match="Must explicitly specify 'treatment' or 'control'"):
+        parse_sample_info(blank_cond_assignments, sids)
+
+    # Test blank replicate fails
+    blank_rep_assignments = pd.DataFrame(
+        {
+            "sample_id": sids,
+            "condition_type": ["control", "control", "treatment", "treatment"],
+            "biological_replicate_id": ["rep_1", "", "rep_3", "rep_4"],
+        }
+    )
+    with pytest.raises(ValueError, match="Missing biological replicate identifier"):
+        parse_sample_info(blank_rep_assignments, sids)

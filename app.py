@@ -2,9 +2,9 @@
 
 Statistically rigorous Bulk RNA-seq differential expression analysis web application.
 Workflow:
-Upload real raw-count matrix
+Upload real raw-count matrix CSV
         ↓
-Upload explicit sample metadata
+Sample Assignment Table (sample_id | condition_type | biological_replicate_id)
         ↓
 Enter/verify exposure information
         ↓
@@ -16,7 +16,8 @@ Gene table + visual plot + scientific checks
         ↓
 Download results
 
-Strictly real-data analysis interface.
+Strictly real-data analysis interface. Only one CSV (raw counts) upload required.
+Sample assignments are entered explicitly by the user in the editable table.
 Automatic inference of treatment/control status and biological replicates from sample names is prohibited.
 """
 
@@ -112,40 +113,65 @@ with st.sidebar:
         help="Column 1: Gene identifier (Ensembl gene ID or gene symbol). Remaining columns: Sample IDs containing non-negative raw integer counts.",
     )
 
-    st.subheader("2. Sample Metadata (Required)")
-    uploaded_samples = st.file_uploader(
-        "Upload explicit sample metadata (CSV / TSV)",
-        type=["csv", "tsv", "txt"],
-        help="Mandatory columns: sample_id, condition_type ('treatment' or 'control'), biological_replicate_id. Automatic inference from sample names is prohibited.",
-    )
+    counts_df: pd.DataFrame | None = None
+    sample_ids: list[str] = []
+    matrix_parse_error: str | None = None
 
-    with st.expander("📋 Sample Metadata Format Guide", expanded=False):
-        st.markdown(
-            """
-            Sample metadata must explicitly map every matrix sample.
-            **Required Columns:**
-            - `sample_id`: Exact sample identifier matching count matrix column header.
-            - `condition_type`: Must explicitly specify `treatment` or `control`.
-            - `biological_replicate_id`: Explicit biological replicate identifier (e.g. `rep_1`, `rep_2`).
-            """
-        )
-        sample_meta_template = pd.DataFrame(
-            {
-                "sample_id": ["sample_ctrl_1", "sample_ctrl_2", "sample_trt_1", "sample_trt_2"],
-                "condition_type": ["control", "control", "treatment", "treatment"],
-                "biological_replicate_id": ["bio_rep_1", "bio_rep_2", "bio_rep_3", "bio_rep_4"],
-            }
-        )
-        st.dataframe(sample_meta_template, use_container_width=True)
+    if uploaded_counts is not None:
+        try:
+            counts_df, sample_ids = parse_count_matrix(uploaded_counts)
+        except Exception as e:
+            matrix_parse_error = str(e)
+            counts_df, sample_ids = None, []
 
-        template_csv = sample_meta_template.to_csv(index=False)
-        st.download_button(
-            label="📥 Download Template (CSV)",
-            data=template_csv,
-            file_name="sample_metadata_template.csv",
-            mime="text/csv",
+    st.subheader("2. Sample Assignments (Required)")
+    if matrix_parse_error:
+        st.error(f"❌ Error reading count matrix: {matrix_parse_error}")
+        edited_samples = None
+    elif sample_ids:
+        # Cache key based on upload file identity or sample IDs
+        current_matrix_id = getattr(uploaded_counts, "file_id", getattr(uploaded_counts, "name", str(sample_ids)))
+        if st.session_state.get("last_uploaded_matrix_id") != current_matrix_id:
+            st.session_state["last_uploaded_matrix_id"] = current_matrix_id
+            st.session_state["sample_assignment_init"] = pd.DataFrame(
+                {
+                    "sample_id": sample_ids,
+                    "condition_type": ["" for _ in sample_ids],
+                    "biological_replicate_id": ["" for _ in sample_ids],
+                }
+            )
+            if "sample_assignment_editor" in st.session_state:
+                del st.session_state["sample_assignment_editor"]
+
+        st.caption("Assign treatment/control status and biological replicate ID for each sample:")
+        edited_samples = st.data_editor(
+            st.session_state["sample_assignment_init"],
+            key="sample_assignment_editor",
+            column_config={
+                "sample_id": st.column_config.TextColumn(
+                    "sample_id",
+                    disabled=True,
+                    help="Sample ID extracted from count matrix column",
+                ),
+                "condition_type": st.column_config.SelectboxColumn(
+                    "condition_type",
+                    options=["", "control", "treatment"],
+                    required=True,
+                    help="Explicitly assign 'control' or 'treatment'",
+                ),
+                "biological_replicate_id": st.column_config.TextColumn(
+                    "biological_replicate_id",
+                    required=True,
+                    help="Explicit biological replicate identifier (e.g. rep_1, rep_2)",
+                ),
+            },
+            hide_index=True,
             use_container_width=True,
+            num_rows="fixed",
         )
+    else:
+        st.info("Upload a raw count matrix above to configure sample assignments.")
+        edited_samples = None
 
     st.subheader("3. Exposure & Experimental Design")
     with st.expander("🔬 Exposure Parameters", expanded=True):
@@ -209,11 +235,44 @@ if analyze_button:
     validation_errors = []
     if uploaded_counts is None:
         validation_errors.append("Please upload an RNA-seq count matrix CSV or TSV file.")
-    if uploaded_samples is None:
-        validation_errors.append(
-            "Please upload explicit sample metadata CSV or TSV. "
-            "Automatic inference of treatment/control assignments or biological replicates from sample names is prohibited."
-        )
+    elif matrix_parse_error:
+        validation_errors.append(f"Invalid count matrix: {matrix_parse_error}")
+    elif edited_samples is None or edited_samples.empty:
+        validation_errors.append("No samples detected in count matrix. Please verify uploaded file.")
+    else:
+        # Validate that every sample has explicit condition_type and biological_replicate_id
+        missing_cond_sids = []
+        missing_rep_sids = []
+        for _, row in edited_samples.iterrows():
+            sid = str(row.get("sample_id", "")).strip()
+            cond = str(row.get("condition_type", "")).strip().lower() if pd.notna(row.get("condition_type")) else ""
+            rep = str(row.get("biological_replicate_id", "")).strip() if pd.notna(row.get("biological_replicate_id")) else ""
+
+            if cond not in ("control", "treatment"):
+                missing_cond_sids.append(sid)
+            if not rep or rep.lower() in ("none", "nan"):
+                missing_rep_sids.append(sid)
+
+        if missing_cond_sids:
+            validation_errors.append(
+                f"Missing or unassigned condition_type ('control' or 'treatment') for sample(s): {', '.join(missing_cond_sids)}. "
+                "Automatic inference from sample names is prohibited."
+            )
+        if missing_rep_sids:
+            validation_errors.append(
+                f"Missing biological_replicate_id for sample(s): {', '.join(missing_rep_sids)}. "
+                "Automatic inference of biological replicates is prohibited."
+            )
+
+        if not missing_cond_sids:
+            trt_count = sum(1 for _, r in edited_samples.iterrows() if str(r.get("condition_type", "")).strip().lower() == "treatment")
+            ctrl_count = sum(1 for _, r in edited_samples.iterrows() if str(r.get("condition_type", "")).strip().lower() == "control")
+            if trt_count < 2 or ctrl_count < 2:
+                validation_errors.append(
+                    f"Differential expression requires at least 2 biological replicates in both treatment and control. "
+                    f"Currently assigned: {trt_count} treatment, {ctrl_count} control."
+                )
+
     if not chem_name.strip():
         validation_errors.append("Please specify Chemical / Agent Name.")
     if not dev_age.strip():
@@ -223,6 +282,14 @@ if analyze_button:
         for err in validation_errors:
             st.error(f"❌ {err}")
     else:
+        samples_df = pd.DataFrame(
+            {
+                "sample_id": [str(s).strip() for s in edited_samples["sample_id"]],
+                "condition_type": [str(c).strip().lower() for c in edited_samples["condition_type"]],
+                "biological_replicate_id": [str(r).strip() for r in edited_samples["biological_replicate_id"]],
+            }
+        )
+
         chem_params = ChemicalParams(
             agent_name=chem_name.strip(),
             agent_identifier=chem_id.strip(),
@@ -241,8 +308,8 @@ if analyze_button:
 
         with st.spinner("Executing end-to-end differential expression pipeline (QC → Harmonization → Normalization → Contrast → DESeq2)..."):
             res = run_full_analysis_pipeline(
-                counts_input=uploaded_counts,
-                samples_input=uploaded_samples,
+                counts_input=counts_df if counts_df is not None else uploaded_counts,
+                samples_input=samples_df,
                 chemical_params=chem_params,
             )
             st.session_state["pipeline_result"] = res
@@ -254,7 +321,11 @@ res: PipelineRunResult | None = st.session_state.get("pipeline_result")
 
 if res is None:
     # Initial landing screen guidance
-    st.info("👋 Upload a raw-count matrix and explicit sample metadata in the sidebar, enter your exposure parameters, and click **🚀 ANALYZE** to run the pipeline.")
+    if uploaded_counts is not None and counts_df is not None:
+        st.success(f"📁 Count matrix loaded: **{len(counts_df):,}** genes across **{len(sample_ids)}** samples.")
+        st.info("👉 Please assign `condition_type` ('control' or 'treatment') and `biological_replicate_id` in the sidebar table, enter exposure details, and click **🚀 ANALYZE**.")
+    else:
+        st.info("👋 Upload a raw-count matrix in the sidebar, assign sample conditions and biological replicates, enter your exposure parameters, and click **🚀 ANALYZE** to run the pipeline.")
 
     col1, col2, col3 = st.columns(3)
     with col1:

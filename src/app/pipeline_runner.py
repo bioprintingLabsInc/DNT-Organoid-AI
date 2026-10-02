@@ -126,7 +126,11 @@ def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
         sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
         df = pd.read_csv(path, sep=sep)
     elif hasattr(file_or_content, "read"):
+        if hasattr(file_or_content, "seek"):
+            file_or_content.seek(0)
         content = file_or_content.read()
+        if hasattr(file_or_content, "seek"):
+            file_or_content.seek(0)
         if isinstance(content, bytes):
             content = content.decode("utf-8-sig")
         sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
@@ -184,7 +188,11 @@ def parse_sample_info(
         sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
         df = pd.read_csv(path, sep=sep)
     elif hasattr(file_or_content, "read"):
+        if hasattr(file_or_content, "seek"):
+            file_or_content.seek(0)
         content = file_or_content.read()
+        if hasattr(file_or_content, "seek"):
+            file_or_content.seek(0)
         if isinstance(content, bytes):
             content = content.decode("utf-8-sig")
         sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
