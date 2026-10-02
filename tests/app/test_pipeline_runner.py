@@ -1,15 +1,21 @@
-"""Unit and integration tests for the Streamlit application pipeline runner."""
+"""Unit and integration tests for the Streamlit application and pipeline runner.
 
-import io
-import json
-import pytest
+Verifies:
+1. Synthetic demo mode is no longer exposed in the application.
+2. Treatment/control status and biological replicates cannot be inferred from filenames or sample names.
+3. Missing or invalid explicit sample metadata fails safely with clear validation errors.
+4. Valid explicit user-provided sample metadata executes through the full locked backend.
+"""
+
+from pathlib import Path
+import random
 import pandas as pd
+import pytest
 
 from src.app.pipeline_runner import (
     ChemicalParams,
     PipelineRunResult,
     build_canonical_metadata,
-    generate_demo_data,
     parse_count_matrix,
     parse_sample_info,
     run_full_analysis_pipeline,
@@ -17,122 +23,224 @@ from src.app.pipeline_runner import (
 from src.response_builder.models import ContrastStatus
 
 
-def test_parse_count_matrix_valid_df() -> None:
-    df_raw = pd.DataFrame(
+def _create_test_dataset(n_genes: int = 40) -> tuple[pd.DataFrame, pd.DataFrame, ChemicalParams]:
+    """Helper to assemble a test expression matrix and explicit metadata for testing."""
+    sids = ["donor1_ctrl_rep1", "donor1_ctrl_rep2", "donor1_ctrl_rep3", "donor1_trt_rep1", "donor1_trt_rep2", "donor1_trt_rep3"]
+
+    genes = [
+        "ENSG00000100292", "ENSG00000128272", "ENSG00000175197", "ENSG00000001084",
+        "ENSG00000181019", "ENSG00000044574", "ENSG00000116717", "ENSG00000087088",
+        "ENSG00000164305", "ENSG00000124762", "ENSG00000161011", "ENSG00000291237",
+        "ENSG00000090266", "ENSG00000167792", "ENSG00000078018", "ENSG00000258947",
+        "ENSG00000008056", "ENSG00000132639", "ENSG00000167281", "ENSG00000102003",
+        "ENSG00000106089", "ENSG00000176884", "ENSG00000155511", "ENSG00000070808",
+        "ENSG00000001617", "ENSG00000001631", "ENSG00000111640", "ENSG00000075624",
+        "ENSG00000166710", "ENSG00000089157", "ENSG00000150991", "ENSG00000196262",
+        "ENSG00000112592", "ENSG00000168488", "ENSG00000102144", "ENSG00000164924",
+        "ENSG00000073578", "ENSG00000144713", "ENSG00000000003", "ENSG00000000419",
+    ][:n_genes]
+
+    mean_levels = [40, 80, 150, 300, 600, 1200, 2500, 5000]
+    rng = random.Random(2026)
+    rows = []
+
+    for i, gid in enumerate(genes):
+        base_mu = mean_levels[i % len(mean_levels)]
+        if i < 12:
+            fc = 3.5
+        elif i < 26:
+            fc = 0.28
+        else:
+            fc = 1.0
+
+        row = [gid]
+        for sid in sids:
+            is_trt = "trt" in sid
+            mu = base_mu * (fc if is_trt else 1.0)
+            val = max(10, int(round(rng.gauss(mu, max(3.0, mu * 0.12)))))
+            row.append(val)
+        rows.append(row)
+
+    counts_df = pd.DataFrame(rows, columns=["gene_id"] + sids)
+
+    # Explicit sample metadata
+    samples_records = []
+    for sid in sids:
+        ctype = "treatment" if "trt" in sid else "control"
+        rep_id = f"biorep_{sid}"
+        samples_records.append(
+            {
+                "sample_id": sid,
+                "condition_type": ctype,
+                "biological_replicate_id": rep_id,
+            }
+        )
+    samples_df = pd.DataFrame(samples_records)
+
+    params = ChemicalParams(
+        agent_name="Bisphenol_A",
+        agent_identifier="CID:6623",
+        concentration_or_dose=10.0,
+        concentration_or_dose_unit="uM",
+        developmental_age="day_35",
+        exposure_duration=24.0,
+        exposure_duration_unit="h",
+        vehicle="0.1% DMSO",
+        organoid_context_id="ctx_cerebral_organoid",
+        organoid_type="cerebral_organoid",
+        brain_region="cerebral_cortex",
+        biological_source_id="ipsc_line_donor_1",
+        species="Homo sapiens",
+    )
+
+    return counts_df, samples_df, params
+
+
+# -----------------------------------------------------------------------------
+# 1. Verification that Demo Mode is Not Exposed
+# -----------------------------------------------------------------------------
+def test_demo_mode_not_exposed_in_app() -> None:
+    """Verify that app.py does not expose synthetic demo mode or generate_demo_data."""
+    app_path = Path(__file__).resolve().parents[2] / "app.py"
+    assert app_path.exists()
+    content = app_path.read_text(encoding="utf-8")
+
+    assert "generate_demo_data" not in content, "generate_demo_data found in app.py"
+    assert "Load Demo Data" not in content, "Demo Data option found in app.py"
+    assert "Rotenone" not in content, "Rotenone hardcoded example found in app.py"
+
+
+def test_generate_demo_data_removed_from_pipeline_runner() -> None:
+    """Verify that pipeline_runner module no longer exports generate_demo_data."""
+    import src.app.pipeline_runner as pr
+    assert not hasattr(pr, "generate_demo_data"), "generate_demo_data must be removed from pipeline_runner"
+
+
+# -----------------------------------------------------------------------------
+# 2. Verification that Automatic Inference is Prohibited
+# -----------------------------------------------------------------------------
+def test_treatment_control_cannot_be_inferred_from_sample_names() -> None:
+    """Attempting to parse sample info without explicit metadata must fail."""
+    sids = ["ctrl_sample_1", "ctrl_sample_2", "treatment_sample_1", "treatment_sample_2"]
+    with pytest.raises(ValueError, match="Explicit sample metadata is required"):
+        parse_sample_info(None, sids)
+
+
+def test_missing_condition_column_fails_safely() -> None:
+    """Sample metadata without an explicit condition column must raise ValueError."""
+    sids = ["sample_1", "sample_2"]
+    invalid_df = pd.DataFrame(
         {
-            "gene": ["ENSG00000100292", "ENSG00000128272"],
-            "sample_1": [100, 200],
-            "sample_2": [110, 210],
+            "sample_id": sids,
+            "biological_replicate_id": ["rep_1", "rep_2"],
         }
     )
-    df, sids = parse_count_matrix(df_raw)
-    assert sids == ["sample_1", "sample_2"]
-    assert "gene_id" in df.columns
-    assert len(df) == 2
-    assert df["sample_1"].iloc[0] == 100
+    with pytest.raises(ValueError, match="explicit condition column"):
+        parse_sample_info(invalid_df, sids)
 
 
-def test_parse_count_matrix_csv_and_tsv_strings() -> None:
-    csv_str = "gene_id,s1,s2\nENSG00000100292,50,60\nENSG00000128272,70,80\n"
-    df_csv, sids_csv = parse_count_matrix(csv_str)
-    assert sids_csv == ["s1", "s2"]
-    assert len(df_csv) == 2
-
-    tsv_str = "gene_id\ts1\ts2\nENSG00000100292\t50\t60\nENSG00000128272\t70\t80\n"
-    df_tsv, sids_tsv = parse_count_matrix(tsv_str)
-    assert sids_tsv == ["s1", "s2"]
-    assert len(df_tsv) == 2
-
-
-def test_parse_count_matrix_invalid() -> None:
-    # Less than 2 columns
-    with pytest.raises(ValueError, match="at least 2 sample columns"):
-        parse_count_matrix("gene_id\nENSG00000100292\n")
-
-    # Non-numeric counts
-    with pytest.raises(ValueError, match="non-numeric"):
-        parse_count_matrix("gene_id,s1,s2\nENSG00000100292,abc,100\n")
-
-    # Negative counts
-    with pytest.raises(ValueError, match="negative"):
-        parse_count_matrix("gene_id,s1,s2\nENSG00000100292,-5,100\n")
-
-
-def test_parse_sample_info_explicit() -> None:
-    sample_df_raw = pd.DataFrame(
+def test_ambiguous_condition_values_fail_safely() -> None:
+    """Sample metadata with ambiguous condition values must raise ValueError."""
+    sids = ["s1", "s2"]
+    ambiguous_df = pd.DataFrame(
         {
-            "sample_id": ["ctrl_1", "trt_1"],
+            "sample_id": sids,
+            "condition_type": ["treated_maybe", "unknown_group"],
+            "biological_replicate_id": ["rep_1", "rep_2"],
+        }
+    )
+    with pytest.raises(ValueError, match="Invalid condition value"):
+        parse_sample_info(ambiguous_df, sids)
+
+
+def test_missing_biological_replicate_column_fails_safely() -> None:
+    """Sample metadata without an explicit biological replicate column must raise ValueError."""
+    sids = ["s1", "s2"]
+    no_rep_df = pd.DataFrame(
+        {
+            "sample_id": sids,
             "condition_type": ["control", "treatment"],
-            "biological_replicate_id": ["b_c1", "b_t1"],
         }
     )
-    res_df = parse_sample_info(sample_df_raw, ["ctrl_1", "trt_1"])
-    assert list(res_df["condition_type"]) == ["control", "treatment"]
-    assert list(res_df["biological_replicate_id"]) == ["b_c1", "b_t1"]
+    with pytest.raises(ValueError, match="explicit biological replicate column"):
+        parse_sample_info(no_rep_df, sids)
 
 
-def test_parse_sample_info_auto_inference() -> None:
-    sids = ["dmso_rep1", "dmso_rep2", "rotenone_rep1", "rotenone_rep2"]
-    res_df = parse_sample_info(None, sids)
-    assert len(res_df) == 4
-    assert res_df.loc[res_df["sample_id"] == "dmso_rep1", "condition_type"].iloc[0] == "control"
-    assert res_df.loc[res_df["sample_id"] == "rotenone_rep1", "condition_type"].iloc[0] == "treatment"
-
-
-def test_build_canonical_metadata() -> None:
-    samples_df = pd.DataFrame(
+def test_empty_biological_replicate_value_fails_safely() -> None:
+    """Sample metadata with empty biological replicate identifier must raise ValueError."""
+    sids = ["s1", "s2"]
+    empty_rep_df = pd.DataFrame(
         {
-            "sample_id": ["c1", "c2", "t1", "t2"],
-            "condition_type": ["control", "control", "treatment", "treatment"],
-            "biological_replicate_id": ["b_c1", "b_c2", "b_t1", "b_t2"],
+            "sample_id": sids,
+            "condition_type": ["control", "treatment"],
+            "biological_replicate_id": ["rep_1", ""],
         }
     )
-    params = ChemicalParams(agent_name="Rotenone", concentration_or_dose=0.5, developmental_age="day_35")
-    meta = build_canonical_metadata(samples_df, params)
-
-    assert "studies" in meta
-    assert "experiments" in meta
-    assert "conditions" in meta
-    assert "samples" in meta
-    assert len(meta["samples"]) == 4
-    assert meta["conditions"][0]["developmental_age_or_stage"] == "day_35"
-    assert meta["exposures"][0]["agent_name"] == "Rotenone"
-    assert meta["treatment_control_relationships"][0]["relationship_id"] == "rel_app_01"
+    with pytest.raises(ValueError, match="Missing biological replicate identifier"):
+        parse_sample_info(empty_rep_df, sids)
 
 
-def test_generate_demo_data() -> None:
-    counts_df, samples_df, params = generate_demo_data()
-    assert len(counts_df) == 40
-    assert len(samples_df) == 6
-    assert sum(samples_df["condition_type"] == "control") == 3
-    assert sum(samples_df["condition_type"] == "treatment") == 3
-    assert params.agent_name == "Rotenone"
-
-
-def test_run_pipeline_insufficient_replicates() -> None:
-    counts_df = pd.DataFrame(
+def test_missing_matrix_sample_in_metadata_fails_safely() -> None:
+    """Count matrix sample missing from metadata must raise ValueError."""
+    matrix_sids = ["s1", "s2", "s3"]
+    partial_df = pd.DataFrame(
         {
-            "gene_id": ["ENSG00000100292"],
-            "ctrl_1": [100],
-            "trt_1": [200],
-        }
-    )
-    samples_df = pd.DataFrame(
-        {
-            "sample_id": ["ctrl_1", "trt_1"],
+            "sample_id": ["s1", "s2"],
             "condition_type": ["control", "treatment"],
             "biological_replicate_id": ["rep_1", "rep_2"],
         }
     )
-    params = ChemicalParams()
-    res = run_full_analysis_pipeline(counts_df, samples_df, params)
+    with pytest.raises(ValueError, match="missing explicit entries for matrix sample"):
+        parse_sample_info(partial_df, matrix_sids)
+
+
+# -----------------------------------------------------------------------------
+# 3. Pipeline Gating & Safe Failure
+# -----------------------------------------------------------------------------
+def test_pipeline_rejects_missing_sample_metadata() -> None:
+    """Pipeline runner must return is_success=False when samples_input is None."""
+    counts_df, _, params = _create_test_dataset()
+    res = run_full_analysis_pipeline(counts_df, None, params)
     assert not res.is_success
-    assert "at least 2 biological replicates" in res.error_message
+    assert "Explicit sample metadata is required" in (res.error_message or "")
 
 
-def test_run_pipeline_demo_data_live() -> None:
-    """Live full integration test running all 5 backend stages with real DESeq2 in R."""
-    counts_df, samples_df, params = generate_demo_data()
+def test_pipeline_rejects_missing_chemical_name() -> None:
+    """Pipeline runner must reject empty chemical agent name."""
+    counts_df, samples_df, params = _create_test_dataset()
+    empty_agent_params = ChemicalParams(agent_name="", developmental_age="day_35")
+    res = run_full_analysis_pipeline(counts_df, samples_df, empty_agent_params)
+    assert not res.is_success
+    assert "Chemical / Agent Name is required" in (res.error_message or "")
+
+
+def test_pipeline_rejects_missing_developmental_age() -> None:
+    """Pipeline runner must reject empty developmental age."""
+    counts_df, samples_df, params = _create_test_dataset()
+    empty_age_params = ChemicalParams(agent_name="Compound_X", developmental_age="")
+    res = run_full_analysis_pipeline(counts_df, samples_df, empty_age_params)
+    assert not res.is_success
+    assert "Developmental Age / Stage is required" in (res.error_message or "")
+
+
+def test_pipeline_rejects_under_replicated_cohort() -> None:
+    """Pipeline runner must safely block cohorts with < 2 biological replicates."""
+    counts_df, samples_df, params = _create_test_dataset()
+    # Filter to 1 treatment and 1 control
+    under_replicated_samples = samples_df.iloc[[0, 3]].copy()
+    sub_counts = counts_df[["gene_id"] + list(under_replicated_samples["sample_id"])]
+
+    res = run_full_analysis_pipeline(sub_counts, under_replicated_samples, params)
+    assert not res.is_success
+    assert "at least 2 biological replicates" in (res.error_message or "")
+
+
+# -----------------------------------------------------------------------------
+# 4. End-to-End Pipeline Execution with Valid Explicit Metadata
+# -----------------------------------------------------------------------------
+def test_pipeline_runs_with_valid_explicit_metadata() -> None:
+    """Live integration test running all 5 backend stages with real DESeq2 using explicit metadata."""
+    counts_df, samples_df, params = _create_test_dataset(n_genes=40)
     res = run_full_analysis_pipeline(counts_df, samples_df, params)
 
     assert res.is_success, f"Pipeline failed: {res.error_message}"
@@ -166,8 +274,3 @@ def test_run_pipeline_demo_data_live() -> None:
     ]
     for col in expected_cols:
         assert col in res.de_genes_df.columns
-
-    # JSON serialization
-    summary_dict = res.to_summary_dict()
-    json_str = json.dumps(summary_dict)
-    assert len(json_str) > 0

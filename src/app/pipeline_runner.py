@@ -1,22 +1,23 @@
 """Pipeline runner orchestrating end-to-end Bulk RNA-seq differential expression.
 
 Connects:
-1. Count Matrix & Sample Info Parsing
+1. Count Matrix & Explicit Sample Metadata Parsing
 2. Step 6A: Bulk Raw-Count QC (`validate_bulk_counts`)
 3. Step 6B: Gene Harmonization v1 (`harmonize_bulk_counts`)
 4. Step 6C: Bulk Normalization v1 (`normalize_bulk_dataset` with official DESeq2 size factors)
 5. Step 7A: Treatment-versus-Matched-Control Contrast Builder v1 (`build_response_contrasts`)
 6. Step 7B: Bulk Differential Expression v1 (`run_differential_expression` with official DESeq2 Wald test)
+
+Strictly requires explicit user-provided sample metadata.
+Automatic inference or guessing of treatment/control roles and biological replicates is prohibited.
 """
 
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 import io
 import json
 import os
 from pathlib import Path
-import random
-import re
 import tempfile
 from typing import Any
 
@@ -63,18 +64,18 @@ def get_gene_reference() -> GeneReference:
 class ChemicalParams:
     """User-entered exposure, biological context, and developmental timing parameters."""
 
-    agent_name: str = "Rotenone"
-    agent_identifier: str = "CID:6758"
-    concentration_or_dose: float = 0.5
+    agent_name: str
+    agent_identifier: str = ""
+    concentration_or_dose: float = 0.0
     concentration_or_dose_unit: str = "uM"
-    developmental_age: str = "day_35"
-    exposure_duration: float = 24.0
+    developmental_age: str = ""
+    exposure_duration: float = 0.0
     exposure_duration_unit: str = "h"
-    vehicle: str = "0.1% DMSO"
-    organoid_context_id: str = "cerebral_organoid_ctx"
+    vehicle: str = ""
+    organoid_context_id: str = "organoid_context"
     organoid_type: str = "cerebral_organoid"
     brain_region: str = "cerebral_cortex"
-    biological_source_id: str = "ipsc_donor_source"
+    biological_source_id: str = "biological_source"
     species: str = "Homo sapiens"
 
     def to_dict(self) -> dict[str, Any]:
@@ -110,11 +111,14 @@ class PipelineRunResult:
 
 
 def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
-    """Parse uploaded file, string, or DataFrame into a normalized count DataFrame.
+    """Parse uploaded file, string, or DataFrame into a validated count DataFrame.
 
     Returns:
         (df, sample_ids) where df has 'gene_id' column followed by sample columns.
     """
+    if file_or_content is None:
+        raise ValueError("Count matrix input is missing. Please provide a count matrix CSV/TSV.")
+
     if isinstance(file_or_content, pd.DataFrame):
         df = file_or_content.copy()
     elif isinstance(file_or_content, (str, Path)) and os.path.exists(str(file_or_content)):
@@ -122,7 +126,6 @@ def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
         sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
         df = pd.read_csv(path, sep=sep)
     elif hasattr(file_or_content, "read"):
-        # Streamlit UploadedFile or file-like object
         content = file_or_content.read()
         if isinstance(content, bytes):
             content = content.decode("utf-8-sig")
@@ -134,7 +137,6 @@ def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
     else:
         raise ValueError(f"Unsupported count matrix input type: {type(file_or_content)}")
 
-    # Ensure gene identifier is first column
     if df.empty or len(df.columns) < 2:
         raise ValueError("Count matrix must contain at least a gene column and at least 2 sample columns.")
 
@@ -160,111 +162,135 @@ def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
 
 
 def parse_sample_info(
-    file_or_content: Any | None,
+    file_or_content: Any,
     matrix_sample_ids: list[str],
 ) -> pd.DataFrame:
-    """Parse or automatically infer sample condition and biological replicate metadata."""
-    if file_or_content is not None:
-        if isinstance(file_or_content, pd.DataFrame):
-            df = file_or_content.copy()
-        elif isinstance(file_or_content, (str, Path)) and os.path.exists(str(file_or_content)):
-            path = str(file_or_content)
-            sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
-            df = pd.read_csv(path, sep=sep)
-        elif hasattr(file_or_content, "read"):
-            content = file_or_content.read()
-            if isinstance(content, bytes):
-                content = content.decode("utf-8-sig")
-            sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
-            df = pd.read_csv(io.StringIO(content), sep=sep)
-        elif isinstance(file_or_content, str):
-            sep = "\t" if ("\t" in file_or_content and "," not in file_or_content.split("\n")[0]) else ","
-            df = pd.read_csv(io.StringIO(file_or_content), sep=sep)
-        else:
-            df = None
+    """Parse and strictly validate explicit sample metadata.
 
-        if df is not None and not df.empty:
-            # Reconcile columns
-            col_map = {str(c).strip().lower(): str(c).strip() for c in df.columns}
-            sid_col = col_map.get("sample_id") or col_map.get("sample") or df.columns[0]
-            cond_col = (
-                col_map.get("condition_type")
-                or col_map.get("condition")
-                or col_map.get("group")
-                or col_map.get("status")
+    Requires explicit sample_id, condition_type ('treatment' or 'control'), and
+    biological_replicate_id for every matrix sample.
+    Automatic inference of condition or replicates from sample names is prohibited.
+    """
+    if file_or_content is None:
+        raise ValueError(
+            "Explicit sample metadata is required. "
+            "Automatic inference of treatment/control assignments or biological replicates from sample names is prohibited."
+        )
+
+    if isinstance(file_or_content, pd.DataFrame):
+        df = file_or_content.copy()
+    elif isinstance(file_or_content, (str, Path)) and os.path.exists(str(file_or_content)):
+        path = str(file_or_content)
+        sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
+        df = pd.read_csv(path, sep=sep)
+    elif hasattr(file_or_content, "read"):
+        content = file_or_content.read()
+        if isinstance(content, bytes):
+            content = content.decode("utf-8-sig")
+        sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
+        df = pd.read_csv(io.StringIO(content), sep=sep)
+    elif isinstance(file_or_content, str):
+        sep = "\t" if ("\t" in file_or_content and "," not in file_or_content.split("\n")[0]) else ","
+        df = pd.read_csv(io.StringIO(file_or_content), sep=sep)
+    else:
+        raise ValueError(f"Unsupported sample metadata input type: {type(file_or_content)}")
+
+    if df.empty:
+        raise ValueError(
+            "Sample metadata file is empty. "
+            "Explicit sample metadata with treatment/control and biological replicate assignments is required."
+        )
+
+    # Reconcile columns
+    col_map = {str(c).strip().lower(): str(c).strip() for c in df.columns}
+    sid_col = col_map.get("sample_id") or col_map.get("sample")
+    if not sid_col:
+        # Check if first column looks like sample_id
+        sid_col = df.columns[0]
+
+    df = df.rename(columns={sid_col: "sample_id"})
+    df["sample_id"] = df["sample_id"].astype(str).str.strip()
+
+    # Verify that all matrix samples are explicitly declared in the metadata
+    meta_sids = set(df["sample_id"])
+    missing_from_metadata = [s for s in matrix_sample_ids if s not in meta_sids]
+    if missing_from_metadata:
+        raise ValueError(
+            f"Sample metadata is missing explicit entries for matrix sample(s): {', '.join(missing_from_metadata)}. "
+            "All count matrix samples must have explicit metadata entries."
+        )
+
+    # Filter to matrix samples in exact matrix order
+    df = df.set_index("sample_id").loc[matrix_sample_ids].reset_index()
+
+    # Reconcile condition column
+    cond_col = (
+        col_map.get("condition_type")
+        or col_map.get("condition")
+        or col_map.get("treatment_control_status")
+        or col_map.get("status")
+        or col_map.get("group")
+    )
+    if not cond_col or cond_col not in df.columns:
+        raise ValueError(
+            "Sample metadata must contain an explicit condition column (e.g. 'condition_type', 'condition', or 'treatment_control_status') "
+            "specifying 'treatment' or 'control' for every sample. Automatic guessing from sample names is prohibited."
+        )
+
+    # Validate condition values
+    norm_conditions = []
+    for sid, val in zip(df["sample_id"], df[cond_col]):
+        if pd.isna(val):
+            raise ValueError(
+                f"Missing condition value for sample '{sid}'. "
+                "Must explicitly specify 'treatment' or 'control'. Automatic guessing from sample names is prohibited."
             )
-            rep_col = (
-                col_map.get("biological_replicate_id")
-                or col_map.get("replicate_id")
-                or col_map.get("replicate")
-                or col_map.get("rep")
+        clean_val = str(val).strip().lower()
+        if clean_val in ("treatment", "treat", "treated"):
+            norm_conditions.append("treatment")
+        elif clean_val in ("control", "ctrl", "baseline", "untreated"):
+            norm_conditions.append("control")
+        else:
+            raise ValueError(
+                f"Invalid condition value '{val}' for sample '{sid}'. "
+                "Must explicitly specify 'treatment' or 'control'. Automatic guessing from sample names is prohibited."
             )
 
-            df = df.rename(columns={sid_col: "sample_id"})
-            df["sample_id"] = df["sample_id"].astype(str).str.strip()
+    df["condition_type"] = norm_conditions
 
-            # Ensure all matrix samples are in metadata
-            meta_sids = set(df["sample_id"])
-            if all(s in meta_sids for s in matrix_sample_ids):
-                # Filter to matrix samples in exact matrix order
-                df = df.set_index("sample_id").loc[matrix_sample_ids].reset_index()
+    # Reconcile biological replicate column
+    rep_col = (
+        col_map.get("biological_replicate_id")
+        or col_map.get("biological_replicate")
+        or col_map.get("replicate_id")
+        or col_map.get("replicate")
+        or col_map.get("rep")
+    )
+    if not rep_col or rep_col not in df.columns:
+        raise ValueError(
+            "Sample metadata must contain an explicit biological replicate column (e.g. 'biological_replicate_id') "
+            "specifying distinct biological replicate identifiers for each sample. Automatic replicate numbering is prohibited."
+        )
 
-                if cond_col and cond_col in df.columns:
-                    # Normalize condition strings to 'control' or 'treatment'
-                    def norm_cond(val: Any) -> str:
-                        s = str(val).strip().lower()
-                        if any(w in s for w in ("ctrl", "control", "veh", "dmso", "untreated", "mock", "baseline")):
-                            return "control"
-                        return "treatment"
+    # Validate biological replicate IDs
+    clean_reps = []
+    for sid, val in zip(df["sample_id"], df[rep_col]):
+        if pd.isna(val):
+            raise ValueError(
+                f"Missing biological replicate identifier for sample '{sid}'. "
+                "Explicit biological replicate assignment is required."
+            )
+        rep_str = str(val).strip()
+        if not rep_str or rep_str.lower() in ("nan", "none", ""):
+            raise ValueError(
+                f"Missing biological replicate identifier for sample '{sid}'. "
+                "Explicit biological replicate assignment is required."
+            )
+        clean_reps.append(rep_str)
 
-                    df["condition_type"] = df[cond_col].apply(norm_cond)
-                else:
-                    df["condition_type"] = [_infer_sample_condition(s) for s in df["sample_id"]]
+    df["biological_replicate_id"] = clean_reps
 
-                if rep_col and rep_col in df.columns:
-                    df["biological_replicate_id"] = df[rep_col].astype(str).str.strip()
-                else:
-                    df["biological_replicate_id"] = [f"rep_{i+1}" for i in range(len(df))]
-
-                return df[["sample_id", "condition_type", "biological_replicate_id"]]
-
-    # Auto-infer condition and replicate assignments from sample names
-    records = []
-    ctrl_count = 0
-    trt_count = 0
-
-    for sid in matrix_sample_ids:
-        cond = _infer_sample_condition(sid)
-        if cond == "control":
-            ctrl_count += 1
-            rep = f"rep_ctrl_{ctrl_count}"
-        else:
-            trt_count += 1
-            rep = f"rep_trt_{trt_count}"
-        records.append({"sample_id": sid, "condition_type": cond, "biological_replicate_id": rep})
-
-    # If all inferred as one class, split evenly (first half control, second half treatment)
-    all_ctrl = all(r["condition_type"] == "control" for r in records)
-    all_trt = all(r["condition_type"] == "treatment" for r in records)
-    if (all_ctrl or all_trt) and len(records) >= 4:
-        mid = len(records) // 2
-        for i, r in enumerate(records):
-            if i < mid:
-                r["condition_type"] = "control"
-                r["biological_replicate_id"] = f"rep_ctrl_{i+1}"
-            else:
-                r["condition_type"] = "treatment"
-                r["biological_replicate_id"] = f"rep_trt_{i - mid + 1}"
-
-    return pd.DataFrame(records)
-
-
-def _infer_sample_condition(sample_id: str) -> str:
-    """Infer control vs treatment from sample name substrings."""
-    s = sample_id.lower()
-    if any(w in s for w in ("ctrl", "control", "dmso", "veh", "vehicle", "mock", "baseline", "untreated", "c_")):
-        return "control"
-    return "treatment"
+    return df[["sample_id", "condition_type", "biological_replicate_id"]]
 
 
 def build_canonical_metadata(
@@ -382,150 +408,72 @@ def build_canonical_metadata(
     return metadata
 
 
-def generate_demo_data() -> tuple[pd.DataFrame, pd.DataFrame, ChemicalParams]:
-    """Generate realistic demonstration human neural organoid RNA-seq data (Rotenone 0.5 uM).
-
-    Contains 40 authentic human genes covering:
-    - Mitochondrial and ER stress markers (upregulated)
-    - Neuronal differentiation and synaptic transmission markers (downregulated)
-    - Canonical housekeeping genes (unchanged)
-    """
-    sids = [
-        "ctrl_organoid_rep1",
-        "ctrl_organoid_rep2",
-        "ctrl_organoid_rep3",
-        "rotenone_0.5uM_rep1",
-        "rotenone_0.5uM_rep2",
-        "rotenone_0.5uM_rep3",
-    ]
-
-    # Authentic human genes from Ensembl 112
-    # 12 Upregulated stress / apoptosis markers
-    up_genes = [
-        "ENSG00000100292",  # HMOX1 (Heme oxygenase 1)
-        "ENSG00000128272",  # ATF4 (Activating transcription factor 4)
-        "ENSG00000175197",  # DDIT3 (CHOP)
-        "ENSG00000001084",  # GCLC (Glutamate-cysteine ligase)
-        "ENSG00000181019",  # NQO1 (NAD(P)H dehydrogenase)
-        "ENSG00000044574",  # HSPA5 (BiP / GRP78)
-        "ENSG00000116717",  # GADD45A (Growth arrest and DNA damage)
-        "ENSG00000087088",  # BAX (Apoptosis regulator BAX)
-        "ENSG00000164305",  # CASP3 (Caspase 3)
-        "ENSG00000124762",  # CDKN1A (p21)
-        "ENSG00000161011",  # SQSTM1 (p62)
-        "ENSG00000291237",  # SOD2 (Superoxide dismutase 2)
-    ]
-
-    # 14 Downregulated synaptic and mitochondrial markers
-    down_genes = [
-        "ENSG00000090266",  # NDUFS1 (Complex I subunit)
-        "ENSG00000167792",  # NDUFV1 (Complex I subunit)
-        "ENSG00000078018",  # MAP2 (Microtubule associated protein 2)
-        "ENSG00000258947",  # TUBB3 (Beta-III tubulin)
-        "ENSG00000008056",  # SYN1 (Synapsin 1)
-        "ENSG00000132639",  # SNAP25 (Synaptosome associated protein)
-        "ENSG00000167281",  # RBFOX3 (NeuN)
-        "ENSG00000102003",  # SYP (Synaptophysin)
-        "ENSG00000106089",  # STX1A (Syntaxin 1A)
-        "ENSG00000176884",  # GRIN1 (NMDA receptor 1)
-        "ENSG00000155511",  # GRIA1 (AMPA receptor 1)
-        "ENSG00000070808",  # CAMK2A (CaMKII alpha)
-        "ENSG00000001617",  # SEMA3F (Semaphorin 3F)
-        "ENSG00000001631",  # KRIT1 (KRIT1 ankyrin repeat)
-    ]
-
-    # 14 Stable housekeeping genes
-    housekeeping_genes = [
-        "ENSG00000111640",  # GAPDH
-        "ENSG00000075624",  # ACTB
-        "ENSG00000166710",  # B2M
-        "ENSG00000089157",  # RPLP0
-        "ENSG00000150991",  # UBC
-        "ENSG00000196262",  # PPIA
-        "ENSG00000112592",  # TBP
-        "ENSG00000168488",  # HPRT1
-        "ENSG00000102144",  # PGK1
-        "ENSG00000164924",  # YWHAZ
-        "ENSG00000073578",  # SDHA
-        "ENSG00000144713",  # RPS18
-        "ENSG00000000003",  # TSPAN6
-        "ENSG00000000419",  # DPM1
-    ]
-
-    all_genes = up_genes + down_genes + housekeeping_genes
-    mean_levels = [40, 80, 150, 300, 600, 1200, 2500, 5000]
-
-    rng = random.Random(2026)
-    rows = []
-
-    for i, gid in enumerate(all_genes):
-        base_mu = mean_levels[i % len(mean_levels)]
-        if gid in up_genes:
-            fc = 3.8
-        elif gid in down_genes:
-            fc = 0.28
-        else:
-            fc = 1.0
-
-        row = [gid]
-        for sid in sids:
-            is_trt = "rotenone" in sid
-            target_mu = base_mu * (fc if is_trt else 1.0)
-            # Add realistic biological replicate variation
-            val = max(10, int(round(rng.gauss(target_mu, max(3.0, target_mu * 0.12)))))
-            row.append(val)
-        rows.append(row)
-
-    counts_df = pd.DataFrame(rows, columns=["gene_id"] + sids)
-
-    samples_records = []
-    for sid in sids:
-        ctype = "treatment" if "rotenone" in sid else "control"
-        rep_num = sid.split("_rep")[-1]
-        rep_id = f"rep_{'trt' if ctype == 'treatment' else 'ctrl'}_{rep_num}"
-        samples_records.append(
-            {
-                "sample_id": sid,
-                "condition_type": ctype,
-                "biological_replicate_id": rep_id,
-            }
-        )
-    samples_df = pd.DataFrame(samples_records)
-
-    params = ChemicalParams(
-        agent_name="Rotenone",
-        agent_identifier="CID:6758",
-        concentration_or_dose=0.5,
-        concentration_or_dose_unit="uM",
-        developmental_age="day_35",
-        exposure_duration=24.0,
-        exposure_duration_unit="h",
-        vehicle="0.1% DMSO",
-        organoid_context_id="ctx_cerebral_cortex_day35",
-        organoid_type="cerebral_organoid",
-        brain_region="cerebral_cortex",
-        biological_source_id="ipsc_donor_line_1",
-        species="Homo sapiens",
-    )
-
-    return counts_df, samples_df, params
-
-
 def run_full_analysis_pipeline(
     counts_input: Any,
-    samples_input: Any | None,
+    samples_input: Any,
     chemical_params: ChemicalParams,
     r_binary_path: str = "Rscript",
     strict_version_check: bool = True,
     r_timeout_seconds: int = 180,
 ) -> PipelineRunResult:
-    """Execute the complete end-to-end differential expression analysis pipeline."""
+    """Execute the complete end-to-end differential expression analysis pipeline.
+
+    Strictly requires both counts_input and samples_input with explicit metadata.
+    """
+    if counts_input is None:
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message="Count matrix is required. Please provide a valid raw-count matrix CSV or TSV file.",
+        )
+
+    if samples_input is None:
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message="Explicit sample metadata is required. Automatic inference of treatment/control assignments or biological replicates from sample names is prohibited.",
+        )
+
+    if not chemical_params.agent_name or not chemical_params.agent_name.strip():
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message="Chemical / Agent Name is required for contrast modeling.",
+        )
+
+    if not chemical_params.developmental_age or not chemical_params.developmental_age.strip():
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message="Developmental Age / Stage is required for contrast modeling.",
+        )
+
     temp_matrix_path: str | None = None
     try:
         # 1. Parse and validate count matrix
         counts_df, sample_ids = parse_count_matrix(counts_input)
 
-        # 2. Parse or infer sample table
+        # 2. Parse and strictly validate explicit sample metadata
         samples_df = parse_sample_info(samples_input, sample_ids)
 
         # Verify replicate counts
@@ -727,7 +675,6 @@ def run_full_analysis_pipeline(
         excluded_records = [e.to_dict() for e in cr.excluded_genes]
         excluded_genes_df = pd.DataFrame(excluded_records)
 
-        # Enriched samples dataframe with size factors and library sizes
         enriched_samples = []
         sf_dict = cr.size_factors_used
         for _, s in samples_df.iterrows():
@@ -784,6 +731,17 @@ def run_full_analysis_pipeline(
             de_dataset=de_dataset,
         )
 
+    except ValueError as exc:
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message=str(exc),
+        )
     except Exception as exc:
         return PipelineRunResult(
             is_success=False,

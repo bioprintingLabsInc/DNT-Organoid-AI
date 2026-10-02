@@ -1,22 +1,23 @@
 """DNT Organoid AI: Treatment-Response Explorer.
 
-End-to-end interactive Bulk RNA-seq differential expression analysis web application.
+Statistically rigorous Bulk RNA-seq differential expression analysis web application.
 Workflow:
-Upload RNA-seq counts
+Upload real raw-count matrix
         ↓
-Upload sample information
+Upload explicit sample metadata
         ↓
-Enter chemical / dose / age
+Enter/verify exposure information
         ↓
-Click ANALYZE
-        ↓
-Existing backend runs (QC → Harmonization → Normalization → Contrast Builder → DESeq2 DE)
+Run existing backend (QC → Harmonization → Normalization → Contrast Builder → DESeq2 DE)
         ↓
 Treatment Response Generated
         ↓
 Gene table + visual plot + scientific checks
         ↓
 Download results
+
+Strictly real-data analysis interface.
+Automatic inference of treatment/control status and biological replicates from sample names is prohibited.
 """
 
 import io
@@ -33,7 +34,6 @@ import streamlit as st
 from src.app.pipeline_runner import (
     ChemicalParams,
     PipelineRunResult,
-    generate_demo_data,
     parse_count_matrix,
     parse_sample_info,
     run_full_analysis_pipeline,
@@ -82,33 +82,6 @@ st.markdown(
         letter-spacing: 0.05em;
         margin-top: 4px;
     }
-    .status-badge-pass {
-        display: inline-block;
-        background-color: #DEF7EC;
-        color: #03543F;
-        padding: 4px 12px;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .status-badge-review {
-        display: inline-block;
-        background-color: #FEF08A;
-        color: #713F12;
-        padding: 4px 12px;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .status-badge-fail {
-        display: inline-block;
-        background-color: #FDE8E8;
-        color: #9B1C1C;
-        padding: 4px 12px;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -127,57 +100,81 @@ st.markdown(
 )
 
 # -----------------------------------------------------------------------------
-# Sidebar: Configuration, Uploads & Chemical Inputs
+# Sidebar: File Uploads & Exposure Inputs
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.header("⚙️ Experimental Setup")
+    st.header("⚙️ Data Ingestion & Setup")
 
-    data_source = st.radio(
-        "Data Source Mode",
-        options=[
-            "🧪 Load Demo Data (Rotenone 0.5 µM, Day 35 Organoids)",
-            "📁 Upload Custom RNA-seq Files",
-        ],
-        index=0,
+    st.subheader("1. Count Matrix (Required)")
+    uploaded_counts = st.file_uploader(
+        "Upload raw count matrix (CSV / TSV)",
+        type=["csv", "tsv", "txt"],
+        help="Column 1: Gene identifier (Ensembl gene ID or gene symbol). Remaining columns: Sample IDs containing non-negative raw integer counts.",
     )
 
-    uploaded_counts = None
-    uploaded_samples = None
+    st.subheader("2. Sample Metadata (Required)")
+    uploaded_samples = st.file_uploader(
+        "Upload explicit sample metadata (CSV / TSV)",
+        type=["csv", "tsv", "txt"],
+        help="Mandatory columns: sample_id, condition_type ('treatment' or 'control'), biological_replicate_id. Automatic inference from sample names is prohibited.",
+    )
 
-    if "Upload Custom" in data_source:
-        st.subheader("1. Count Matrix")
-        uploaded_counts = st.file_uploader(
-            "Upload RNA-seq count matrix (CSV / TSV)",
-            type=["csv", "tsv", "txt"],
-            help="First column: Gene identifiers (Ensembl ID or Gene Symbol). Remaining columns: Sample raw integer counts.",
+    with st.expander("📋 Sample Metadata Format Guide", expanded=False):
+        st.markdown(
+            """
+            Sample metadata must explicitly map every matrix sample.
+            **Required Columns:**
+            - `sample_id`: Exact sample identifier matching count matrix column header.
+            - `condition_type`: Must explicitly specify `treatment` or `control`.
+            - `biological_replicate_id`: Explicit biological replicate identifier (e.g. `rep_1`, `rep_2`).
+            """
+        )
+        sample_meta_template = pd.DataFrame(
+            {
+                "sample_id": ["sample_ctrl_1", "sample_ctrl_2", "sample_trt_1", "sample_trt_2"],
+                "condition_type": ["control", "control", "treatment", "treatment"],
+                "biological_replicate_id": ["bio_rep_1", "bio_rep_2", "bio_rep_3", "bio_rep_4"],
+            }
+        )
+        st.dataframe(sample_meta_template, use_container_width=True)
+
+        template_csv = sample_meta_template.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Template (CSV)",
+            data=template_csv,
+            file_name="sample_metadata_template.csv",
+            mime="text/csv",
+            use_container_width=True,
         )
 
-        st.subheader("2. Sample Information")
-        uploaded_samples = st.file_uploader(
-            "Upload sample metadata (CSV / TSV, Optional)",
-            type=["csv", "tsv", "txt"],
-            help="Optional columns: sample_id, condition_type ('treatment' or 'control'), biological_replicate_id. If omitted, condition is inferred from sample names.",
+    st.subheader("3. Exposure & Experimental Design")
+    with st.expander("🔬 Exposure Parameters", expanded=True):
+        chem_name = st.text_input(
+            "Chemical / Agent Name *",
+            value="",
+            placeholder="e.g., Bisphenol A",
+            help="Name of the chemical compound or stressor tested.",
         )
-    else:
-        st.info("Demo data loaded: 6 human cerebral cortex organoid samples (3 control, 3 rotenone-treated) with 40 authentic marker genes.")
-
-    st.subheader("3. Chemical & Exposure Parameters")
-    with st.expander("🔬 Chemical / Dose / Age Inputs", expanded=True):
-        chem_name = st.text_input("Chemical / Agent Name", value="Rotenone")
-        chem_id = st.text_input("Agent Identifier / CID", value="CID:6758")
+        chem_id = st.text_input(
+            "Agent Identifier / CID",
+            value="",
+            placeholder="e.g., CID:6623",
+            help="PubChem CID, CAS registry number, or standard chemical identifier.",
+        )
 
         col_dose1, col_dose2 = st.columns([2, 1])
         with col_dose1:
-            chem_dose = st.number_input("Concentration / Dose", value=0.5, step=0.1, format="%.2f")
+            chem_dose = st.number_input("Concentration / Dose", value=10.0, step=0.1, format="%.2f")
         with col_dose2:
-            chem_unit = st.selectbox("Unit", options=["uM", "nM", "mM", "ug/mL", "mg/kg"], index=0)
+            chem_unit = st.selectbox("Unit", options=["uM", "nM", "mM", "ug/mL", "mg/kg", "ppm"], index=0)
 
         col_age1, col_dur = st.columns([1, 1])
         with col_age1:
             dev_age = st.text_input(
-                "Developmental Age",
-                value="day_35",
-                help="Strictly matches developmental stage between treatment and control (e.g. 'day_35').",
+                "Developmental Age *",
+                value="",
+                placeholder="e.g., day_35",
+                help="Strictly matches developmental stage between treatment and control (e.g. 'day_35' or 'Day 30').",
             )
         with col_dur:
             exp_dur = st.number_input("Duration", value=24.0, step=1.0)
@@ -186,27 +183,11 @@ with st.sidebar:
         with col_dur_unit:
             exp_dur_unit = st.selectbox("Duration Unit", options=["h", "days", "weeks"], index=0)
         with col_veh:
-            chem_vehicle = st.text_input("Vehicle", value="0.1% DMSO")
+            chem_vehicle = st.text_input("Vehicle", value="", placeholder="e.g., 0.1% DMSO")
 
-        organoid_ctx = st.text_input("Organoid Context", value="Cerebral Cortex Organoid")
-        brain_reg = st.text_input("Brain Region", value="cerebral_cortex")
-        bio_src = st.text_input("Biological Source / Line", value="iPSC_donor_line_1")
-
-    chem_params = ChemicalParams(
-        agent_name=chem_name,
-        agent_identifier=chem_id,
-        concentration_or_dose=chem_dose,
-        concentration_or_dose_unit=chem_unit,
-        developmental_age=dev_age,
-        exposure_duration=exp_dur,
-        exposure_duration_unit=exp_dur_unit,
-        vehicle=chem_vehicle,
-        organoid_context_id=f"ctx_{organoid_ctx.lower().replace(' ', '_')}",
-        organoid_type="cerebral_organoid",
-        brain_region=brain_reg,
-        biological_source_id=bio_src,
-        species="Homo sapiens",
-    )
+        organoid_ctx = st.text_input("Organoid Context", value="", placeholder="e.g., Cerebral Cortex Organoid")
+        brain_reg = st.text_input("Brain Region", value="", placeholder="e.g., cerebral_cortex")
+        bio_src = st.text_input("Biological Source / Line", value="", placeholder="e.g., iPSC_donor_line_1")
 
     analyze_button = st.button("🚀 ANALYZE", type="primary", use_container_width=True)
 
@@ -224,22 +205,44 @@ if "pipeline_result" not in st.session_state:
     st.session_state["pipeline_result"] = None
 
 if analyze_button:
-    with st.spinner("Executing end-to-end differential expression pipeline (QC → Harmonization → Normalization → Contrast → DESeq2)..."):
-        if "Upload Custom" in data_source:
-            if uploaded_counts is None:
-                st.error("Please upload an RNA-seq count matrix CSV or TSV file.")
-            else:
-                res = run_full_analysis_pipeline(
-                    counts_input=uploaded_counts,
-                    samples_input=uploaded_samples,
-                    chemical_params=chem_params,
-                )
-                st.session_state["pipeline_result"] = res
-        else:
-            demo_counts, demo_samples, _ = generate_demo_data()
+    # Strict validation of required inputs
+    validation_errors = []
+    if uploaded_counts is None:
+        validation_errors.append("Please upload an RNA-seq count matrix CSV or TSV file.")
+    if uploaded_samples is None:
+        validation_errors.append(
+            "Please upload explicit sample metadata CSV or TSV. "
+            "Automatic inference of treatment/control assignments or biological replicates from sample names is prohibited."
+        )
+    if not chem_name.strip():
+        validation_errors.append("Please specify Chemical / Agent Name.")
+    if not dev_age.strip():
+        validation_errors.append("Please specify Developmental Age (e.g., 'day_35').")
+
+    if validation_errors:
+        for err in validation_errors:
+            st.error(f"❌ {err}")
+    else:
+        chem_params = ChemicalParams(
+            agent_name=chem_name.strip(),
+            agent_identifier=chem_id.strip(),
+            concentration_or_dose=chem_dose,
+            concentration_or_dose_unit=chem_unit,
+            developmental_age=dev_age.strip(),
+            exposure_duration=exp_dur,
+            exposure_duration_unit=exp_dur_unit,
+            vehicle=chem_vehicle.strip(),
+            organoid_context_id=f"ctx_{organoid_ctx.lower().replace(' ', '_')}" if organoid_ctx.strip() else "organoid_context",
+            organoid_type="cerebral_organoid",
+            brain_region=brain_reg.strip() or "cerebral_cortex",
+            biological_source_id=bio_src.strip() or "biological_source",
+            species="Homo sapiens",
+        )
+
+        with st.spinner("Executing end-to-end differential expression pipeline (QC → Harmonization → Normalization → Contrast → DESeq2)..."):
             res = run_full_analysis_pipeline(
-                counts_input=demo_counts,
-                samples_input=demo_samples,
+                counts_input=uploaded_counts,
+                samples_input=uploaded_samples,
                 chemical_params=chem_params,
             )
             st.session_state["pipeline_result"] = res
@@ -251,7 +254,7 @@ res: PipelineRunResult | None = st.session_state.get("pipeline_result")
 
 if res is None:
     # Initial landing screen guidance
-    st.info("👋 Welcome! Select **Demo Data** or **Upload Custom Data** in the sidebar, review your chemical exposure parameters, and click **🚀 ANALYZE** to run the pipeline.")
+    st.info("👋 Upload a raw-count matrix and explicit sample metadata in the sidebar, enter your exposure parameters, and click **🚀 ANALYZE** to run the pipeline.")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -259,7 +262,7 @@ if res is None:
             """
             ### 1. Ingestion & Quality Control
             - Validates non-negative integer count matrix.
-            - Reconciles samples with canonical metadata.
+            - Reconciles samples with explicit canonical metadata.
             - Evaluates library sizes and zero-count fractions.
             """
         )
@@ -372,7 +375,6 @@ else:
     with tab_plots:
         de_df = res.de_genes_df.copy()
         if not de_df.empty:
-            # Prepare plotting columns
             de_df["neg_log10_padj"] = -np.log10(de_df["adjusted_p_value_bh"].replace(0, 1e-300))
             de_df["log10_base_mean"] = np.log10(de_df["base_mean"].replace(0, 1))
 
@@ -407,7 +409,6 @@ else:
                     },
                     title=f"Volcano Plot: {cr.agent_name} vs Matched Control",
                 )
-                # Cutoff lines
                 volcano_fig.add_hline(
                     y=-math.log10(0.05),
                     line_dash="dash",
@@ -498,7 +499,6 @@ else:
 
         st.caption(f"Showing **{len(display_df)}** of **{len(res.de_genes_df)}** genes evaluated.")
 
-        # Formatting table
         formatted_table = display_df.copy()
         formatted_table["base_mean"] = formatted_table["base_mean"].map(lambda x: f"{x:.2f}" if pd.notnull(x) else "")
         formatted_table["log2_fold_change"] = formatted_table["log2_fold_change"].map(lambda x: f"{x:.3f}" if pd.notnull(x) else "")
@@ -569,7 +569,6 @@ else:
 
         st.dataframe(res.samples_df, use_container_width=True)
 
-        # Plot library size vs size factor
         if not res.samples_df.empty:
             sample_fig = px.bar(
                 res.samples_df,
