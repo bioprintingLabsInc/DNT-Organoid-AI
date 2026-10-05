@@ -12,8 +12,9 @@ Strictly requires explicit user-provided sample metadata.
 Automatic inference or guessing of treatment/control roles and biological replicates is prohibited.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
+import gzip
 import io
 import json
 import os
@@ -110,50 +111,187 @@ class PipelineRunResult:
         }
 
 
-def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
-    """Parse uploaded file, string, or DataFrame into a validated count DataFrame.
+def prepare_plot_data(
+    de_df: pd.DataFrame,
+    fdr_threshold: float = 0.05,
+    max_background_points: int = 5000,
+    seed: int = 42,
+) -> tuple[pd.DataFrame, bool, int, int]:
+    """Sample background non-significant genes deterministically for smooth plotting.
+
+    Preserves 100% of statistically significant genes (adjusted_p_value_bh < fdr_threshold).
+    Samples at most `max_background_points` background points using a fixed seed (42).
+    Returns (plot_df, is_downsampled, total_significant, total_background).
+    """
+    if de_df.empty:
+        return de_df, False, 0, 0
+
+    is_sig = (de_df["adjusted_p_value_bh"] < fdr_threshold) & (de_df["result_status"] == "ELIGIBLE")
+    sig_df = de_df[is_sig]
+    bg_df = de_df[~is_sig]
+
+    total_sig = len(sig_df)
+    total_bg = len(bg_df)
+
+    if total_bg > max_background_points:
+        sampled_bg = bg_df.sample(n=max_background_points, random_state=seed)
+        combined = pd.concat([sig_df, sampled_bg], ignore_index=True)
+        return combined, True, total_sig, total_bg
+
+    return de_df, False, total_sig, total_bg
+
+
+KNOWN_ANNOTATION_COLUMNS = {
+    "entrezgene_id",
+    "entrez_id",
+    "entrez",
+    "ncbi_gene_id",
+    "external_gene_name",
+    "gene_name",
+    "symbol",
+    "gene_symbol",
+    "approved_symbol",
+    "display_name",
+    "description",
+    "desc",
+    "definition",
+    "gene_biotype",
+    "biotype",
+    "transcript_biotype",
+    "type",
+    "feature_type",
+    "chromosome",
+    "chrom",
+    "chr",
+    "seqname",
+    "start",
+    "end",
+    "strand",
+    "length",
+    "gene_length",
+    "exon_length",
+    "gc_content",
+    "version",
+}
+GENE_ID_CANDIDATE_NAMES = {
+    "gene_id",
+    "gene",
+    "ensembl_id",
+    "ensembl_gene_id",
+    "feature_id",
+    "target_id",
+    "id",
+}
+
+
+def parse_count_matrix(
+    file_or_content: Any,
+    return_excluded_columns: bool = False,
+) -> tuple[pd.DataFrame, list[str]] | tuple[pd.DataFrame, list[str], list[str]]:
+    """Parse uploaded file, string, bytes, or DataFrame into a validated count DataFrame.
+
+    Automatically handles:
+    - Gzip decompression (.gz or gzip magic bytes)
+    - Delimiter detection (tabs, commas)
+    - True gene identifier column identification
+    - Recognition and exclusion of annotation columns (e.g. entrezgene_id, external_gene_name, description)
+    - Preserves exact raw count integer values without alteration
 
     Returns:
-        (df, sample_ids) where df has 'gene_id' column followed by sample columns.
+        (df, sample_ids) by default, or (df, sample_ids, excluded_annotations) if return_excluded_columns=True.
     """
     if file_or_content is None:
         raise ValueError("Count matrix input is missing. Please provide a count matrix CSV/TSV.")
 
     if isinstance(file_or_content, pd.DataFrame):
         df = file_or_content.copy()
-    elif isinstance(file_or_content, (str, Path)) and os.path.exists(str(file_or_content)):
-        path = str(file_or_content)
-        sep = "\t" if path.endswith((".tsv", ".tab", ".txt")) else ","
-        df = pd.read_csv(path, sep=sep)
-    elif hasattr(file_or_content, "read"):
-        if hasattr(file_or_content, "seek"):
-            file_or_content.seek(0)
-        content = file_or_content.read()
-        if hasattr(file_or_content, "seek"):
-            file_or_content.seek(0)
-        if isinstance(content, bytes):
-            content = content.decode("utf-8-sig")
-        sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
-        df = pd.read_csv(io.StringIO(content), sep=sep)
-    elif isinstance(file_or_content, str):
-        sep = "\t" if ("\t" in file_or_content and "," not in file_or_content.split("\n")[0]) else ","
-        df = pd.read_csv(io.StringIO(file_or_content), sep=sep)
     else:
-        raise ValueError(f"Unsupported count matrix input type: {type(file_or_content)}")
+        raw_bytes: bytes | None = None
+        if isinstance(file_or_content, (str, Path)) and os.path.exists(str(file_or_content)):
+            path = Path(file_or_content)
+            raw_bytes = path.read_bytes()
+        elif hasattr(file_or_content, "read"):
+            if hasattr(file_or_content, "seek"):
+                file_or_content.seek(0)
+            content = file_or_content.read()
+            if hasattr(file_or_content, "seek"):
+                file_or_content.seek(0)
+            if isinstance(content, str):
+                raw_bytes = content.encode("utf-8")
+            elif isinstance(content, bytes):
+                raw_bytes = content
+            else:
+                raise ValueError(f"Unsupported stream content type: {type(content)}")
+        elif isinstance(file_or_content, str):
+            raw_bytes = file_or_content.encode("utf-8")
+        elif isinstance(file_or_content, bytes):
+            raw_bytes = file_or_content
+        else:
+            raise ValueError(f"Unsupported count matrix input type: {type(file_or_content)}")
+
+        # Check for gzip compression
+        if raw_bytes.startswith(b"\x1f\x8b"):
+            try:
+                raw_bytes = gzip.decompress(raw_bytes)
+            except Exception as e:
+                raise ValueError(f"Failed to decompress gzip count matrix: {e}") from e
+
+        text_content = raw_bytes.decode("utf-8-sig", errors="replace")
+        if not text_content.strip():
+            raise ValueError("Count matrix file is empty.")
+
+        first_line = text_content.splitlines()[0]
+        sep = "\t" if ("\t" in first_line and first_line.count("\t") >= first_line.count(",")) else ","
+        df = pd.read_csv(io.StringIO(text_content), sep=sep)
 
     if df.empty or len(df.columns) < 2:
         raise ValueError("Count matrix must contain at least a gene column and at least 2 sample columns.")
 
-    # Normalize gene column name
-    first_col = df.columns[0]
-    df = df.rename(columns={first_col: "gene_id"})
+    # 1. Identify true gene identifier column
+    gene_col: str | None = None
+    for col in df.columns:
+        if str(col).strip().lower() in GENE_ID_CANDIDATE_NAMES:
+            gene_col = str(col)
+            break
+    if not gene_col:
+        gene_col = str(df.columns[0])
+
+    df = df.rename(columns={gene_col: "gene_id"})
     df["gene_id"] = df["gene_id"].astype(str).str.strip()
 
-    # Verify sample columns
-    sample_ids = [str(c).strip() for c in df.columns[1:]]
+    # 2. Identify annotation vs real sample-count columns
+    excluded_annotation_cols: list[str] = []
+    sample_cols: list[str] = []
+
+    for col in df.columns:
+        if col == "gene_id":
+            continue
+        c_clean = str(col).strip()
+        c_lower = c_clean.lower()
+
+        if c_lower in KNOWN_ANNOTATION_COLUMNS:
+            excluded_annotation_cols.append(c_clean)
+        else:
+            # Check if column is numeric or text annotation
+            s_num = pd.to_numeric(df[col], errors="coerce")
+            # If majority NaN, treat as text annotation
+            if s_num.isna().sum() / max(1, len(df)) > 0.5:
+                excluded_annotation_cols.append(c_clean)
+            else:
+                sample_cols.append(c_clean)
+
+    if len(sample_cols) < 2:
+        raise ValueError(
+            f"Count matrix must contain at least 2 sample columns. "
+            f"Detected {len(sample_cols)} sample column(s) and {len(excluded_annotation_cols)} annotation column(s)."
+        )
+
+    # 3. Filter DataFrame to gene_id + sample columns
+    sample_ids = [str(c).strip() for c in sample_cols]
+    df = df[["gene_id"] + sample_cols].copy()
     df.columns = ["gene_id"] + sample_ids
 
-    # Verify counts are numeric non-negative integers
+    # 4. Strictly verify count values are numeric non-negative integers
     for sid in sample_ids:
         df[sid] = pd.to_numeric(df[sid], errors="coerce")
         if df[sid].isna().any():
@@ -162,6 +300,10 @@ def parse_count_matrix(file_or_content: Any) -> tuple[pd.DataFrame, list[str]]:
             raise ValueError(f"Sample column '{sid}' contains negative count values.")
         df[sid] = df[sid].round().astype(int)
 
+    df.attrs["excluded_annotation_columns"] = excluded_annotation_cols
+
+    if return_excluded_columns:
+        return df, sample_ids, excluded_annotation_cols
     return df, sample_ids
 
 
@@ -171,8 +313,8 @@ def parse_sample_info(
 ) -> pd.DataFrame:
     """Parse and strictly validate explicit sample metadata.
 
-    Requires explicit sample_id, condition_type ('treatment' or 'control'), and
-    biological_replicate_id for every matrix sample.
+    Requires explicit sample_id, condition_type ('treatment', 'control', or 'exclude'), and
+    biological_replicate_id for every active sample.
     Automatic inference of condition or replicates from sample names is prohibited.
     """
     if file_or_content is None:
@@ -194,6 +336,8 @@ def parse_sample_info(
         if hasattr(file_or_content, "seek"):
             file_or_content.seek(0)
         if isinstance(content, bytes):
+            if content.startswith(b"\x1f\x8b"):
+                content = gzip.decompress(content)
             content = content.decode("utf-8-sig")
         sep = "\t" if ("\t" in content and "," not in content.split("\n")[0]) else ","
         df = pd.read_csv(io.StringIO(content), sep=sep)
@@ -213,7 +357,6 @@ def parse_sample_info(
     col_map = {str(c).strip().lower(): str(c).strip() for c in df.columns}
     sid_col = col_map.get("sample_id") or col_map.get("sample")
     if not sid_col:
-        # Check if first column looks like sample_id
         sid_col = df.columns[0]
 
     df = df.rename(columns={sid_col: "sample_id"})
@@ -242,13 +385,13 @@ def parse_sample_info(
     if not cond_col or cond_col not in df.columns:
         raise ValueError(
             "Sample metadata must contain an explicit condition column (e.g. 'condition_type', 'condition', or 'treatment_control_status') "
-            "specifying 'treatment' or 'control' for every sample. Automatic guessing from sample names is prohibited."
+            "specifying 'treatment', 'control', or 'exclude' for every sample. Automatic guessing from sample names is prohibited."
         )
 
     # Validate condition values
     norm_conditions = []
     for sid, val in zip(df["sample_id"], df[cond_col]):
-        if pd.isna(val):
+        if pd.isna(val) or not str(val).strip():
             raise ValueError(
                 f"Missing condition value for sample '{sid}'. "
                 "Must explicitly specify 'treatment' or 'control'. Automatic guessing from sample names is prohibited."
@@ -256,8 +399,10 @@ def parse_sample_info(
         clean_val = str(val).strip().lower()
         if clean_val in ("treatment", "treat", "treated"):
             norm_conditions.append("treatment")
-        elif clean_val in ("control", "ctrl", "baseline", "untreated"):
+        elif clean_val in ("control", "ctrl", "baseline", "untreated", "vehicle"):
             norm_conditions.append("control")
+        elif clean_val in ("exclude", "excluded"):
+            norm_conditions.append("exclude")
         else:
             raise ValueError(
                 f"Invalid condition value '{val}' for sample '{sid}'. "
@@ -280,25 +425,35 @@ def parse_sample_info(
             "specifying distinct biological replicate identifiers for each sample. Automatic replicate numbering is prohibited."
         )
 
-    # Validate biological replicate IDs
+    # Validate biological replicate IDs for active samples
     clean_reps = []
-    for sid, val in zip(df["sample_id"], df[rep_col]):
-        if pd.isna(val):
-            raise ValueError(
-                f"Missing biological replicate identifier for sample '{sid}'. "
-                "Explicit biological replicate assignment is required."
-            )
-        rep_str = str(val).strip()
-        if not rep_str or rep_str.lower() in ("nan", "none", ""):
-            raise ValueError(
-                f"Missing biological replicate identifier for sample '{sid}'. "
-                "Explicit biological replicate assignment is required."
-            )
-        clean_reps.append(rep_str)
+    for sid, ctype, val in zip(df["sample_id"], df["condition_type"], df[rep_col]):
+        rep_str = str(val).strip() if pd.notna(val) else ""
+        if ctype in ("treatment", "control"):
+            if not rep_str or rep_str.lower() in ("nan", "none", ""):
+                raise ValueError(
+                    f"Missing biological replicate identifier for sample '{sid}'. "
+                    "Explicit biological replicate assignment is required."
+                )
+            clean_reps.append(rep_str)
+        else:
+            clean_reps.append(rep_str or "excluded")
 
     df["biological_replicate_id"] = clean_reps
 
-    return df[["sample_id", "condition_type", "biological_replicate_id"]]
+    # Filter to active cohort (treatment and control only)
+    active_df = df[df["condition_type"].isin(["treatment", "control"])].copy()
+
+    # Verify replication in active cohort
+    trt_samples = active_df[active_df["condition_type"] == "treatment"]
+    ctrl_samples = active_df[active_df["condition_type"] == "control"]
+    if len(trt_samples) < 2 or len(ctrl_samples) < 2:
+        raise ValueError(
+            f"Differential expression requires at least 2 biological replicates in both treatment and control. "
+            f"Found: {len(trt_samples)} treatment, {len(ctrl_samples)} control."
+        )
+
+    return active_df[["sample_id", "condition_type", "biological_replicate_id"]].reset_index(drop=True)
 
 
 def build_canonical_metadata(
@@ -307,6 +462,7 @@ def build_canonical_metadata(
     asset_id: str = "asset_app_01",
     assay_id: str = "assay_app_01",
     gene_identifier_type: str = "ensembl_gene_id",
+    source_accession: str = "",
 ) -> dict[str, Any]:
     """Construct a full canonical metadata dictionary adhering to schema and backend stage rules."""
     sample_records = []
@@ -331,18 +487,34 @@ def build_canonical_metadata(
 
     all_sids = [s["sample_id"] for s in sample_records]
 
+    if source_accession and source_accession.strip():
+        clean_acc = source_accession.strip()
+        study_id = f"study_{clean_acc}"
+        study_entry = {
+            "study_id": study_id,
+            "source_type": "public",
+            "public_accessions": [
+                {
+                    "namespace": "GSE" if clean_acc.upper().startswith("GSE") else "public_repo",
+                    "identifier": clean_acc,
+                }
+            ],
+            "metadata_validation_status": "valid",
+        }
+    else:
+        study_id = "study_app_01"
+        study_entry = {
+            "study_id": study_id,
+            "source_type": "in_house",
+            "metadata_validation_status": "valid",
+        }
+
     metadata: dict[str, Any] = {
-        "studies": [
-            {
-                "study_id": "study_app_01",
-                "source_type": "in_house",
-                "metadata_validation_status": "valid",
-            }
-        ],
+        "studies": [study_entry],
         "experiments": [
             {
                 "experiment_id": "exp_app_01",
-                "study_id": "study_app_01",
+                "study_id": study_id,
                 "metadata_validation_status": "valid",
             }
         ],
@@ -420,9 +592,11 @@ def run_full_analysis_pipeline(
     counts_input: Any,
     samples_input: Any,
     chemical_params: ChemicalParams,
+    source_accession: str = "",
+    progress_callback: Callable[[str, str], None] | None = None,
     r_binary_path: str = "Rscript",
     strict_version_check: bool = True,
-    r_timeout_seconds: int = 180,
+    r_timeout_seconds: int = 600,
 ) -> PipelineRunResult:
     """Execute the complete end-to-end differential expression analysis pipeline.
 
@@ -476,13 +650,29 @@ def run_full_analysis_pipeline(
             error_message="Developmental Age / Stage is required for contrast modeling.",
         )
 
+    if chemical_params.exposure_duration <= 0:
+        return PipelineRunResult(
+            is_success=False,
+            contrast_result=None,
+            de_genes_df=pd.DataFrame(),
+            excluded_genes_df=pd.DataFrame(),
+            samples_df=pd.DataFrame(),
+            summary_metrics={},
+            scientific_findings=[],
+            error_message="Exposure duration must be greater than 0 (e.g. 48.0 h). Unresolved duration requires explicit verified entry.",
+        )
+
     temp_matrix_path: str | None = None
     try:
-        # 1. Parse and validate count matrix
-        counts_df, sample_ids = parse_count_matrix(counts_input)
+        # 1. Parse and validate count matrix (decompressing gzip, identifying annotations)
+        counts_df, sample_ids, excluded_annotations = parse_count_matrix(counts_input, return_excluded_columns=True)
 
-        # 2. Parse and strictly validate explicit sample metadata
+        # 2. Parse and strictly validate explicit sample metadata (filtering to active cohort)
         samples_df = parse_sample_info(samples_input, sample_ids)
+
+        # Filter count matrix to active cohort in exact metadata order
+        active_sids = list(samples_df["sample_id"])
+        counts_df = counts_df[["gene_id"] + active_sids].copy()
 
         # Verify replicate counts
         trt_samples = samples_df[samples_df["condition_type"] == "treatment"]
@@ -516,6 +706,7 @@ def run_full_analysis_pipeline(
             asset_id=asset_id,
             assay_id=assay_id,
             gene_identifier_type=gene_id_type,
+            source_accession=source_accession,
         )
 
         # Write counts to temporary CSV for QC and Harmonization
@@ -524,6 +715,8 @@ def run_full_analysis_pipeline(
             temp_matrix_path = tf.name
 
         # 4. Step 6A: Bulk Raw-Count QC
+        if progress_callback:
+            progress_callback("[1/5] Count Matrix QC", "Validating non-negative integer count matrix & schema conformance...")
         qc_result = validate_bulk_counts(temp_matrix_path, metadata, asset_id, assay_id)
         if qc_result.status == QCStatus.FAIL:
             error_msgs = [f.message for f in qc_result.findings if f.severity.value == "ERROR"]
@@ -540,6 +733,8 @@ def run_full_analysis_pipeline(
             )
 
         # 5. Step 6B: Gene Harmonization v1
+        if progress_callback:
+            progress_callback("[2/5] Gene Harmonization", "Harmonizing gene identifiers against Ensembl Release 112...")
         gene_ref = get_gene_reference()
         harm_result = harmonize_bulk_counts(
             matrix=temp_matrix_path,
@@ -565,6 +760,8 @@ def run_full_analysis_pipeline(
             )
 
         # 6. Step 6C: Bulk Normalization v1 (Locked DESeq2 Size Factors)
+        if progress_callback:
+            progress_callback("[3/5] Normalization", "Estimating locked DESeq2 median-of-ratios size factors...")
         norm_result = normalize_bulk_dataset(harm_result, metadata)
         if norm_result.status.value == "FAIL":
             error_msgs = [f.message for f in norm_result.findings if f.severity.value == "ERROR"]
@@ -583,6 +780,8 @@ def run_full_analysis_pipeline(
             )
 
         # 7. Step 7A: Treatment-versus-Matched-Control Contrast Builder v1
+        if progress_callback:
+            progress_callback("[4/5] Contrast Builder", "Evaluating replication and developmental age-matching gates...")
         contrast_dataset = build_response_contrasts(norm_result, metadata)
         if not contrast_dataset.contrasts:
             return PipelineRunResult(
@@ -619,6 +818,8 @@ def run_full_analysis_pipeline(
             )
 
         # 8. Step 7B: Bulk Differential Expression v1 (DESeq2 Wald test)
+        if progress_callback:
+            progress_callback("[5/5] DESeq2 Analysis", "Running DESeq2 Wald test with FDR control in R 4.4.3...")
         de_dataset = run_differential_expression(
             contrast_dataset=contrast_dataset,
             normalized_dataset=norm_result,
@@ -704,6 +905,9 @@ def run_full_analysis_pipeline(
         summary_metrics = {
             "contrast_id": cr.contrast_id,
             "status": str(cr.status),
+            "source_accession": source_accession,
+            "source_type": "public" if source_accession.strip() else "in_house",
+            "excluded_annotation_columns": excluded_annotations,
             "treatment_replicates": cr.treatment_replicate_count,
             "control_replicates": cr.control_replicate_count,
             "total_input_genes": cr.total_input_genes_count,

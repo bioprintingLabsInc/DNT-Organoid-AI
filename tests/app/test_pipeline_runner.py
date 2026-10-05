@@ -7,6 +7,8 @@ Verifies:
 4. Valid explicit user-provided sample metadata executes through the full locked backend.
 """
 
+import gzip
+import io
 from pathlib import Path
 import random
 import pandas as pd
@@ -18,6 +20,7 @@ from src.app.pipeline_runner import (
     build_canonical_metadata,
     parse_count_matrix,
     parse_sample_info,
+    prepare_plot_data,
     run_full_analysis_pipeline,
 )
 from src.response_builder.models import ContrastStatus
@@ -223,6 +226,15 @@ def test_pipeline_rejects_missing_developmental_age() -> None:
     assert "Developmental Age / Stage is required" in (res.error_message or "")
 
 
+def test_pipeline_rejects_zero_exposure_duration() -> None:
+    """Pipeline runner must reject zero or negative exposure duration."""
+    counts_df, samples_df, params = _create_test_dataset()
+    zero_dur_params = ChemicalParams(agent_name="Compound_X", developmental_age="Day 6", exposure_duration=0.0)
+    res = run_full_analysis_pipeline(counts_df, samples_df, zero_dur_params)
+    assert not res.is_success
+    assert "Exposure duration must be greater than 0" in (res.error_message or "")
+
+
 def test_pipeline_rejects_under_replicated_cohort() -> None:
     """Pipeline runner must safely block cohorts with < 2 biological replicates."""
     counts_df, samples_df, params = _create_test_dataset()
@@ -336,3 +348,132 @@ def test_sample_assignments_frontend_conversion_and_validation() -> None:
     )
     with pytest.raises(ValueError, match="Missing biological replicate identifier"):
         parse_sample_info(blank_rep_assignments, sids)
+
+
+# -----------------------------------------------------------------------------
+# 5. Ingestion, Provenance & Plotting Verification
+# -----------------------------------------------------------------------------
+def test_parse_count_matrix_gzip_decompression() -> None:
+    """Gzip-compressed count matrices must be automatically decompressed and parsed."""
+    tsv_content = "gene_id\tsample_1\tsample_2\nENSG00000000003\t100\t200\nENSG00000000419\t300\t400\n"
+    gz_bytes = gzip.compress(tsv_content.encode("utf-8"))
+
+    df, sample_ids = parse_count_matrix(io.BytesIO(gz_bytes))
+    assert sample_ids == ["sample_1", "sample_2"]
+    assert len(df) == 2
+    assert df.loc[0, "sample_1"] == 100
+    assert df.loc[1, "sample_2"] == 400
+
+
+def test_parse_count_matrix_annotation_exclusion() -> None:
+    """Annotation columns (e.g. entrezgene_id, external_gene_name, description) must be recognized and excluded."""
+    tsv_content = (
+        "gene_id\tentrezgene_id\texternal_gene_name\tdescription\tsample_1\tsample_2\n"
+        "ENSG00000000003\t7105\tTSPAN6\ttetraspanin 6\t150\t250\n"
+        "ENSG00000000419\t8813\tDPM1\tdolichyl-phosphate mannosyltransferase polypeptide 1\t350\t450\n"
+    )
+    df, sample_ids, excluded = parse_count_matrix(tsv_content, return_excluded_columns=True)
+    assert sample_ids == ["sample_1", "sample_2"]
+    assert set(excluded) == {"entrezgene_id", "external_gene_name", "description"}
+    assert list(df.columns) == ["gene_id", "sample_1", "sample_2"]
+    assert df.loc[0, "sample_1"] == 150
+
+
+def test_parse_sample_info_with_excluded_samples() -> None:
+    """Samples marked with condition_type='exclude' must be filtered out of the active cohort."""
+    sids = ["s1", "s2", "s3", "s4", "s5", "s6"]
+    assignments = pd.DataFrame(
+        {
+            "sample_id": sids,
+            "condition_type": ["control", "control", "treatment", "treatment", "exclude", "exclude"],
+            "biological_replicate_id": ["rep1", "rep2", "rep3", "rep4", "", ""],
+        }
+    )
+    parsed = parse_sample_info(assignments, sids)
+    assert len(parsed) == 4
+    assert set(parsed["sample_id"]) == {"s1", "s2", "s3", "s4"}
+    assert set(parsed["condition_type"]) == {"control", "treatment"}
+
+
+def test_build_canonical_metadata_public_geo_source() -> None:
+    """Public datasets must carry source_type='public' and appropriate public_accessions structure."""
+    chem = ChemicalParams(
+        agent_name="Valproic Acid",
+        concentration_or_dose=200.0,
+        concentration_or_dose_unit="uM",
+        developmental_age="Day 6",
+        exposure_duration=48.0,
+        organoid_type="cortical organoid",
+    )
+    df_samples = pd.DataFrame(
+        {
+            "sample_id": ["s1", "s2", "s3", "s4"],
+            "condition_type": ["control", "control", "treatment", "treatment"],
+            "biological_replicate_id": ["rep1", "rep2", "rep3", "rep4"],
+        }
+    )
+    meta = build_canonical_metadata(
+        samples_df=df_samples,
+        chemical_params=chem,
+        source_accession="GSE232218",
+    )
+    study = meta["studies"][0]
+    assert study["source_type"] == "public"
+    assert len(study["public_accessions"]) == 1
+    assert study["public_accessions"][0]["identifier"] == "GSE232218"
+    assert study["public_accessions"][0]["namespace"] == "GSE"
+
+
+def test_prepare_plot_data_deterministic_sampling() -> None:
+    """Plot preparation must preserve 100% of FDR < 0.05 genes and sample background deterministically."""
+    # 50 significant genes + 6000 non-significant genes
+    sig_rows = [
+        {
+            "feature_id": f"ENSG_SIG_{i:04d}",
+            "gene_symbol": f"SIG_{i}",
+            "log2_fold_change": 2.5 if i % 2 == 0 else -2.5,
+            "adjusted_p_value_bh": 0.01,
+            "base_mean": 500.0,
+            "result_status": "ELIGIBLE",
+        }
+        for i in range(50)
+    ]
+    bg_rows = [
+        {
+            "feature_id": f"ENSG_BG_{i:04d}",
+            "gene_symbol": f"BG_{i}",
+            "log2_fold_change": 0.05 * (i % 10 - 5),
+            "adjusted_p_value_bh": 0.85,
+            "base_mean": 200.0,
+            "result_status": "ELIGIBLE",
+        }
+        for i in range(6000)
+    ]
+    df = pd.DataFrame(sig_rows + bg_rows)
+
+    sampled_df, is_downsampled, n_sig, n_bg = prepare_plot_data(
+        df, fdr_threshold=0.05, max_background_points=5000, seed=42
+    )
+
+    assert is_downsampled is True
+    assert n_sig == 50
+    assert n_bg == 6000
+    assert len(sampled_df) == 5050  # 50 sig + 5000 background
+
+    # All 50 significant genes must be present
+    sig_ids = set(sampled_df[sampled_df["adjusted_p_value_bh"] < 0.05]["feature_id"])
+    assert len(sig_ids) == 50
+
+    # Determinism: repeating with seed=42 must give identical subset
+    sampled_df_2, _, _, _ = prepare_plot_data(
+        df, fdr_threshold=0.05, max_background_points=5000, seed=42
+    )
+    assert list(sampled_df["feature_id"]) == list(sampled_df_2["feature_id"])
+
+    # When background <= max_background_points, no downsampling
+    small_df = df.iloc[:1000]
+    sampled_small, is_down_small, _, _ = prepare_plot_data(
+        small_df, fdr_threshold=0.05, max_background_points=5000
+    )
+    assert is_down_small is False
+    assert len(sampled_small) == 1000

@@ -1,22 +1,16 @@
-"""DNT Organoid AI: Treatment-Response Explorer.
+"""DNT Organoid AI Web Interface: Treatment-Response Explorer.
 
-Statistically rigorous Bulk RNA-seq differential expression analysis web application.
-Workflow:
-Upload real raw-count matrix CSV
+Statistically rigorous Bulk RNA-seq differential expression analysis web interface.
+Architecture:
+Browser / Web Interface
         ↓
-Sample Assignment Table (sample_id | condition_type | biological_replicate_id)
+Existing scientific backend
         ↓
-Enter/verify exposure information
+QC → Gene Harmonization → Normalization → Treatment-Control Contrast → DESeq2
         ↓
-Run existing backend (QC → Harmonization → Normalization → Contrast Builder → DESeq2 DE)
-        ↓
-Treatment Response Generated
-        ↓
-Gene table + visual plot + scientific checks
-        ↓
-Download results
+Molecular Response displayed in the browser (Gene table + visual plot + scientific checks + CSV downloads)
 
-Strictly real-data analysis interface. Only one CSV (raw counts) upload required.
+Strictly real-data analysis website. Only one count-matrix upload required.
 Sample assignments are entered explicitly by the user in the editable table.
 Automatic inference of treatment/control status and biological replicates from sample names is prohibited.
 """
@@ -32,11 +26,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.app.geo_resolver import fetch_geo_metadata, resolve_geo_samples
 from src.app.pipeline_runner import (
     ChemicalParams,
     PipelineRunResult,
     parse_count_matrix,
     parse_sample_info,
+    prepare_plot_data,
     run_full_analysis_pipeline,
 )
 
@@ -44,7 +40,7 @@ from src.app.pipeline_runner import (
 # Streamlit Page Configuration & Styling
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="DNT Organoid AI | Treatment-Response Explorer",
+    page_title="DNT Organoid AI Web Interface | Treatment-Response Explorer",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -91,11 +87,11 @@ st.markdown(
 # -----------------------------------------------------------------------------
 # Header
 # -----------------------------------------------------------------------------
-st.markdown('<div class="main-title">🧬 DNT Organoid AI: Treatment-Response Explorer</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🧬 DNT Organoid AI Web Interface: Treatment-Response Explorer</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="subtitle">'
-    "Statistically rigorous human developmental neurotoxicity (DNT) organoid treatment-versus-matched-control response analysis. "
-    "Orchestrates locked scientific pipeline: Raw-Count QC → Ensembl 112 Harmonization → DESeq2 Normalization → Step 7A Contrast Gate → Step 7B DESeq2 Wald Test."
+    "Statistically rigorous human developmental neurotoxicity (DNT) organoid treatment-versus-matched-control response analysis website. "
+    "Orchestrates locked scientific backend: Raw-Count QC → Ensembl 112 Harmonization → DESeq2 Normalization → Step 7A Contrast Gate → Step 7B DESeq2 Wald Test."
     "</div>",
     unsafe_allow_html=True,
 )
@@ -108,28 +104,86 @@ with st.sidebar:
 
     st.subheader("1. Count Matrix (Required)")
     uploaded_counts = st.file_uploader(
-        "Upload raw count matrix (CSV / TSV)",
-        type=["csv", "tsv", "txt"],
+        "Upload raw count matrix (.csv, .tsv, .txt, .gz)",
+        type=["csv", "tsv", "txt", "gz"],
         help="Column 1: Gene identifier (Ensembl gene ID or gene symbol). Remaining columns: Sample IDs containing non-negative raw integer counts.",
     )
 
     counts_df: pd.DataFrame | None = None
     sample_ids: list[str] = []
+    excluded_annotations: list[str] = []
     matrix_parse_error: str | None = None
 
     if uploaded_counts is not None:
         try:
-            counts_df, sample_ids = parse_count_matrix(uploaded_counts)
+            counts_df, sample_ids, excluded_annotations = parse_count_matrix(uploaded_counts, return_excluded_columns=True)
+            if excluded_annotations:
+                st.info(f"ℹ️ Recognized and excluded {len(excluded_annotations)} annotation column(s): {', '.join(excluded_annotations)}. Sample count columns preserved.")
         except Exception as e:
             matrix_parse_error = str(e)
-            counts_df, sample_ids = None, []
+            counts_df, sample_ids, excluded_annotations = None, [], []
 
-    st.subheader("2. Sample Assignments (Required)")
+    st.subheader("2. Dataset Provenance & Resolution (Optional)")
+    source_acc = st.text_input(
+        "Source Accession / Public ID",
+        value=st.session_state.get("source_accession_val", ""),
+        placeholder="e.g., GSE232218",
+        help="Enter a public GEO Series accession (e.g. GSE232218) to automatically resolve sample records and match conditions.",
+        key="source_accession_input",
+    )
+    if source_acc.strip():
+        st.session_state["source_accession_val"] = source_acc.strip()
+
+    resolve_geo_clicked = st.button("🔍 Resolve GEO Metadata", use_container_width=True)
+
+    if resolve_geo_clicked:
+        if not sample_ids:
+            st.warning("Please upload a count matrix before resolving GEO metadata.")
+        elif not source_acc.strip():
+            st.warning("Please enter a GEO Series accession (e.g., GSE232218).")
+        else:
+            try:
+                with st.spinner(f"Querying NCBI GEO for {source_acc.strip()}..."):
+                    geo_data = fetch_geo_metadata(source_acc.strip())
+                    assignments, suggestions = resolve_geo_samples(
+                        matrix_sample_ids=sample_ids,
+                        geo_data=geo_data,
+                        target_agent=st.session_state.get("chem_name_input", "") or "VPA",
+                        target_dose=float(st.session_state.get("chem_dose_input", 200.0)),
+                        target_dose_unit=st.session_state.get("chem_unit_input", "uM"),
+                        vehicle_keyword=st.session_state.get("chem_veh_input", "") or "vehicle",
+                    )
+                    st.session_state["sample_assignment_init"] = assignments[["sample_id", "condition_type", "biological_replicate_id"]]
+                    if "sample_assignment_editor" in st.session_state:
+                        del st.session_state["sample_assignment_editor"]
+                    if suggestions.get("developmental_age"):
+                        st.session_state["dev_age_val"] = suggestions["developmental_age"]
+                    if suggestions.get("biological_source"):
+                        st.session_state["bio_src_val"] = suggestions["biological_source"]
+                    if suggestions.get("exposure_duration") is not None:
+                        st.session_state["exp_dur_val"] = float(suggestions["exposure_duration"])
+                    if suggestions.get("exposure_duration_unit"):
+                        st.session_state["exp_dur_unit_val"] = suggestions["exposure_duration_unit"]
+                    if suggestions.get("vehicle"):
+                        st.session_state["chem_veh_val"] = suggestions["vehicle"]
+                    if suggestions.get("organoid_context"):
+                        st.session_state["organoid_ctx_val"] = suggestions["organoid_context"]
+                    if suggestions.get("duration_citation"):
+                        st.session_state["duration_citation"] = suggestions["duration_citation"]
+                    if suggestions.get("duration_status"):
+                        st.session_state["duration_status"] = suggestions["duration_status"]
+                    trt_n = (assignments["condition_type"] == "treatment").sum()
+                    ctrl_n = (assignments["condition_type"] == "control").sum()
+                    excl_n = (assignments["condition_type"] == "exclude").sum()
+                    st.success(f"✅ Resolved GEO metadata: {trt_n} treatment, {ctrl_n} control, {excl_n} excluded. Please review below.")
+            except Exception as exc:
+                st.error(f"❌ Failed to resolve GEO metadata: {exc}")
+
+    st.subheader("3. Sample Assignments (Required)")
     if matrix_parse_error:
         st.error(f"❌ Error reading count matrix: {matrix_parse_error}")
         edited_samples = None
     elif sample_ids:
-        # Cache key based on upload file identity or sample IDs
         current_matrix_id = getattr(uploaded_counts, "file_id", getattr(uploaded_counts, "name", str(sample_ids)))
         if st.session_state.get("last_uploaded_matrix_id") != current_matrix_id:
             st.session_state["last_uploaded_matrix_id"] = current_matrix_id
@@ -143,7 +197,7 @@ with st.sidebar:
             if "sample_assignment_editor" in st.session_state:
                 del st.session_state["sample_assignment_editor"]
 
-        st.caption("Assign treatment/control status and biological replicate ID for each sample:")
+        st.caption("Assign treatment/control status ('control', 'treatment', or 'exclude') and biological replicate ID for each sample:")
         edited_samples = st.data_editor(
             st.session_state["sample_assignment_init"],
             key="sample_assignment_editor",
@@ -155,13 +209,13 @@ with st.sidebar:
                 ),
                 "condition_type": st.column_config.SelectboxColumn(
                     "condition_type",
-                    options=["", "control", "treatment"],
+                    options=["", "control", "treatment", "exclude"],
                     required=True,
-                    help="Explicitly assign 'control' or 'treatment'",
+                    help="Assign 'control', 'treatment', or 'exclude' for non-contrast samples",
                 ),
                 "biological_replicate_id": st.column_config.TextColumn(
                     "biological_replicate_id",
-                    required=True,
+                    required=False,
                     help="Explicit biological replicate identifier (e.g. rep_1, rep_2)",
                 ),
             },
@@ -173,47 +227,97 @@ with st.sidebar:
         st.info("Upload a raw count matrix above to configure sample assignments.")
         edited_samples = None
 
-    st.subheader("3. Exposure & Experimental Design")
+    st.subheader("4. Exposure & Experimental Design")
     with st.expander("🔬 Exposure Parameters", expanded=True):
         chem_name = st.text_input(
             "Chemical / Agent Name *",
-            value="",
-            placeholder="e.g., Bisphenol A",
+            value=st.session_state.get("chem_name_val", "Valproic Acid" if "GSE232218" in source_acc.upper() else ""),
+            placeholder="e.g., Valproic Acid",
             help="Name of the chemical compound or stressor tested.",
+            key="chem_name_input",
         )
         chem_id = st.text_input(
             "Agent Identifier / CID",
-            value="",
-            placeholder="e.g., CID:6623",
+            value="CID:3121" if "GSE232218" in source_acc.upper() else "",
+            placeholder="e.g., CID:3121",
             help="PubChem CID, CAS registry number, or standard chemical identifier.",
+            key="chem_id_input",
         )
 
         col_dose1, col_dose2 = st.columns([2, 1])
         with col_dose1:
-            chem_dose = st.number_input("Concentration / Dose", value=10.0, step=0.1, format="%.2f")
+            chem_dose = st.number_input(
+                "Concentration / Dose",
+                value=200.0 if "GSE232218" in source_acc.upper() else 10.0,
+                step=0.1,
+                format="%.2f",
+                key="chem_dose_input",
+            )
         with col_dose2:
-            chem_unit = st.selectbox("Unit", options=["uM", "nM", "mM", "ug/mL", "mg/kg", "ppm"], index=0)
+            chem_unit = st.selectbox("Unit", options=["uM", "nM", "mM", "ug/mL", "mg/kg", "ppm"], index=0, key="chem_unit_input")
 
         col_age1, col_dur = st.columns([1, 1])
         with col_age1:
             dev_age = st.text_input(
                 "Developmental Age *",
-                value="",
-                placeholder="e.g., day_35",
-                help="Strictly matches developmental stage between treatment and control (e.g. 'day_35' or 'Day 30').",
+                value=st.session_state.get("dev_age_val", "Day 6" if "GSE232218" in source_acc.upper() else ""),
+                placeholder="e.g., Day 6",
+                help="Strictly matches developmental stage between treatment and control (e.g. 'Day 6').",
+                key="dev_age_input",
             )
         with col_dur:
-            exp_dur = st.number_input("Duration", value=24.0, step=1.0)
+            default_dur = st.session_state.get(
+                "exp_dur_val",
+                48.0 if "GSE232218" in source_acc.upper() else 0.0,
+            )
+            exp_dur = st.number_input(
+                "Duration *",
+                value=float(default_dur),
+                step=1.0,
+                min_value=0.0,
+                help="Duration of exposure (e.g. 48.0 h). Must be verified from official records.",
+                key="exp_dur_input",
+            )
 
         col_dur_unit, col_veh = st.columns([1, 1])
         with col_dur_unit:
-            exp_dur_unit = st.selectbox("Duration Unit", options=["h", "days", "weeks"], index=0)
+            unit_opts = ["h", "days", "weeks"]
+            default_unit = st.session_state.get("exp_dur_unit_val", "h")
+            unit_idx = unit_opts.index(default_unit) if default_unit in unit_opts else 0
+            exp_dur_unit = st.selectbox("Duration Unit", options=unit_opts, index=unit_idx, key="exp_dur_unit_input")
         with col_veh:
-            chem_vehicle = st.text_input("Vehicle", value="", placeholder="e.g., 0.1% DMSO")
+            chem_vehicle = st.text_input(
+                "Vehicle",
+                value=st.session_state.get("chem_veh_val", "vehicle control" if "GSE232218" in source_acc.upper() else ""),
+                placeholder="e.g., vehicle control",
+                key="chem_veh_input",
+            )
 
-        organoid_ctx = st.text_input("Organoid Context", value="", placeholder="e.g., Cerebral Cortex Organoid")
-        brain_reg = st.text_input("Brain Region", value="", placeholder="e.g., cerebral_cortex")
-        bio_src = st.text_input("Biological Source / Line", value="", placeholder="e.g., iPSC_donor_line_1")
+        dur_citation = st.session_state.get("duration_citation")
+        dur_status = st.session_state.get("duration_status")
+        if dur_citation:
+            if dur_status == "verified_publication":
+                st.caption(f"📚 **Verified Official Publication Evidence**: {dur_citation}")
+            elif dur_status == "verified_geo_sample":
+                st.caption(f"📋 **Verified GEO Sample Evidence**: {dur_citation}")
+            else:
+                st.warning("⚠️ **Unresolved Duration**: Exposure duration was not declared in GEO sample records. Please enter verified experimental duration.")
+        elif exp_dur == 0.0:
+            st.warning("⚠️ **Duration Required**: Exposure duration cannot be assumed. Please enter verified experimental duration (e.g. 48.0 h).")
+
+        organoid_ctx = st.text_input(
+            "Organoid Context",
+            value=st.session_state.get("organoid_ctx_val", "Cerebral Cortex Organoid (SOSR-CO)" if "GSE232218" in source_acc.upper() else "Cerebral Cortex Organoid"),
+            placeholder="e.g., Cerebral Cortex Organoid",
+            key="organoid_ctx_input",
+        )
+        brain_reg = st.text_input("Brain Region", value="cerebral_cortex", placeholder="e.g., cerebral_cortex", key="brain_reg_input")
+        bio_src = st.text_input(
+            "Biological Source / Line",
+            value=st.session_state.get("bio_src_val", "iPSC (AICS-0023)" if "GSE232218" in source_acc.upper() else ""),
+            placeholder="e.g., iPSC donor line",
+            key="bio_src_input",
+        )
 
     analyze_button = st.button("🚀 ANALYZE", type="primary", use_container_width=True)
 
@@ -231,52 +335,40 @@ if "pipeline_result" not in st.session_state:
     st.session_state["pipeline_result"] = None
 
 if analyze_button:
-    # Strict validation of required inputs
     validation_errors = []
     if uploaded_counts is None:
-        validation_errors.append("Please upload an RNA-seq count matrix CSV or TSV file.")
+        validation_errors.append("Please upload an RNA-seq count matrix (.csv, .tsv, .txt, .gz) file.")
     elif matrix_parse_error:
         validation_errors.append(f"Invalid count matrix: {matrix_parse_error}")
     elif edited_samples is None or edited_samples.empty:
         validation_errors.append("No samples detected in count matrix. Please verify uploaded file.")
     else:
-        # Validate that every sample has explicit condition_type and biological_replicate_id
-        missing_cond_sids = []
-        missing_rep_sids = []
+        # Validate sample assignments
+        active_rows = []
         for _, row in edited_samples.iterrows():
             sid = str(row.get("sample_id", "")).strip()
             cond = str(row.get("condition_type", "")).strip().lower() if pd.notna(row.get("condition_type")) else ""
             rep = str(row.get("biological_replicate_id", "")).strip() if pd.notna(row.get("biological_replicate_id")) else ""
 
-            if cond not in ("control", "treatment"):
-                missing_cond_sids.append(sid)
-            if not rep or rep.lower() in ("none", "nan"):
-                missing_rep_sids.append(sid)
+            if cond in ("treatment", "control"):
+                if not rep or rep.lower() in ("none", "nan"):
+                    validation_errors.append(f"Missing biological_replicate_id for active sample '{sid}'. Explicit biological replicate assignment is required.")
+                active_rows.append({"sample_id": sid, "condition_type": cond, "biological_replicate_id": rep})
+            elif cond not in ("exclude", "excluded", "none", "", "unassigned"):
+                validation_errors.append(f"Invalid condition '{cond}' for sample '{sid}'. Please assign 'control', 'treatment', or 'exclude'.")
 
-        if missing_cond_sids:
+        trt_count = sum(1 for r in active_rows if r["condition_type"] == "treatment")
+        ctrl_count = sum(1 for r in active_rows if r["condition_type"] == "control")
+        if trt_count < 2 or ctrl_count < 2:
             validation_errors.append(
-                f"Missing or unassigned condition_type ('control' or 'treatment') for sample(s): {', '.join(missing_cond_sids)}. "
-                "Automatic inference from sample names is prohibited."
+                f"Differential expression requires at least 2 biological replicates in both treatment and control. "
+                f"Currently assigned active: {trt_count} treatment, {ctrl_count} control."
             )
-        if missing_rep_sids:
-            validation_errors.append(
-                f"Missing biological_replicate_id for sample(s): {', '.join(missing_rep_sids)}. "
-                "Automatic inference of biological replicates is prohibited."
-            )
-
-        if not missing_cond_sids:
-            trt_count = sum(1 for _, r in edited_samples.iterrows() if str(r.get("condition_type", "")).strip().lower() == "treatment")
-            ctrl_count = sum(1 for _, r in edited_samples.iterrows() if str(r.get("condition_type", "")).strip().lower() == "control")
-            if trt_count < 2 or ctrl_count < 2:
-                validation_errors.append(
-                    f"Differential expression requires at least 2 biological replicates in both treatment and control. "
-                    f"Currently assigned: {trt_count} treatment, {ctrl_count} control."
-                )
 
     if not chem_name.strip():
         validation_errors.append("Please specify Chemical / Agent Name.")
     if not dev_age.strip():
-        validation_errors.append("Please specify Developmental Age (e.g., 'day_35').")
+        validation_errors.append("Please specify Developmental Age (e.g., 'Day 6').")
 
     if validation_errors:
         for err in validation_errors:
@@ -285,8 +377,8 @@ if analyze_button:
         samples_df = pd.DataFrame(
             {
                 "sample_id": [str(s).strip() for s in edited_samples["sample_id"]],
-                "condition_type": [str(c).strip().lower() for c in edited_samples["condition_type"]],
-                "biological_replicate_id": [str(r).strip() for r in edited_samples["biological_replicate_id"]],
+                "condition_type": [str(c).strip().lower() if pd.notna(c) else "exclude" for c in edited_samples["condition_type"]],
+                "biological_replicate_id": [str(r).strip() if pd.notna(r) else "" for r in edited_samples["biological_replicate_id"]],
             }
         )
 
@@ -306,12 +398,22 @@ if analyze_button:
             species="Homo sapiens",
         )
 
-        with st.spinner("Executing end-to-end differential expression pipeline (QC → Harmonization → Normalization → Contrast → DESeq2)..."):
+        with st.status("Executing differential expression pipeline...", expanded=True) as status_box:
+            def on_progress(stage: str, msg: str):
+                status_box.write(f"**{stage}**: {msg}")
+
             res = run_full_analysis_pipeline(
                 counts_input=counts_df if counts_df is not None else uploaded_counts,
                 samples_input=samples_df,
                 chemical_params=chem_params,
+                source_accession=source_acc.strip(),
+                progress_callback=on_progress,
+                r_timeout_seconds=600,
             )
+            if res.is_success:
+                status_box.update(label="✅ Differential expression pipeline completed successfully!", state="complete", expanded=False)
+            else:
+                status_box.update(label=f"❌ Pipeline execution halted: {res.error_message}", state="error", expanded=True)
             st.session_state["pipeline_result"] = res
 
 # -----------------------------------------------------------------------------
@@ -449,6 +551,8 @@ else:
             de_df["neg_log10_padj"] = -np.log10(de_df["adjusted_p_value_bh"].replace(0, 1e-300))
             de_df["log10_base_mean"] = np.log10(de_df["base_mean"].replace(0, 1))
 
+            plot_df, is_sampled, total_sig, total_bg = prepare_plot_data(de_df)
+
             col_p1, col_p2 = st.columns(2)
 
             with col_p1:
@@ -459,7 +563,7 @@ else:
                     "Not Significant": "#9CA3AF",
                 }
                 volcano_fig = px.scatter(
-                    de_df,
+                    plot_df,
                     x="log2_fold_change",
                     y="neg_log10_padj",
                     color="direction",
@@ -499,7 +603,7 @@ else:
             with col_p2:
                 st.subheader("MA Plot (Mean vs Log2FC)")
                 ma_fig = px.scatter(
-                    de_df,
+                    plot_df,
                     x="log10_base_mean",
                     y="log2_fold_change",
                     color="direction",
@@ -527,6 +631,14 @@ else:
                     template="plotly_white",
                 )
                 st.plotly_chart(ma_fig, use_container_width=True)
+
+            if is_sampled:
+                st.caption(
+                    f"ℹ️ **Performance-Optimized Display**: Plot displays 100% of statistically significant genes ({total_sig:,}) "
+                    f"and a deterministic representative sample of 5,000 of {total_bg:,} background genes (seed 42) "
+                    "to maintain responsive, lag-free browser visualization. Complete evaluated canonical genes "
+                    f"({len(de_df):,}) are preserved without sampling in the Differential Expression Gene Table, Conservation Audit, and CSV export."
+                )
         else:
             st.warning("No differential expression results available to plot.")
 
@@ -659,6 +771,15 @@ else:
     with tab_provenance:
         st.subheader("Scientific Provenance & Audit Log")
 
+        m = res.summary_metrics
+        if m.get("source_accession"):
+            st.info(f"🌐 **Public Repository Provenance**: NCBI GEO `{m['source_accession']}` (Source type: `public`)")
+        else:
+            st.info("🏢 **In-House Study Provenance**: Source type: `in_house`")
+
+        if m.get("excluded_annotation_columns"):
+            st.markdown(f"- **Excluded Annotation Columns**: `{', '.join(m['excluded_annotation_columns'])}`")
+
         st.write("#### Execution Findings")
         if res.scientific_findings:
             f_df = pd.DataFrame(res.scientific_findings)
@@ -675,6 +796,8 @@ else:
                 "pipeline_version": "Step 7B v1.0.0",
                 "design_formula": m.get("design_formula"),
                 "residual_degrees_of_freedom": m.get("residual_degrees_of_freedom"),
+                "source_accession": m.get("source_accession", ""),
+                "source_type": m.get("source_type", "in_house"),
             }
         )
 
