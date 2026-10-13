@@ -23,6 +23,7 @@ DNT-Organoid-AI/
 │   └── references/            # Ensembl Release 112 catalog and offline KEGG/GO assets
 ├── docs/                      # Architectural specifications and project runbooks
 │   └── project/               # Primary developer & scientist handoff system
+│       ├── MODULE_REGISTRY.yaml # Machine-readable canonical module registry
 │       └── pipeline/          # Scientific module documentation packages
 ├── scripts/                   # Reference builders and pilot execution runners
 │   └── r/                     # Headless R engines (DESeq2, clusterProfiler, renv.lock)
@@ -81,6 +82,7 @@ To explore the project further, consult the following dedicated guides:
 
 | Document | Purpose |
 | :--- | :--- |
+| **[Module Registry](MODULE_REGISTRY.yaml)** | Canonical machine-readable registry of scientific modules, code paths, QC invariants, and status |
 | **[Project Overview](PROJECT_OVERVIEW.md)** | Scientific foundations, organoid context, and DNT modeling scope |
 | **[Current Status](CURRENT_STATUS.md)** | Implemented vs. planned modules, test counts, and release milestones |
 | **[Pipeline Map](PIPELINE_MAP.md)** | Visual flowchart of data intake, response contrast, features, and ML |

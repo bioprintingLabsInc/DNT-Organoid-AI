@@ -45,7 +45,7 @@ This document records the chronological development milestones of the DNT Organo
 
 ### Milestone 5: Pathway & Signaling Feature Foundation (Stage 8C — Frozen)
 * Implemented preranked GSEA for Gene Ontology (GO BP) and KEGG pathways using clusterProfiler 4.14.6.
-* Established exact statistical universe preservation: 32,140 statistically eligible genes; 7,122 non-Entrez genes retained (`future_feature_eligibility=True`); 2 duplicate Entrez mappings resolved deterministically via `MAX_ABS_WALD`.
+* Established exact statistical universe preservation: 60,207 evaluated = 27,980 all-zero + 32,227 valid Wald; 32,227 = 87 Cook's outliers + 32,140 statistically eligible; 32,140 = 25,018 Entrez-mapped eligible + 7,122 non-Entrez genes retained (`future_feature_eligibility=True`); 2 duplicate Entrez representatives removed (Targets: `125775236` and `100874204`) via `MAX_ABS_WALD` yielding 25,016 final GSEA ranked genes.
 * Evaluated 4,893 GO BP pathways (1,151 significant) and 348 KEGG pathways (129 significant).
 * Formally frozen with immutable annotated release tag: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
 

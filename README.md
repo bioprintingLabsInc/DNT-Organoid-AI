@@ -24,7 +24,7 @@ DNT Organoid AI translates genome-wide transcriptomic profiling (bulk and single
   * **Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)
   * **Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
   * **Milestone**: **Pathway and Signaling Features v1** (GO BP & KEGG preranked GSEA).
-  * **Accounting on GSE232218**: 60,207 evaluated genes; 32,140 statistically eligible genes; 7,122 non-Entrez valid genes retained; 25,016 final GSEA ranked genes; 4,893 GO BP pathways and 348 KEGG pathways tested.
+  * **Accounting on GSE232218**: 60,207 evaluated genes (27,980 all-zero, 32,227 valid Wald, 87 Cook's outliers, 32,140 statistically eligible); 25,018 Entrez-mapped eligible genes; 7,122 non-Entrez valid genes retained; 2 duplicate Entrez representatives removed (Targets: `125775236` and `100874204`); 25,016 final GSEA ranked genes; 4,893 GO BP pathways and 348 KEGG pathways tested.
 
 ---
 

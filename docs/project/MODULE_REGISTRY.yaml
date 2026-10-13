@@ -1,0 +1,283 @@
+# ==============================================================================
+# DNT Organoid AI — Canonical Scientific Module Registry
+# ==============================================================================
+# This machine-readable YAML registry serves as the primary navigation index
+# for human researchers, software engineers, and autonomous AI agents.
+# Every module record details status, code/test/config paths, IO contracts,
+# governance tags, QC invariants, troubleshooting locations, and leakage rules.
+# ==============================================================================
+
+version: "1.0"
+last_updated: "2026-10-13"
+frozen_baseline_tag: "stage8c-v1-frozen"
+frozen_baseline_commit: "7a69c259b9be1ea9cff55dd76b8db365df105b9f"
+
+modules:
+  - canonical_scientific_name: "Ingestion & Format Detection"
+    historical_identifier: "Step 5"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/routing/"
+      - "src/ingestion/"
+    test_paths:
+      - "tests/routing/"
+      - "tests/ingestion/"
+    config_paths:
+      - "config/metadata_schema.yaml"
+    principal_input: "Raw sequencing counts or expression matrix files (FASTQ, TSV, CSV, H5AD, GEO series matrix)"
+    principal_output: "Ingestion manifest with detected format and assigned modality route (e.g. ModalityRoute.BULK_RAW_COUNT_PIPELINE)"
+    upstream_module: "External Data / GEO Accession"
+    downstream_module: "Metadata Validation"
+    governed_commit_or_tag: "f1a7ad8"
+    key_qc_invariant: "Format and modality must be unambiguously detected before downstream parsing; unrecognized formats trigger deliberate routing failures rather than speculative parsing."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#11-failure-domain-1-ingestion--routing-failures"
+    leakage_constraints: "None (pre-feature technical routing)."
+
+  - canonical_scientific_name: "Metadata Validation"
+    historical_identifier: "Steps 3–4"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/metadata/"
+    test_paths:
+      - "tests/metadata/"
+    config_paths:
+      - "config/metadata_schema.yaml"
+    principal_input: "Sample and study metadata records (condition, concentration, duration, developmental stage, protocol)"
+    principal_output: "Validated MetadataValidationResult and structured typed metadata models"
+    upstream_module: "Ingestion & Format Detection"
+    downstream_module: "Quality Control & Preprocessing"
+    governed_commit_or_tag: "f1a7ad8"
+    key_qc_invariant: "Strict compliance against config/metadata_schema.yaml; schema rejects invalid controlled vocabulary, missing required fields, and conflicting sample identifiers."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#12-failure-domain-2-metadata-validation-errors"
+    leakage_constraints: "Exposure metadata must record experimental parameters (concentration, time) without referencing DNT outcome labels or toxicological classifications."
+
+  - canonical_scientific_name: "Quality Control & Preprocessing"
+    historical_identifier: "Step 6A"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/qc/"
+    test_paths:
+      - "tests/qc/"
+    config_paths:
+      - "config/qc_rules.yaml"
+    principal_input: "Raw count matrix and validated sample metadata"
+    principal_output: "BulkQCSummary with evaluation status (PASS, FLAGGED, FAIL)"
+    upstream_module: "Metadata Validation"
+    downstream_module: "Gene Harmonization"
+    governed_commit_or_tag: "f1a7ad8"
+    key_qc_invariant: "Matrix must contain strictly non-negative integer counts; library sizes, zero fractions, and replicate correlations must satisfy governed thresholds."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#13-failure-domain-3-raw-count-qc-violations"
+    leakage_constraints: "QC thresholds are computed across technical quality metrics alone; blinded to chemical phenotype or outcome."
+
+  - canonical_scientific_name: "Gene Harmonization"
+    historical_identifier: "Step 6B"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/gene_harmonization/"
+    test_paths:
+      - "tests/gene_harmonization/"
+    config_paths:
+      - "config/gene_harmonization.yaml"
+      - "data/references/ensembl_112/"
+    principal_input: "QC-passed raw count matrix with source gene symbols or IDs"
+    principal_output: "HarmonizationResult with canonical Ensembl Release 112 identifiers"
+    upstream_module: "Quality Control & Preprocessing"
+    downstream_module: "Normalization"
+    governed_commit_or_tag: "b904a41"
+    key_qc_invariant: "Source identifiers map to canonical Ensembl Release 112 catalog without fabricating synthetic IDs; colliding identifiers are flagged for review and never silently summed or aggregated."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#14-failure-domain-4-gene-harmonization-failures"
+    leakage_constraints: "Purely genomic reference mapping; zero exposure or outcome leakage."
+
+  - canonical_scientific_name: "Normalization"
+    historical_identifier: "Step 6C"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/normalization/"
+    test_paths:
+      - "tests/normalization/"
+    config_paths:
+      - "config/bulk_normalization.yaml"
+    principal_input: "Harmonized count matrix and biological cohort definitions"
+    principal_output: "NormalizedDataset containing DESeq2 median-of-ratios size factors"
+    upstream_module: "Gene Harmonization"
+    downstream_module: "Treatment-Control Response Construction"
+    governed_commit_or_tag: "5ce67cc"
+    key_qc_invariant: "Size factors estimated strictly within metadata-defined biological cohorts sharing protocol, cell line, and developmental window; never pools across disparate protocols."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#15-failure-domain-5-normalization-failures"
+    leakage_constraints: "Normalization cohorts must balance treatment and vehicle control samples without using DNT outcome labels."
+
+  - canonical_scientific_name: "Treatment-Control Response Construction"
+    historical_identifier: "Step 7A"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/response_builder/"
+    test_paths:
+      - "tests/response_builder/"
+    config_paths: []
+    principal_input: "Harmonized count matrix and validated exposure metadata"
+    principal_output: "Pairwise contrast specifications (ResponseContrast) pairing treated organoids with matched vehicle controls"
+    upstream_module: "Normalization"
+    downstream_module: "Differential Molecular Response"
+    governed_commit_or_tag: "cd954f4"
+    key_qc_invariant: "Treated conditions matched strictly to vehicle controls from the same study, experiment, cell line, developmental age, and protocol; requires minimum >= 2 biological replicates per arm."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#2-differential-expression-failures-steps-7a7b"
+    leakage_constraints: "Contrasts evaluate exposure versus vehicle control only; no external toxicity classifications used."
+
+  - canonical_scientific_name: "Differential Molecular Response"
+    historical_identifier: "Step 7B"
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/differential_expression/"
+      - "scripts/r/run_deseq2_contrast.R"
+    test_paths:
+      - "tests/differential_expression/"
+    config_paths:
+      - "scripts/r/renv.lock"
+    principal_input: "Harmonized counts and paired ResponseContrast specifications"
+    principal_output: "DifferentialExpressionContrastResult (log2FC, SE, Wald statistic, p-value, padj) across all 60,207 canonical genes"
+    upstream_module: "Treatment-Control Response Construction"
+    downstream_module: "Pathway & Signaling Features"
+    governed_commit_or_tag: "f1a7ad8"
+    key_qc_invariant: "Gene-universe conservation audit preserves all 60,207 evaluated genes; zero genes dropped before statistical accounting; Cook's distance outliers flagged explicitly."
+    first_troubleshooting_location: "docs/project/TROUBLESHOOTING.md#2-differential-expression-failures-steps-7a7b"
+    leakage_constraints: "Computes unbiased treatment-vs-control perturbation statistics; completely blind to chemical DNT status."
+
+  - canonical_scientific_name: "Pathway and Signaling Feature Foundation"
+    historical_identifier: "Stage 8C"
+    status: "FROZEN"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/features/pathway/"
+      - "scripts/r/run_gsea_analysis.R"
+    test_paths:
+      - "tests/features/pathway/"
+    config_paths:
+      - "data/references/kegg_20261012/"
+      - "data/references/org.Hs.eg.db_sqlite_checksum.txt"
+    principal_input: "DifferentialExpressionContrastResult from Differential Molecular Response"
+    principal_output: "PathwayAnalysisResult (preranked GSEA NES, p-values, FDR for GO BP and KEGG) and preserved 32,140 statistically eligible gene universe"
+    upstream_module: "Differential Molecular Response"
+    downstream_module: "Compound/Study-Safe Dataset Splitting & Pre-Split Feature Assembly"
+    governed_commit_or_tag: "stage8c-v1-frozen (7a69c259b9be1ea9cff55dd76b8db365df105b9f)"
+    key_qc_invariant: "Full universe reconciliation: 60,207 evaluated = 27,980 all-zero + 32,227 valid Wald; 32,227 = 87 Cook's outliers + 32,140 statistically eligible; 32,140 = 25,018 Entrez-mapped eligible + 7,122 non-Entrez retained (future_feature_eligibility=True); 2 duplicate Entrez representatives removed via MAX_ABS_WALD (Targets: 125775236 and 100874204) yielding 25,016 final GSEA ranked genes."
+    first_troubleshooting_location: "docs/project/pipeline/pathway_and_signaling_features/README.md#2-frozen-gene-universe--reconciliation-accounting"
+    leakage_constraints: "Completely blind to developmental neurotoxicity outcome labels or expected toxicological answers."
+
+  - canonical_scientific_name: "Cross-Study Gene Response Features"
+    historical_identifier: "Stage 8A"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "DifferentialExpressionContrastResult objects across one or more independent organoid studies"
+    principal_output: "Gene-level cross-study synthesized perturbation records (pooled effect, pooled SE, tau^2, I^2 when N_studies >= 2; single-study estimates retained when N_studies = 1)"
+    upstream_module: "Differential Molecular Response"
+    downstream_module: "Compound/Study-Safe Dataset Splitting"
+    governed_commit_or_tag: null
+    key_qc_invariant: "Never pool different chemical compounds; do not treat multiple doses/timepoints from the same experiment as independent studies; do not unweighted-average fold changes; preserve log2FC and SE alongside full experimental context."
+    first_troubleshooting_location: "docs/project/pipeline/cross_study_gene_response_features/README.md#1-scientific-objective--governing-design"
+    leakage_constraints: "Feature extraction operates strictly on treatment-control contrast estimates; zero knowledge of DNT outcome labels."
+
+  - canonical_scientific_name: "Gene Co-Response and Network Features"
+    historical_identifier: "Stage 8B"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Multi-contrast molecular response results from Differential Molecular Response"
+    principal_output: "Case A: Prespecified static external interactome annotations. Case B: Data-adaptive co-response modules and network metrics learned within training partitions only."
+    upstream_module: "Differential Molecular Response"
+    downstream_module: "Case A: Compound/Study-Safe Dataset Splitting. Case B: Training Partition / CV Folds only."
+    governed_commit_or_tag: null
+    key_qc_invariant: "A single VPA contrast remains insufficient for empirical co-response network inference; requires multiple independent contrasts across varied compounds/conditions; no arbitrary sample threshold imposed."
+    first_troubleshooting_location: "docs/project/pipeline/gene_coresponse_and_network_features/README.md#1-scientific-objective--methodological-requirements"
+    leakage_constraints: "Fixed external networks (Case A) may be evaluated as pre-split annotations. Data-adaptive co-response modules (Case B) must be learned strictly on the training partition after compound/study-safe dataset splitting, or within CV training folds. Calibration and test compounds must never participate in adaptive module or network learning."
+
+  - canonical_scientific_name: "Compound-Gene and Compound-Pathway Relationships"
+    historical_identifier: "Stage 8D"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Differential Molecular Response results (compound-gene) and Pathway & Signaling Feature results (compound-pathway)"
+    principal_output: "Structured experimental compound-gene and compound-pathway perturbation mappings preserving full experimental context (dose, duration, stage, study)"
+    upstream_module: "Differential Molecular Response & Pathway and Signaling Features"
+    downstream_module: "Compound/Study-Safe Dataset Splitting"
+    governed_commit_or_tag: null
+    key_qc_invariant: "External toxicology resources remain separate annotation and post-hoc validation sources and are not automatically v1 predictive features."
+    first_troubleshooting_location: "docs/project/pipeline/compound_gene_and_pathway_relationships/README.md#2-external-toxicological-knowledge--circularity-safeguards"
+    leakage_constraints: "Circularity prevention: external chemical-neurotoxicity annotations and known literature mechanisms must not leak into input features."
+
+  - canonical_scientific_name: "Developmental Neurotoxicity Reference Label Curation"
+    historical_identifier: "Stage 9"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Chemical regulatory dossiers, in vivo DNT test outcomes (EPA, OECD, EFSA, NTP DNT-DIVER), and peer-reviewed literature"
+    principal_output: "Version-controlled chemical reference label catalog (data/labels/) supporting positive, negative, and uncertain states"
+    upstream_module: "External Regulatory / Toxicology Evidence"
+    downstream_module: "Compound/Study-Safe Dataset Splitting"
+    governed_commit_or_tag: null
+    key_qc_invariant: "Label curation is completely independent of transcriptomic and organoid assay data."
+    first_troubleshooting_location: "docs/project/pipeline/dnt_label_curation/README.md#1-scientific-objective"
+    leakage_constraints: "Zero expression leakage: labels must never be inferred or derived from molecular response profiles."
+
+  - canonical_scientific_name: "Compound-Safe Dataset Splitting and Leakage Controls"
+    historical_identifier: "Stage 10"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Integrated molecular feature matrices + chemical metadata + independent reference DNT labels"
+    principal_output: "Partitioned train, calibration, and test index manifests with verified zero compound overlap"
+    upstream_module: "Molecular Feature Engineering & DNT Reference Label Curation"
+    downstream_module: "DNT Signature Discovery (Training Partition), Calibration, Test Evaluation"
+    governed_commit_or_tag: null
+    key_qc_invariant: "Strict whole-compound and study-family grouping so that observations from the same compound or study family do not cross partition boundaries."
+    first_troubleshooting_location: "docs/project/pipeline/compound_safe_dataset_splitting/README.md#1-scientific-objective"
+    leakage_constraints: "Enforces complete physical separation between training data and held-out evaluation sets."
+
+  - canonical_scientific_name: "Developmental Neurotoxicity Transcriptomic Signature Discovery"
+    historical_identifier: "Stage 11"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Training-partition-only feature vectors + training reference DNT labels"
+    principal_output: "Candidate biomarker gene panels, pathway signature weights, and biological perturbation profiles learned without test-set leakage"
+    upstream_module: "Compound-Safe Dataset Splitting (Training Partition only)"
+    downstream_module: "Model Training"
+    governed_commit_or_tag: null
+    key_qc_invariant: "Supervised signature extraction, stability selection, and feature filtering occur strictly on the training partition."
+    first_troubleshooting_location: "docs/project/pipeline/dnt_signature_discovery/README.md#1-scientific-objective--leakage-controls"
+    leakage_constraints: "Calibration compounds and test chemicals must never influence signature selection, ranking, thresholding, or weighting."
+
+  - canonical_scientific_name: "Model Training, Calibration, and Validation"
+    historical_identifier: "Stage 12"
+    status: "PLANNED"
+    implementation_status: "NOT_IMPLEMENTED"
+    primary_code_paths: []
+    test_paths: []
+    config_paths: []
+    principal_input: "Training signatures/features, calibration partition, and untouched test partition"
+    principal_output: "Locked predictive models, calibrated risk probabilities, generalization benchmarks"
+    upstream_module: "DNT Signature Discovery & Compound-Safe Dataset Splitting"
+    downstream_module: "Prospective Chemical Screening"
+    governed_commit_or_tag: null
+    key_qc_invariant: "Probabilistic calibration evaluated on dedicated calibration split; final generalization evaluated once on untouched test set."
+    first_troubleshooting_location: "docs/project/pipeline/model_training_calibration_and_validation/README.md#1-scientific-objective"
+    leakage_constraints: "Untouched test evaluation: test set compounds remain held out until final locked model evaluation."
