@@ -1,0 +1,17 @@
+{
+  "provenance_type": "KEGG_OFFLINE_SNAPSHOT",
+  "snapshot_timestamp": "2026-10-13T12:00:00Z",
+  "kegg_database_update_date": "2026-10-13",
+  "organism": "hsa",
+  "species": "Homo sapiens",
+  "pathway_count": 372,
+  "gene_pathway_association_count": 39671,
+  "download_mechanism": "clusterProfiler / KEGGREST headless snapshot",
+  "clusterprofiler_version": "4.14.6",
+  "keggrest_version": "1.46.0",
+  "r_version": "4.4.3",
+  "bioconductor_version": "3.20",
+  "sha256_rds": "A54298B77CE24D0059FB58CE0B3E22EB6837589D02FA4B2437E7545A02967C20",
+  "sha256_json": "B454F803A2935333FEA52076BAF5E7D98C4FDEFE29EFA8EB75903BD5BBBA3DB8",
+  "source_api_method": "keggLink('hsa') and keggList('pathway', 'hsa')"
+}

@@ -129,6 +129,42 @@
       "Version": "2.0.0",
       "Source": "Repository",
       "Repository": "CRAN"
+    },
+    "AnnotationDbi": {
+      "Package": "AnnotationDbi",
+      "Version": "1.68.0",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
+    },
+    "clusterProfiler": {
+      "Package": "clusterProfiler",
+      "Version": "4.14.6",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
+    },
+    "org.Hs.eg.db": {
+      "Package": "org.Hs.eg.db",
+      "Version": "3.20.0",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
+    },
+    "GO.db": {
+      "Package": "GO.db",
+      "Version": "3.20.0",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
+    },
+    "fgsea": {
+      "Package": "fgsea",
+      "Version": "1.32.4",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
+    },
+    "KEGGREST": {
+      "Package": "KEGGREST",
+      "Version": "1.46.0",
+      "Source": "Bioconductor",
+      "Repository": "BioCsoft"
     }
   }
 }
