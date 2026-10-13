@@ -24,6 +24,7 @@ class GSEARunnerResult:
     packages: dict[str, str]
     go_results: tuple[PathwayEnrichmentResult, ...]
     kegg_results: tuple[PathwayEnrichmentResult, ...]
+    gsea_parameters: dict[str, Any] | None = None
     error_message: str | None = None
 
 
@@ -36,6 +37,11 @@ def execute_preranked_gsea_r(
     max_size: int = 500,
     pvalue_cutoff: float = 1.0,
     seed: int = 42,
+    gsea_param: float = 1.0,
+    score_type: str = "std",
+    nperm_simple: int = 1000,
+    eps: float = 0.0,
+    padjust_method: str = "BH",
     timeout_seconds: int = 600,
 ) -> GSEARunnerResult:
     """Execute preranked GSEA in headless R subprocess using clusterProfiler and fgsea."""
@@ -89,6 +95,16 @@ def execute_preranked_gsea_r(
             str(pvalue_cutoff),
             "--seed",
             str(seed),
+            "--gsea_param",
+            str(gsea_param),
+            "--score_type",
+            str(score_type),
+            "--nperm_simple",
+            str(nperm_simple),
+            "--eps",
+            str(eps),
+            "--padjust_method",
+            str(padjust_method),
         ]
 
         kegg_path = Path(kegg_rds_path)
@@ -152,6 +168,7 @@ def execute_preranked_gsea_r(
                 packages=data.get("packages", {}),
                 go_results=(),
                 kegg_results=(),
+                gsea_parameters=data.get("gsea_parameters"),
                 error_message=data.get("error_message", "Unknown error from R runner."),
             )
 
@@ -190,5 +207,6 @@ def execute_preranked_gsea_r(
             packages=data.get("packages", {}),
             go_results=go_results,
             kegg_results=kegg_results,
+            gsea_parameters=data.get("gsea_parameters"),
             error_message=None,
         )

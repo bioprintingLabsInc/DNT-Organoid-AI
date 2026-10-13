@@ -17,7 +17,12 @@ parse_args <- function(args) {
     max_size = 500,
     pvalue_cutoff = 1.0,
     kegg_rds = "data/references/kegg_hsa_pathways.rds",
-    seed = 42
+    seed = 42,
+    gsea_param = 1.0,
+    score_type = "std",
+    nperm_simple = 1000,
+    eps = 0,
+    padjust_method = "BH"
   )
   i <- 1
   while (i <= length(args)) {
@@ -42,6 +47,21 @@ parse_args <- function(args) {
     } else if (args[i] == "--seed" && i < length(args)) {
       params$seed <- as.integer(args[i + 1])
       i <- i + 2
+    } else if (args[i] == "--gsea_param" && i < length(args)) {
+      params$gsea_param <- as.numeric(args[i + 1])
+      i <- i + 2
+    } else if (args[i] == "--score_type" && i < length(args)) {
+      params$score_type <- as.character(args[i + 1])
+      i <- i + 2
+    } else if (args[i] == "--nperm_simple" && i < length(args)) {
+      params$nperm_simple <- as.integer(args[i + 1])
+      i <- i + 2
+    } else if (args[i] == "--eps" && i < length(args)) {
+      params$eps <- as.numeric(args[i + 1])
+      i <- i + 2
+    } else if (args[i] == "--padjust_method" && i < length(args)) {
+      params$padjust_method <- as.character(args[i + 1])
+      i <- i + 2
     } else {
       i <- i + 1
     }
@@ -52,7 +72,7 @@ parse_args <- function(args) {
 params <- parse_args(args)
 
 if (is.null(params$ranks) || is.null(params$output)) {
-  cat("Usage: Rscript run_preranked_gsea.R --ranks <ranks.tsv> --output <output.json> [--min_size 15] [--max_size 500] [--pvalue_cutoff 1.0] [--kegg_rds <path>] [--seed 42]\n", file = stderr())
+  cat("Usage: Rscript run_preranked_gsea.R --ranks <ranks.tsv> --output <output.json> [--min_size 15] [--max_size 500] [--pvalue_cutoff 1.0] [--kegg_rds <path>] [--seed 42] [--gsea_param 1] [--score_type std] [--nperm_simple 1000]\n", file = stderr())
   quit(status = 1)
 }
 
@@ -74,7 +94,7 @@ write_error <- function(msg, code = 2) {
 }
 
 # Check package dependencies
-req_pkgs <- c("clusterProfiler", "org.Hs.eg.db", "fgsea", "KEGGREST")
+req_pkgs <- c("clusterProfiler", "org.Hs.eg.db", "GO.db", "fgsea", "KEGGREST", "AnnotationDbi")
 missing_pkgs <- req_pkgs[!sapply(req_pkgs, requireNamespace, quietly = TRUE)]
 if (length(missing_pkgs) > 0) {
   write_error(paste("Missing required R packages:", paste(missing_pkgs, collapse = ", ")), code = 2)
@@ -83,13 +103,16 @@ if (length(missing_pkgs) > 0) {
 suppressPackageStartupMessages({
   library(clusterProfiler)
   library(org.Hs.eg.db)
+  library(GO.db)
   library(fgsea)
   library(KEGGREST)
+  library(AnnotationDbi)
 })
 
 pkg_versions <- list(
   clusterProfiler = as.character(packageVersion("clusterProfiler")),
   org_Hs_eg_db = as.character(packageVersion("org.Hs.eg.db")),
+  GO_db = as.character(packageVersion("GO.db")),
   fgsea = as.character(packageVersion("fgsea")),
   KEGGREST = as.character(packageVersion("KEGGREST"))
 )
@@ -167,18 +190,22 @@ parse_gsea_results <- function(res_obj, db_name, e2s_map) {
   return(out)
 }
 
-# 1. Run GO Biological Process GSEA
+# 1. Run GO Biological Process GSEA with explicit parameters
 cat("Executing GO Biological Process preranked GSEA...\n")
 go_res <- tryCatch({
   clusterProfiler::gseGO(
     geneList = geneList,
     OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+    keyType = "ENTREZID",
     ont = "BP",
+    exponent = params$gsea_param,
     minGSSize = params$min_size,
     maxGSSize = params$max_size,
     pvalueCutoff = params$pvalue_cutoff,
-    pAdjustMethod = "BH",
-    eps = 0,
+    pAdjustMethod = params$padjust_method,
+    eps = params$eps,
+    scoreType = params$score_type,
+    nPermSimple = params$nperm_simple,
     seed = TRUE,
     verbose = FALSE
   )
@@ -190,7 +217,7 @@ go_res <- tryCatch({
 go_list <- parse_gsea_results(go_res, "GO_BP", entrez2symbol)
 cat("GO BP completed. Evaluated pathways:", length(go_list), "\n")
 
-# 2. Run KEGG GSEA
+# 2. Run KEGG GSEA with explicit parameters
 cat("Executing KEGG preranked GSEA...\n")
 kegg_res <- NULL
 if (!is.null(params$kegg_rds) && file.exists(params$kegg_rds)) {
@@ -202,11 +229,14 @@ if (!is.null(params$kegg_rds) && file.exists(params$kegg_rds)) {
         geneList = geneList,
         TERM2GENE = kegg_data$KEGGPATHID2EXTID,
         TERM2NAME = kegg_data$KEGGPATHID2NAME,
+        exponent = params$gsea_param,
         minGSSize = params$min_size,
         maxGSSize = params$max_size,
         pvalueCutoff = params$pvalue_cutoff,
-        pAdjustMethod = "BH",
-        eps = 0,
+        pAdjustMethod = params$padjust_method,
+        eps = params$eps,
+        scoreType = params$score_type,
+        nPermSimple = params$nperm_simple,
         seed = TRUE,
         verbose = FALSE
       )
@@ -224,11 +254,14 @@ if (is.null(kegg_res)) {
       geneList = geneList,
       organism = "hsa",
       keyType = "kegg",
+      exponent = params$gsea_param,
       minGSSize = params$min_size,
       maxGSSize = params$max_size,
       pvalueCutoff = params$pvalue_cutoff,
-      pAdjustMethod = "BH",
-      eps = 0,
+      pAdjustMethod = params$padjust_method,
+      eps = params$eps,
+      scoreType = params$score_type,
+      nPermSimple = params$nperm_simple,
       seed = TRUE,
       verbose = FALSE
     )
@@ -248,6 +281,18 @@ out_obj <- list(
   operating_system = os_info,
   execution_timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
   packages = pkg_versions,
+  gsea_parameters = list(
+    exponent = params$gsea_param,
+    gsea_param = params$gsea_param,
+    score_type = params$score_type,
+    min_size = params$min_size,
+    max_size = params$max_size,
+    pvalue_cutoff = params$pvalue_cutoff,
+    padjust_method = params$padjust_method,
+    eps = params$eps,
+    seed = params$seed,
+    nperm_simple = params$nperm_simple
+  ),
   go_results = go_list,
   kegg_results = kegg_list
 )

@@ -86,11 +86,12 @@ class EnsemblToEntrezAdapter:
                         status = MappingStatus.MAPPED.value
                         note = None
 
-            intermediate.append((gene, entrez_id, status, note))
+            biotype = ref_record.gene_biotype if ref_record else None
+            intermediate.append((gene, entrez_id, status, note, biotype))
 
         # Second pass: flag duplicate Entrez targets
         duplicate_entrez_count = 0
-        for gene, entrez_id, status, note in intermediate:
+        for gene, entrez_id, status, note, biotype in intermediate:
             final_status = status
             final_note = note
             if entrez_id and entrez_counts.get(entrez_id, 0) > 1:
@@ -106,6 +107,7 @@ class EnsemblToEntrezAdapter:
                     entrez_gene_id=entrez_id,
                     mapping_status=final_status,
                     source_reference_version=self.gene_reference.reference_version,
+                    gene_biotype=biotype,
                     notes=final_note,
                 )
             )

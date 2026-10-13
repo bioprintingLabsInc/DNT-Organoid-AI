@@ -24,6 +24,7 @@ class PathwayGeneMappingRecord:
     entrez_gene_id: str | None
     mapping_status: str
     source_reference_version: str
+    gene_biotype: str | None = None
     notes: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -56,6 +57,48 @@ class PathwayGeneMappingResult:
             "reference_checksum": self.reference_checksum,
             "mappings": [m.to_dict() for m in self.mappings],
         }
+
+
+@dataclass(frozen=True, slots=True)
+class StatisticallyEligibleGeneFeature:
+    """A statistically valid Stage 7 gene in the preserved molecular universe."""
+
+    canonical_gene_id: str
+    approved_symbol: str | None
+    gene_biotype: str | None
+    entrez_gene_id: str | None
+    base_mean: float
+    log2_fold_change: float | None
+    lfc_standard_error: float | None
+    wald_statistic: float | None
+    p_value: float | None
+    adjusted_p_value_bh: float | None
+    result_status: str
+    annotation_status: str  # "ENTREZ_MAPPED" or "ENTREZ_UNMAPPED"
+    statistical_eligibility: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class RetainedNonEntrezGeneFeature:
+    """A statistically valid gene retained for feature construction despite lacking Entrez ID."""
+
+    canonical_gene_id: str
+    approved_symbol: str | None
+    gene_biotype: str | None
+    wald_statistic: float | None
+    log2_fold_change: float | None
+    lfc_standard_error: float | None
+    p_value: float | None
+    adjusted_p_value_bh: float | None
+    reason_not_in_kegg: str  # "NO_ENTREZ_ID_IN_ENSEMBL_112"
+    go_annotation_status: str  # "NOT_ANNOTATED_IN_ENTREZ_GO"
+    future_feature_eligibility: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,18 +193,15 @@ class PathwayAnalysisQC:
     """Comprehensive quality control and accounting report for Stage 8C."""
 
     stage7_evaluated_genes: int
-    valid_ranking_statistic_genes: int
-    valid_ranking_statistic_pct: float
-    invalid_statistical_result_genes: int
-    invalid_statistical_result_pct: float
-    mapped_entrez_genes: int
-    mapped_entrez_pct: float
-    unmapped_ensembl_genes: int
-    unmapped_ensembl_pct: float
-    one_to_many_mappings: int
-    duplicate_entrez_mappings: int
-    genes_entering_go_gsea: int
-    genes_entering_kegg_gsea: int
+    zero_count_genes: int
+    genes_with_valid_wald: int
+    cooks_outlier_genes: int
+    statistically_eligible_genes: int
+    entrez_mapped_eligible_genes: int
+    entrez_unmapped_eligible_genes: int
+    duplicate_entrez_entries_removed: int
+    final_kegg_ranked_genes: int
+    final_go_ranked_genes: int
     go_gene_sets_tested: int
     kegg_gene_sets_tested: int
     go_significant_pathways_count: int
@@ -171,9 +211,76 @@ class PathwayAnalysisQC:
     qc_status: str  # "PASS", "WARNING", "FAIL"
     qc_notes: tuple[str, ...]
 
+    # Compatibility properties for Stage 8C v1 callers
+    @property
+    def valid_ranking_statistic_genes(self) -> int:
+        return self.statistically_eligible_genes
+
+    @property
+    def valid_ranking_statistic_pct(self) -> float:
+        return round((self.statistically_eligible_genes / self.stage7_evaluated_genes) * 100.0, 2) if self.stage7_evaluated_genes > 0 else 0.0
+
+    @property
+    def invalid_statistical_result_genes(self) -> int:
+        return self.zero_count_genes + self.cooks_outlier_genes
+
+    @property
+    def invalid_statistical_result_pct(self) -> float:
+        return round((self.invalid_statistical_result_genes / self.stage7_evaluated_genes) * 100.0, 2) if self.stage7_evaluated_genes > 0 else 0.0
+
+    @property
+    def mapped_entrez_genes(self) -> int:
+        return self.entrez_mapped_eligible_genes
+
+    @property
+    def mapped_entrez_pct(self) -> float:
+        return round((self.entrez_mapped_eligible_genes / self.stage7_evaluated_genes) * 100.0, 2) if self.stage7_evaluated_genes > 0 else 0.0
+
+    @property
+    def unmapped_ensembl_genes(self) -> int:
+        return self.entrez_unmapped_eligible_genes
+
+    @property
+    def unmapped_ensembl_pct(self) -> float:
+        return round((self.entrez_unmapped_eligible_genes / self.stage7_evaluated_genes) * 100.0, 2) if self.stage7_evaluated_genes > 0 else 0.0
+
+    @property
+    def one_to_many_mappings(self) -> int:
+        return 0
+
+    @property
+    def duplicate_entrez_mappings(self) -> int:
+        return self.duplicate_entrez_entries_removed
+
+    @property
+    def genes_entering_go_gsea(self) -> int:
+        return self.final_go_ranked_genes
+
+    @property
+    def genes_entering_kegg_gsea(self) -> int:
+        return self.final_kegg_ranked_genes
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "stage7_evaluated_genes": self.stage7_evaluated_genes,
+            "zero_count_genes": self.zero_count_genes,
+            "genes_with_valid_wald": self.genes_with_valid_wald,
+            "cooks_outlier_genes": self.cooks_outlier_genes,
+            "statistically_eligible_genes": self.statistically_eligible_genes,
+            "entrez_mapped_eligible_genes": self.entrez_mapped_eligible_genes,
+            "entrez_unmapped_eligible_genes": self.entrez_unmapped_eligible_genes,
+            "duplicate_entrez_entries_removed": self.duplicate_entrez_entries_removed,
+            "final_kegg_ranked_genes": self.final_kegg_ranked_genes,
+            "final_go_ranked_genes": self.final_go_ranked_genes,
+            "go_gene_sets_tested": self.go_gene_sets_tested,
+            "kegg_gene_sets_tested": self.kegg_gene_sets_tested,
+            "go_significant_pathways_count": self.go_significant_pathways_count,
+            "go_significant_pathways_pct": self.go_significant_pathways_pct,
+            "kegg_significant_pathways_count": self.kegg_significant_pathways_count,
+            "kegg_significant_pathways_pct": self.kegg_significant_pathways_pct,
+            "qc_status": self.qc_status,
+            "qc_notes": list(self.qc_notes),
+            # Compatibility fields
             "valid_ranking_statistic_genes": self.valid_ranking_statistic_genes,
             "valid_ranking_statistic_pct": self.valid_ranking_statistic_pct,
             "invalid_statistical_result_genes": self.invalid_statistical_result_genes,
@@ -186,14 +293,6 @@ class PathwayAnalysisQC:
             "duplicate_entrez_mappings": self.duplicate_entrez_mappings,
             "genes_entering_go_gsea": self.genes_entering_go_gsea,
             "genes_entering_kegg_gsea": self.genes_entering_kegg_gsea,
-            "go_gene_sets_tested": self.go_gene_sets_tested,
-            "kegg_gene_sets_tested": self.kegg_gene_sets_tested,
-            "go_significant_pathways_count": self.go_significant_pathways_count,
-            "go_significant_pathways_pct": self.go_significant_pathways_pct,
-            "kegg_significant_pathways_count": self.kegg_significant_pathways_count,
-            "kegg_significant_pathways_pct": self.kegg_significant_pathways_pct,
-            "qc_status": self.qc_status,
-            "qc_notes": list(self.qc_notes),
         }
 
 
@@ -220,6 +319,11 @@ class PathwayAnalysisProvenance:
     software_packages: dict[str, str]
     stage7_source_commit: str
     stage8c_source_commit: str
+    statistical_eligibility_criteria: str
+    pathway_annotation_eligibility_criteria: dict[str, str]
+    go_provenance: dict[str, Any]
+    kegg_provenance: dict[str, Any]
+    gsea_parameters: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -234,6 +338,8 @@ class PathwayEnrichmentDataset:
     go_results: tuple[PathwayEnrichmentResult, ...]
     kegg_results: tuple[PathwayEnrichmentResult, ...]
     ranked_genes: RankedGeneSet
+    statistically_eligible_universe: tuple[StatisticallyEligibleGeneFeature, ...]
+    retained_non_entrez_genes: tuple[RetainedNonEntrezGeneFeature, ...]
     qc: PathwayAnalysisQC
     provenance: PathwayAnalysisProvenance
     mapping_result: PathwayGeneMappingResult
@@ -245,6 +351,8 @@ class PathwayEnrichmentDataset:
             "go_results": [r.to_dict() for r in self.go_results],
             "kegg_results": [r.to_dict() for r in self.kegg_results],
             "ranked_genes": self.ranked_genes.to_dict(),
+            "statistically_eligible_universe": [g.to_dict() for g in self.statistically_eligible_universe],
+            "retained_non_entrez_genes": [g.to_dict() for g in self.retained_non_entrez_genes],
             "qc": self.qc.to_dict(),
             "provenance": self.provenance.to_dict(),
             "mapping_result": self.mapping_result.to_dict(),

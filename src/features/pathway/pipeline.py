@@ -17,6 +17,8 @@ from .models import (
     PathwayEnrichmentResult,
     PathwayGeneMappingResult,
     RankedGeneSet,
+    RetainedNonEntrezGeneFeature,
+    StatisticallyEligibleGeneFeature,
 )
 from .provenance import build_pathway_analysis_provenance
 from .qc import compute_pathway_analysis_qc
@@ -32,6 +34,9 @@ def run_pathway_enrichment_for_contrast(
     max_size: int = 500,
     pvalue_cutoff: float = 1.0,
     seed: int = 42,
+    gsea_param: float = 1.0,
+    score_type: str = "std",
+    nperm_simple: int = 1000,
     timeout_seconds: int = 600,
     deduplicate_entrez: bool = True,
 ) -> PathwayEnrichmentDataset:
@@ -40,18 +45,24 @@ def run_pathway_enrichment_for_contrast(
     Steps:
     1. Map canonical Ensembl IDs to Entrez Gene IDs using governed local reference.
     2. Build statistically qualified, deterministically ordered ranked gene set.
-    3. Execute preranked GSEA in R using clusterProfiler / fgsea for GO BP and KEGG.
-    4. Compute exhaustive quality control accounting and metrics.
-    5. Construct complete upstream-to-downstream provenance audit record.
-    6. Return governed PathwayEnrichmentDataset.
+    3. Preserve the full statistically eligible molecular universe (32,140 genes) and retained non-Entrez genes.
+    4. Execute preranked GSEA in R using clusterProfiler / fgsea for GO BP and KEGG.
+    5. Compute exhaustive quality control accounting and metrics.
+    6. Construct complete upstream-to-downstream provenance audit record.
+    7. Return governed PathwayEnrichmentDataset.
     """
     mapping_adapter = EnsemblToEntrezAdapter(gene_reference=gene_reference)
     ranking_builder = GeneRankingBuilder(mapping_adapter=mapping_adapter)
 
-    ranked_genes, mapping_result, excluded_records = ranking_builder.build_ranking(
+    ranking_res = ranking_builder.build_ranking(
         contrast=contrast,
         deduplicate_entrez=deduplicate_entrez,
     )
+    ranked_genes = ranking_res.ranked_gene_set
+    mapping_result = ranking_res.mapping_result
+    excluded_records = ranking_res.excluded_records
+    stat_universe = ranking_res.statistically_eligible_universe
+    retained_non_entrez = ranking_res.retained_non_entrez_genes
 
     # Execute GSEA via R subprocess bridge
     runner_result = execute_preranked_gsea_r(
@@ -61,6 +72,9 @@ def run_pathway_enrichment_for_contrast(
         max_size=max_size,
         pvalue_cutoff=pvalue_cutoff,
         seed=seed,
+        gsea_param=gsea_param,
+        score_type=score_type,
+        nperm_simple=nperm_simple,
         timeout_seconds=timeout_seconds,
     )
 
@@ -76,6 +90,9 @@ def run_pathway_enrichment_for_contrast(
         excluded_records=excluded_records,
         go_results=runner_result.go_results,
         kegg_results=runner_result.kegg_results,
+        contrast=contrast,
+        statistically_eligible_universe=stat_universe,
+        retained_non_entrez_genes=retained_non_entrez,
     )
 
     provenance = build_pathway_analysis_provenance(
@@ -84,6 +101,7 @@ def run_pathway_enrichment_for_contrast(
         gene_reference_version=mapping_result.reference_version,
         pathway_databases=("GO_BP", "KEGG"),
         software_packages=runner_result.packages,
+        gsea_parameters=runner_result.gsea_parameters,
     )
 
     return PathwayEnrichmentDataset(
@@ -92,6 +110,8 @@ def run_pathway_enrichment_for_contrast(
         go_results=runner_result.go_results,
         kegg_results=runner_result.kegg_results,
         ranked_genes=ranked_genes,
+        statistically_eligible_universe=stat_universe,
+        retained_non_entrez_genes=retained_non_entrez,
         qc=qc,
         provenance=provenance,
         mapping_result=mapping_result,
@@ -148,4 +168,95 @@ def export_pathway_results_to_csv(
         ]
         lines.append(",".join(row))
 
-    p.write_text("\n".join(lines), encoding="utf-8")
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def export_retained_non_entrez_genes_to_csv(
+    genes: Sequence[RetainedNonEntrezGeneFeature],
+    output_path: Path | str,
+) -> None:
+    """Export retained non-Entrez statistically eligible genes to a tabular CSV file."""
+    p = Path(output_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+
+    header = [
+        "canonical_gene_id",
+        "approved_symbol",
+        "gene_biotype",
+        "wald_statistic",
+        "log2_fold_change",
+        "lfc_standard_error",
+        "p_value",
+        "adjusted_p_value_bh",
+        "reason_not_in_kegg",
+        "go_annotation_status",
+        "future_feature_eligibility",
+    ]
+
+    lines = [",".join(header)]
+    for g in genes:
+        row = [
+            g.canonical_gene_id,
+            g.approved_symbol or "",
+            g.gene_biotype or "",
+            f"{g.wald_statistic:.6f}" if g.wald_statistic is not None else "",
+            f"{g.log2_fold_change:.6f}" if g.log2_fold_change is not None else "",
+            f"{g.lfc_standard_error:.6f}" if g.lfc_standard_error is not None else "",
+            f"{g.p_value:.6e}" if g.p_value is not None else "",
+            f"{g.adjusted_p_value_bh:.6e}" if g.adjusted_p_value_bh is not None else "",
+            g.reason_not_in_kegg,
+            g.go_annotation_status,
+            str(g.future_feature_eligibility),
+        ]
+        lines.append(",".join(row))
+
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def export_statistically_eligible_universe_to_csv(
+    universe: Sequence[StatisticallyEligibleGeneFeature],
+    output_path: Path | str,
+) -> None:
+    """Export the complete preserved statistically eligible molecular universe to CSV."""
+    p = Path(output_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+
+    header = [
+        "canonical_gene_id",
+        "approved_symbol",
+        "gene_biotype",
+        "entrez_gene_id",
+        "base_mean",
+        "log2_fold_change",
+        "lfc_standard_error",
+        "wald_statistic",
+        "p_value",
+        "adjusted_p_value_bh",
+        "result_status",
+        "annotation_status",
+        "statistical_eligibility",
+    ]
+
+    lines = [",".join(header)]
+    for g in universe:
+        row = [
+            g.canonical_gene_id,
+            g.approved_symbol or "",
+            g.gene_biotype or "",
+            g.entrez_gene_id or "",
+            f"{g.base_mean:.6f}",
+            f"{g.log2_fold_change:.6f}" if g.log2_fold_change is not None else "",
+            f"{g.lfc_standard_error:.6f}" if g.lfc_standard_error is not None else "",
+            f"{g.wald_statistic:.6f}" if g.wald_statistic is not None else "",
+            f"{g.p_value:.6e}" if g.p_value is not None else "",
+            f"{g.adjusted_p_value_bh:.6e}" if g.adjusted_p_value_bh is not None else "",
+            g.result_status,
+            g.annotation_status,
+            str(g.statistical_eligibility),
+        ]
+        lines.append(",".join(row))
+
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")

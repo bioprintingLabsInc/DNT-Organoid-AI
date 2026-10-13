@@ -15,6 +15,8 @@ from .models import (
     PathwayGeneMappingResult,
     RankedGeneFeature,
     RankedGeneSet,
+    RetainedNonEntrezGeneFeature,
+    StatisticallyEligibleGeneFeature,
 )
 
 
@@ -28,6 +30,39 @@ class ExcludedRankingGene:
     result_status: str
     wald_statistic: float | None
     exclusion_reason: str
+
+
+class RankingResult(tuple):
+    """Immutable outcome of ranking construction.
+
+    Unpacks as a 3-tuple (ranked_gene_set, mapping_result, excluded_records) for
+    strict backwards-compatibility with existing callers, while exposing
+    the full statistically eligible universe and retained non-Entrez genes.
+    """
+
+    ranked_gene_set: RankedGeneSet
+    mapping_result: PathwayGeneMappingResult
+    excluded_records: tuple[ExcludedRankingGene, ...]
+    statistically_eligible_universe: tuple[StatisticallyEligibleGeneFeature, ...]
+    retained_non_entrez_genes: tuple[RetainedNonEntrezGeneFeature, ...]
+
+    def __new__(
+        cls,
+        ranked_gene_set: RankedGeneSet,
+        mapping_result: PathwayGeneMappingResult,
+        excluded_records: tuple[ExcludedRankingGene, ...],
+        statistically_eligible_universe: tuple[StatisticallyEligibleGeneFeature, ...],
+        retained_non_entrez_genes: tuple[RetainedNonEntrezGeneFeature, ...],
+    ):
+        instance = super().__new__(
+            cls, (ranked_gene_set, mapping_result, excluded_records)
+        )
+        instance.ranked_gene_set = ranked_gene_set
+        instance.mapping_result = mapping_result
+        instance.excluded_records = excluded_records
+        instance.statistically_eligible_universe = statistically_eligible_universe
+        instance.retained_non_entrez_genes = retained_non_entrez_genes
+        return instance
 
 
 class GeneRankingBuilder:
@@ -47,12 +82,8 @@ class GeneRankingBuilder:
         self,
         contrast: DifferentialExpressionContrastResult,
         deduplicate_entrez: bool = True,
-    ) -> tuple[RankedGeneSet, PathwayGeneMappingResult, tuple[ExcludedRankingGene, ...]]:
-        """Construct ranked gene set from Stage 7 contrast differential expression results.
-
-        Returns:
-            tuple of (RankedGeneSet, PathwayGeneMappingResult, tuple of ExcludedRankingGene)
-        """
+    ) -> RankingResult:
+        """Construct ranked gene set and preserve the full statistically eligible universe."""
         gene_results = contrast.gene_results
         mapping_result = self.mapping_adapter.map_genes(gene_results)
 
@@ -61,10 +92,14 @@ class GeneRankingBuilder:
 
         eligible_features: list[RankedGeneFeature] = []
         excluded_records: list[ExcludedRankingGene] = []
+        stat_eligible_universe: list[StatisticallyEligibleGeneFeature] = []
+        retained_non_entrez: list[RetainedNonEntrezGeneFeature] = []
 
         for gene in gene_results:
             map_rec = mapping_by_id.get(gene.canonical_gene_id)
             entrez_id = map_rec.entrez_gene_id if map_rec else None
+            biotype = map_rec.gene_biotype if map_rec else None
+            symbol = map_rec.approved_symbol if map_rec else gene.approved_symbol
 
             # Check validity of Wald statistic
             wald = gene.wald_statistic
@@ -100,7 +135,41 @@ class GeneRankingBuilder:
                 )
                 continue
 
+            # Gene is statistically eligible!
+            stat_feat = StatisticallyEligibleGeneFeature(
+                canonical_gene_id=gene.canonical_gene_id,
+                approved_symbol=symbol,
+                gene_biotype=biotype,
+                entrez_gene_id=entrez_id,
+                base_mean=gene.base_mean,
+                log2_fold_change=gene.log2_fold_change,
+                lfc_standard_error=gene.lfc_standard_error,
+                wald_statistic=wald,
+                p_value=gene.p_value,
+                adjusted_p_value_bh=gene.adjusted_p_value_bh,
+                result_status=gene.result_status,
+                annotation_status="ENTREZ_MAPPED" if entrez_id else "ENTREZ_UNMAPPED",
+                statistical_eligibility=True,
+            )
+            stat_eligible_universe.append(stat_feat)
+
             if not entrez_id:
+                # Gene is statistically valid but cannot enter Entrez-based pathway GSEA.
+                # Must NOT be classified as QC failure; retained for feature construction.
+                retained_feat = RetainedNonEntrezGeneFeature(
+                    canonical_gene_id=gene.canonical_gene_id,
+                    approved_symbol=symbol,
+                    gene_biotype=biotype,
+                    wald_statistic=wald,
+                    log2_fold_change=gene.log2_fold_change,
+                    lfc_standard_error=gene.lfc_standard_error,
+                    p_value=gene.p_value,
+                    adjusted_p_value_bh=gene.adjusted_p_value_bh,
+                    reason_not_in_kegg="NO_ENTREZ_ID_IN_ENSEMBL_112",
+                    go_annotation_status="NOT_ANNOTATED_IN_ENTREZ_GO",
+                    future_feature_eligibility=True,
+                )
+                retained_non_entrez.append(retained_feat)
                 excluded_records.append(
                     ExcludedRankingGene(
                         canonical_gene_id=gene.canonical_gene_id,
@@ -108,7 +177,7 @@ class GeneRankingBuilder:
                         entrez_gene_id=None,
                         result_status=gene.result_status,
                         wald_statistic=wald,
-                        exclusion_reason="Unmapped to Entrez Gene ID in Ensembl 112 reference",
+                        exclusion_reason="Unmapped to Entrez Gene ID in Ensembl 112 reference (retained in non-Entrez feature universe)",
                     )
                 )
                 continue
@@ -117,7 +186,7 @@ class GeneRankingBuilder:
                 contrast_id=contrast.contrast_id,
                 study_id=contrast.study_id,
                 canonical_gene_id=gene.canonical_gene_id,
-                approved_symbol=gene.approved_symbol,
+                approved_symbol=symbol,
                 entrez_gene_id=entrez_id,
                 log2_fold_change=gene.log2_fold_change,
                 lfc_standard_error=gene.lfc_standard_error,
@@ -180,4 +249,10 @@ class GeneRankingBuilder:
             duplicate_resolution_rule=self.DUPLICATE_RULE_MAX_ABS_WALD if deduplicate_entrez else "NONE",
         )
 
-        return ranked_set, mapping_result, tuple(excluded_records)
+        return RankingResult(
+            ranked_gene_set=ranked_set,
+            mapping_result=mapping_result,
+            excluded_records=tuple(excluded_records),
+            statistically_eligible_universe=tuple(stat_eligible_universe),
+            retained_non_entrez_genes=tuple(retained_non_entrez),
+        )
