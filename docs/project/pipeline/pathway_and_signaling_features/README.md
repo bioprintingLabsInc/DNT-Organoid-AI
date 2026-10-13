@@ -3,7 +3,7 @@
 **Historical Identifier**: Stage 8C  
 **Scientific Name**: Pathway and Signaling Feature Foundation  
 **Release Status**: **FROZEN v1**  
-**Immutable Release Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen)  
+**Immutable Release Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)
 **Frozen Baseline Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
 
 ---

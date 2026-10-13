@@ -8,8 +8,8 @@ Welcome to the **DNT Organoid AI** codebase. This guide is designed to orient ne
 
 * **Scientific Mission**: Developing and validating an interpretable, leakage-safe machine learning platform that evaluates developmental neurotoxicity (DNT) molecular responses in human brain organoids from bulk and single-cell RNA-sequencing data.
 * **Core Paradigm**: The platform evaluates **treatment-versus-matched-control molecular perturbations** without assuming prior biological answers or leaking DNT outcome labels into feature extraction.
-* **Current Validated Milestone**: Stages 1 through 7B (Data Intake, Normalization, Contrast Construction, Differential Expression) and Stage 8C (Pathway and Signaling Feature Foundation) are fully implemented and verified against public human cortical organoid data (**GSE232218**, Valproic Acid 200 µM).
-* **Current Frozen Baseline**: Tag [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
+* **Current Validated Milestone**: **Data Intake, QC & Standardization**, **Treatment-Control Response**, **Differential Molecular Response**, and **Pathway & Signaling Features** are fully implemented and verified against public human cortical organoid data (**GSE232218**, Valproic Acid 200 µM).
+* **Current Frozen Baseline**: Tag [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
 
 ---
 
@@ -63,14 +63,15 @@ Launch the interactive web interface locally:
 ```bash
 py -3.12 -m streamlit run app.py
 ```
-*Access in browser*: `http://localhost:8501`.
+*Access in browser*: `http://localhost:8501`. Allows uploading raw counts and assigning sample conditions interactively.
 
-### Step 4: Reproduce the Pilot Dataset (GSE232218)
-To execute the complete end-to-end differential expression and pathway analysis for Valproic Acid 200 µM:
+### Step 4: Pilot Benchmark Execution (GSE232218)
+To execute the complete headless differential expression and pathway analysis for Valproic Acid 200 µM:
 ```bash
 py -3.12 scripts/run_vpa_pilot_stage8c.py
 ```
-See the [Reproduction Runbook](REPRODUCTION_RUNBOOK.md) for full instructions and expected statistical outputs.
+> [!NOTE]
+> **Environment Dependency Note**: The current headless pilot runner script (`scripts/run_vpa_pilot_stage8c.py`) has a local file path dependency targeting `C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt.gz`. It is fully validated and verified on the primary development environment, but running it on a fresh machine currently requires placing the file at that expected location until CLI input-path parameterization is implemented. See the [Reproduction Runbook](REPRODUCTION_RUNBOOK.md) for full reproduction details.
 
 ---
 

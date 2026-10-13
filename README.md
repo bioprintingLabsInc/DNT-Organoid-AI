@@ -18,10 +18,10 @@ DNT Organoid AI translates genome-wide transcriptomic profiling (bulk and single
 
 ## 2. Current Validated State & Frozen Baseline
 
-* **Production Trunk (`main`)**: Stages 1 through 7B validated (Data Intake, Normalization, Contrast Construction, Differential Expression).
+* **Production Trunk (`main`)**: Data Intake, QC & Standardization, Treatment-Control Response, and Differential Molecular Response validated.
 * **Web Interface**: Interactive Streamlit web interface (`app.py`) validated for manual sample assignment and GEO accession lookup (`ca26d34`).
 * **Frozen Scientific Baseline**:
-  * **Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen)
+  * **Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)
   * **Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
   * **Milestone**: **Pathway and Signaling Features v1** (GO BP & KEGG preranked GSEA).
   * **Accounting on GSE232218**: 60,207 evaluated genes; 32,140 statistically eligible genes; 7,122 non-Entrez valid genes retained; 25,016 final GSEA ranked genes; 4,893 GO BP pathways and 348 KEGG pathways tested.
@@ -31,26 +31,34 @@ DNT Organoid AI translates genome-wide transcriptomic profiling (bulk and single
 ## 3. Scientific Pipeline Hierarchy
 
 ```text
-1. Data Intake, QC & Standardization
-   ├── Ingestion & Format Detection
-   ├── Metadata Validation
-   ├── Quality Control & Preprocessing
-   ├── Gene Harmonization (Ensembl 112)
-   └── Normalization (DESeq2 Size Factors)
-2. Treatment-Control Response (Matched Contrasts)
-3. Differential Molecular Response (DESeq2 Wald Test)
-4. Molecular Feature Engineering
-   ├── Pathway & Signaling Features [FROZEN v1]
-   ├── Cross-Study Gene Response Features [PLANNED]
-   ├── Gene Coresponse & Network Features [PLANNED]
-   └── Compound-Gene-Pathway Relationships [PLANNED]
-5. Independent Evidence & ML
-   ├── DNT Label Curation [PLANNED]
-   ├── Compound-Safe Dataset Splitting [PLANNED]
-   ├── DNT Signature Discovery [PLANNED]
-   └── Model Training, Calibration & Validation [PLANNED]
+Data Intake, QC & Standardization
+├── Ingestion & Format Detection
+├── Metadata Validation
+├── Quality Control & Preprocessing
+├── Gene Harmonization (Ensembl 112)
+└── Normalization (DESeq2 Size Factors)
+
+Treatment-Control Molecular Response
+├── Treatment-Control Response Construction
+└── Differential Molecular Response (DESeq2 Wald Test)
+
+Molecular Feature Engineering
+├── Pathway & Signaling Features [FROZEN v1]
+├── Cross-Study Gene Response Features [PLANNED]
+├── Gene Coresponse & Network Features [PLANNED]
+└── Compound-Gene-Pathway Relationships [PLANNED]
+
+Evidence & Dataset Partitioning
+├── Independent DNT Label Curation [PLANNED]
+└── Compound/Study-Safe Dataset Splitting [PLANNED]
+
+Predictive Modeling & Evaluation
+├── DNT Signature Discovery (Training Partition Only) [PLANNED]
+├── Model Training [PLANNED]
+├── Probabilistic Calibration [PLANNED]
+└── Untouched Internal Test Evaluation [PLANNED]
 ```
-For a complete visual flowchart and data contracts, see the **[Pipeline Map](docs/project/PIPELINE_MAP.md)**.
+For the complete visual flowchart, data transition contracts, and leakage-safe rules, see the **[Pipeline Map](docs/project/PIPELINE_MAP.md)**.
 
 ---
 
@@ -72,7 +80,8 @@ py -3.12 -m streamlit run app.py
 ```bash
 py -3.12 scripts/run_vpa_pilot_stage8c.py
 ```
-See the **[Reproduction Runbook](docs/project/REPRODUCTION_RUNBOOK.md)** for detailed acceptance criteria.
+> [!NOTE]
+> **Environment & Portability Notice**: `scripts/run_vpa_pilot_stage8c.py` currently targets a local path on the development machine (`C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt.gz`). It is fully validated in the development environment. For running on other machines, see the **[Reproduction Runbook](docs/project/REPRODUCTION_RUNBOOK.md)** for exact file placement requirements until CLI path parameterization is implemented in a future code update.
 
 ---
 

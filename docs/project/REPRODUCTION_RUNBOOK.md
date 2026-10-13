@@ -1,6 +1,6 @@
 # Scientific Reproduction Runbook: GSE232218 VPA Pilot
 
-This runbook provides step-by-step instructions to reproduce the validated Stage 7 differential expression and frozen Stage 8C pathway analysis results on public dataset **GSE232218**.
+This runbook provides step-by-step instructions to reproduce the validated Differential Molecular Response and frozen Pathway and Signaling Feature results on public dataset **GSE232218**.
 
 ---
 
@@ -27,6 +27,13 @@ Execute the standalone verification runner:
 py -3.12 scripts/run_vpa_pilot_stage8c.py
 ```
 
+> [!WARNING]
+> **Environment & Portability Limitation**:
+> The headless pilot script [`scripts/run_vpa_pilot_stage8c.py`](../../scripts/run_vpa_pilot_stage8c.py) currently contains a local-machine path dependency targeting `C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt.gz`.
+> * The script is **fully validated and reproducible** in the primary development environment where the downloaded count matrix resides at that location.
+> * It is **not yet fully portable to a fresh clone or third-party machine** without placing `GSE232218_gene_expected_count.txt.gz` at that expected path, pending CLI argument parameterization in a future code update.
+> * One-command cross-machine reproduction is therefore not claimed until that path parameterization is implemented.
+
 ### Expected Output & Acceptance Gates:
 
 1. **Count Matrix & QC**:
@@ -35,16 +42,16 @@ py -3.12 scripts/run_vpa_pilot_stage8c.py
    * Excluded non-canonical annotation rows: `421`
    * Gene-universe conservation: `True` (evaluated 60,207 + excluded 421 = 60,628 input rows)
 
-2. **Stage 7B Differential Expression**:
+2. **Differential Molecular Response (Step 7B)**:
    * Significant upregulated genes ($p_{\text{adj}} < 0.05, \log_2\text{FC} > 0$): **111**
    * Significant downregulated genes ($p_{\text{adj}} < 0.05, \log_2\text{FC} < 0$): **16**
 
-3. **Stage 8C Pathway & Signaling Features**:
+3. **Pathway & Signaling Features (Stage 8C)**:
    * Zero-count genes: `27,980`
    * Genes with valid Wald statistics: `32,227`
    * Cook's distance outliers: `87`
    * Statistically eligible molecular universe: **32,140**
-   * Retained non-Entrez valid genes: **7,122** (`future_feature_eligibility=True`)
+   * Retained non-Entrez valid genes: **7,122** (`future_feature_eligibility=True`, not QC failures)
    * Entrez-mapped eligible genes: `25,018`
    * Duplicate Entrez entries resolved: **2** (Targets: `125775236` and `100874204`)
    * Final ranked genes entering GSEA: **25,016**

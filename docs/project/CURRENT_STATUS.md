@@ -1,7 +1,7 @@
 # Current Platform Status & Implementation Ledger
 
 **Last Updated**: 2026-10-13  
-**Active Release Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen)  
+**Active Release Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)
 **Frozen Baseline Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`  
 **Test Suite Health**: **327 passed, 13 subtests passed** (0 failures, 100% passing)
 
@@ -30,9 +30,9 @@
 
 ---
 
-## 2. Frozen Scientific Baseline: Stage 8C v1 Details
+## 2. Frozen Scientific Baseline: Pathway & Signaling Features Details
 
-The pathway and signaling feature foundation was frozen at tag `stage8c-v1-frozen` on 2026-10-13. The pipeline was audited on the **GSE232218** dataset (Valproic Acid 200 µM in Day 6 human cortical organoids, 4 treated vs. 4 matched vehicle controls).
+The pathway and signaling feature foundation was frozen at tag [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen) on 2026-10-13. The pipeline was audited on the **GSE232218** dataset (Valproic Acid 200 µM in Day 6 human cortical organoids, 4 treated vs. 4 matched vehicle controls).
 
 ### Exact Gene Accounting & Preservation Ledger:
 ```

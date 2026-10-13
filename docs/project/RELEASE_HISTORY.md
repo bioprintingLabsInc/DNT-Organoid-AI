@@ -47,7 +47,7 @@ This document records the chronological development milestones of the DNT Organo
 * Implemented preranked GSEA for Gene Ontology (GO BP) and KEGG pathways using clusterProfiler 4.14.6.
 * Established exact statistical universe preservation: 32,140 statistically eligible genes; 7,122 non-Entrez genes retained (`future_feature_eligibility=True`); 2 duplicate Entrez mappings resolved deterministically via `MAX_ABS_WALD`.
 * Evaluated 4,893 GO BP pathways (1,151 significant) and 348 KEGG pathways (129 significant).
-* Formally frozen with immutable annotated release tag: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
+* Formally frozen with immutable annotated release tag: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
 
 ### Milestone 6: Repository Organization & Handoff Documentation (Current)
 * Created comprehensive `docs/project/` documentation suite and standardized scientific module nomenclature.
