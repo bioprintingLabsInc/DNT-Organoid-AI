@@ -1,13 +1,92 @@
 # DNT Organoid AI
 
-DNT Organoid AI is a research platform for developing and validating AI models that assess developmental-neurotoxicity-associated molecular responses in human brain organoid experiments. It is intended to support both public human brain-organoid datasets and future in-house experiments while preserving provenance, experimental context, and matched-control relationships.
+> **A research platform for developing and validating AI models that assess developmental-neurotoxicity-associated molecular responses in human brain organoids.**
 
-The intended workflow is:
+👉 **New researchers, developers, and AI agents: Start with the [Quick Orientation Guide](docs/project/START_HERE.md).**
 
-> Data sources → ingestion → format detection → metadata validation → format-specific QC/preprocessing → gene harmonization → normalization → treatment-versus-matched-control response construction → standardized features → model-ready dataset → AI training → calibration/validation → locked model → prospective prediction
+---
 
-The architecture supports bulk RNA-seq, scRNA-seq, snRNA-seq, raw FASTQ/SRA inputs, and scientifically usable processed expression matrices through modality- and format-appropriate routes. See [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) for the intended boundaries and responsibilities.
+## 1. Project Purpose & Scope
 
-## Status and intended use
+DNT Organoid AI translates genome-wide transcriptomic profiling (bulk and single-cell RNA-seq) of human brain organoids exposed to chemical compounds into interpretable, leakage-safe toxicological features and predictive machine learning models.
 
-This repository is under research development. It is not a clinical, diagnostic, or regulatory decision system, and its outputs must not be used as such.
+* **Experimental Paradigm**: Organoid treatments are strictly compared against matched vehicle controls sharing identical developmental age and culture protocols ($\ge 2$ biological replicates per arm).
+* **Zero Leakage**: Feature extraction operates strictly on the cellular molecular perturbation without using DNT outcome labels or expected biological answers.
+* **Dual-Stack Execution**: High-performance Python 3.12 data orchestration coupled with official Bioconductor R 4.4.3 statistical engines (`DESeq2 1.46.0`, `clusterProfiler 4.14.6`).
+
+---
+
+## 2. Current Validated State & Frozen Baseline
+
+* **Production Trunk (`main`)**: Stages 1 through 7B validated (Data Intake, Normalization, Contrast Construction, Differential Expression).
+* **Web Interface**: Interactive Streamlit web interface (`app.py`) validated for manual sample assignment and GEO accession lookup (`ca26d34`).
+* **Frozen Scientific Baseline**:
+  * **Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/releases/tag/stage8c-v1-frozen)
+  * **Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
+  * **Milestone**: **Pathway and Signaling Features v1** (GO BP & KEGG preranked GSEA).
+  * **Accounting on GSE232218**: 60,207 evaluated genes; 32,140 statistically eligible genes; 7,122 non-Entrez valid genes retained; 25,016 final GSEA ranked genes; 4,893 GO BP pathways and 348 KEGG pathways tested.
+
+---
+
+## 3. Scientific Pipeline Hierarchy
+
+```text
+1. Data Intake, QC & Standardization
+   ├── Ingestion & Format Detection
+   ├── Metadata Validation
+   ├── Quality Control & Preprocessing
+   ├── Gene Harmonization (Ensembl 112)
+   └── Normalization (DESeq2 Size Factors)
+2. Treatment-Control Response (Matched Contrasts)
+3. Differential Molecular Response (DESeq2 Wald Test)
+4. Molecular Feature Engineering
+   ├── Pathway & Signaling Features [FROZEN v1]
+   ├── Cross-Study Gene Response Features [PLANNED]
+   ├── Gene Coresponse & Network Features [PLANNED]
+   └── Compound-Gene-Pathway Relationships [PLANNED]
+5. Independent Evidence & ML
+   ├── DNT Label Curation [PLANNED]
+   ├── Compound-Safe Dataset Splitting [PLANNED]
+   ├── DNT Signature Discovery [PLANNED]
+   └── Model Training, Calibration & Validation [PLANNED]
+```
+For a complete visual flowchart and data contracts, see the **[Pipeline Map](docs/project/PIPELINE_MAP.md)**.
+
+---
+
+## 4. Quickstart: Running Tests & Reproducing Results
+
+### Run Automated Tests:
+```bash
+py -3.12 -m pytest -q
+```
+*Current test health: 327 passed, 13 subtests passed.*
+
+### Run the Interactive Web Interface:
+```bash
+py -3.12 -m streamlit run app.py
+```
+*Web interface accessible at `http://localhost:8501`.*
+
+### Reproduce Public Benchmark (GSE232218 Valproic Acid):
+```bash
+py -3.12 scripts/run_vpa_pilot_stage8c.py
+```
+See the **[Reproduction Runbook](docs/project/REPRODUCTION_RUNBOOK.md)** for detailed acceptance criteria.
+
+---
+
+## 5. Troubleshooting & Diagnostics
+
+If an input dataset, test, or bridge fails, refer to the **[Practical Troubleshooting Guide](docs/project/TROUBLESHOOTING.md)** to diagnose across the 5 intake failure domains:
+1. *File cannot be read / format mismatch* → [`src/routing/detector.py`](src/routing/detector.py)
+2. *Metadata schema invalid* → [`src/metadata/validator.py`](src/metadata/validator.py)
+3. *Raw count QC failed* → [`src/qc/validator.py`](src/qc/validator.py)
+4. *Gene ID unmapped / collision* → [`src/gene_harmonization/harmonizer.py`](src/gene_harmonization/harmonizer.py)
+5. *Normalization / size factor failed* → [`src/normalization/normalizer.py`](src/normalization/normalizer.py)
+
+---
+
+## 6. Regulatory Disclaimer
+
+This repository is an academic and industrial research development platform. It is not a clinical, diagnostic, or regulatory safety decision system, and its outputs must not be used as such.
