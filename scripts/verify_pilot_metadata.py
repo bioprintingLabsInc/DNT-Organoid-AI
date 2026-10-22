@@ -1,7 +1,11 @@
 """Verify authoritative ENA/SRA metadata for the 12 approved pilot runs."""
 
 import csv
+import sys
 import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.quantification_bridge.manifest import APPROVED_PILOT_RUNS
 
