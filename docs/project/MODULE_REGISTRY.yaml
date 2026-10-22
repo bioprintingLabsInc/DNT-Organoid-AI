@@ -172,13 +172,15 @@ modules:
 
   - canonical_scientific_name: "Cross-Study Gene Response Features"
     historical_identifier: "Stage 8A"
-    status: "PLANNED"
-    implementation_status: "NOT_IMPLEMENTED"
-    primary_code_paths: []
-    test_paths: []
+    status: "STAGE_8A1_VALIDATED"
+    implementation_status: "STAGE_8A1_IMPLEMENTED"
+    primary_code_paths:
+      - "src/features/cross_study/"
+    test_paths:
+      - "tests/features/cross_study/"
     config_paths: []
-    principal_input: "DifferentialExpressionContrastResult objects across one or more independent organoid studies"
-    principal_output: "Gene-level cross-study synthesized perturbation records (pooled effect, pooled SE, tau^2, I^2 when N_studies >= 2; single-study estimates retained when N_studies = 1)"
+    principal_input: "DifferentialExpressionContrastResult objects from Differential Molecular Response"
+    principal_output: "ConditionGeneResponseRegistry and long-format gene-response dataset"
     upstream_module: "Differential Molecular Response"
     downstream_module: "Compound/Study-Safe Dataset Splitting"
     governed_commit_or_tag: null

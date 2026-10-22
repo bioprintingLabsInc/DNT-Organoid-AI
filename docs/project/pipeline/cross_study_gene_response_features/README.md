@@ -1,42 +1,145 @@
 # Cross-Study Gene Response Features
 
-**Historical Identifier**: Stage 8A  
+**Historical Identifier**: Stage 8A
 **Scientific Name**: Cross-Study Gene Response Features
-**Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
+**Current Milestone**: **Stage 8A.1 — Condition-Level Gene Response Registry (Implemented & Validated)**
+**Future Milestone**: **Stage 8A.2 — Multi-Study Synthesis & Comparability Evaluation (Planned)**
 
 ---
 
-## 1. Scientific Objective & Governing Design
+## 1. Scientific Purpose & Governance Boundary
 
 The purpose of Cross-Study Gene Response Features is to synthesize gene-level molecular perturbation estimates across independent brain-organoid studies without introducing bias or leaking DNT outcome labels.
 
-### Core Methodological Rules:
-1. **Within-Study QC Qualification**: Uses strictly QC-qualified within-study treatment-vs-control effects from Differential Molecular Response (`gene_results`).
-2. **Preservation of Statistical Metrics**: Preserves effect size ($\log_2\text{FC}$) and its standard error ($\text{SE}$) alongside full experimental context: chemical compound identity, dose/concentration, exposure duration, developmental stage, organoid system, and contrast identity.
-3. **No Unweighted Averaging**: Simple unweighted averaging of $\log_2\text{FC}$ values across datasets is prohibited.
-4. **No Compound Pooling**: Different chemical compounds are never pooled together.
-5. **Experiment Independence**: Multiple doses or exposure timepoints from the same experiment must not be treated as independent studies.
-6. **Biologically Comparable Evidence**: Only biologically comparable evidence (comparable developmental stage, organoid context, and exposure window) may be synthesized.
-7. **Random-Effects Meta-Analysis**:
-   * When multiple independent, biologically comparable studies exist for the same compound regimen, estimates are pooled using **random-effects meta-analysis**.
-   * Planned meta-analytic metrics: pooled effect size, pooled standard error/uncertainty, number of supporting independent studies, direction consistency across studies, between-study variance ($\tau^2$), heterogeneity ($I^2$), and leave-one-study-out stability.
-8. **Single-Study Preservation**: When only one independent study exists for a compound/regimen (such as the single GSE232218 pilot study), the module retains the study-specific effect size and uncertainty directly without running meta-analysis.
+> [!CRITICAL]
+> **Foundational Governance Principle**:
+> **Stage 8A.1 creates a condition-level gene-response registry. It does not by itself establish cross-study reproducibility.**
+> Cross-study synthesis (Stage 8A.2) will occur only after a second independent dataset is processed through Stages 1–7 and approved under formal comparability criteria.
+
+### Fundamental Unit of Stage 8A.1
+The fundamental scientific unit of Stage 8A.1 is:
+$$\mathbf{one\ gene \times one\ treatment\text{-}control\ contrast}$$
+
+Every gene evaluated by Stage 7B in a treatment-versus-matched-control contrast is preserved with its exact differential statistics and complete experimental, chemical, and biological context. Stage 8A.1 strictly preserves condition-level identity rather than collapsing, averaging, or filtering records.
 
 ---
 
-## 2. Intended Inputs & Outputs
+## 2. Non-Negotiable Scientific Rules
 
-* **Intended Upstream Input**: Validated `DifferentialExpressionContrastResult` objects from `pipeline/differential_molecular_response/` across one or more independent studies.
-* **Intended Output**: Gene-level cross-study feature records preserving:
-  * Canonical gene identifier (`canonical_gene_id`, `approved_symbol`);
-  * Compound identity and regimen (`agent_identifier`, `concentration`, `exposure_duration`, `developmental_stage`);
-  * Single-study estimate (when $N_{\text{studies}} = 1$);
-  * Meta-analytic pooled effect, pooled uncertainty, supporting study count, direction consistency, $\tau^2$, and $I^2$ (when $N_{\text{studies}} \ge 2$);
-  * Complete source contrast and study provenance IDs.
+1. **Exact Numerical & Context Preservation**:
+   * Preserves effect size ($\log_2\text{FC}$), standard error ($\text{SE}$), Wald statistic, $p$-value, and FDR/adjusted $p$-value exactly as calculated by Stage 7.
+   * Stage 8A never recalculates differential expression statistics.
+2. **No Unweighted Averaging**:
+   * Simple unweighted averaging of $\log_2\text{FC}$ values across conditions or datasets is strictly prohibited.
+3. **No Compound Pooling**:
+   * Different chemical compounds are never pooled together.
+4. **Study Independence Definition**:
+   * Multiple concentrations, doses, timepoints, or contrasts from the same experiment or study accession (e.g. GSE232218 VPA 200 µM and VPA 400 µM) share the same `independent_study_id`.
+   * They **must not** be treated as independent studies and do not inflate the independent study count.
+5. **Single-Study Status (`SINGLE_STUDY_ONLY`)**:
+   * Because the initial foundation uses GSE232218, all gene/compound records are assigned `CrossStudyStatus.SINGLE_STUDY_ONLY`.
+   * The pipeline strictly prohibits generating pooled effects, between-study heterogeneity statistics ($\tau^2$, $I^2$), or reproducibility claims from a single study.
+6. **No Premature Meta-Analysis Locking**:
+   * DerSimonian-Laird, REML, fixed-effects pooling, or any other meta-analysis estimators are **not** locked or executed in Stage 8A.1.
+7. **No Arbitrary Comparability Thresholds**:
+   * The pipeline does not invent arbitrary thresholds (e.g. "doses within 2× are comparable" or "stages within X days are comparable").
+8. **No Significance or Magnitude Filtering**:
+   * Non-significant genes (FDR $> 0.05$) and small-effect genes ($|\log_2\text{FC}| < 0.2$) are **not** discarded. All Stage 7 evaluated genes remain present.
+9. **No Entrez ID Requirement**:
+   * Canonical Ensembl gene IDs from Ensembl Release 112 remain the primary identifiers. Valid non-Entrez genes (e.g. lncRNAs) are fully preserved.
+10. **Zero DNT Label Leakage**:
+    * Operates with zero dependency on DNT-positive, DNT-negative, or regulatory toxicology outcome labels.
 
 ---
 
-## 3. Implementation Plan
+## 3. Data Contracts & Output Schema
 
-* Implementation will reside in `src/features/cross_study/` and `tests/features/cross_study/`.
-* No code paths or algorithms are currently implemented.
+### Upstream Input Contract
+Consumes validated `DifferentialExpressionContrastResult` (or `DifferentialExpressionDataset`) from `src/differential_expression/`.
+
+### Output Registry Schema (`cross_study_gene_response_long`)
+Each row represents one gene evaluated in one treatment-control contrast:
+
+| Column Name | Type | Description |
+| :--- | :--- | :--- |
+| `study_id` | `str` | Study accession (e.g. `GSE232218`) |
+| `study_family_id` | `str` | Study family identifier for multi-experiment series |
+| `experiment_id` | `str` | Specific experiment identifier within the study |
+| `contrast_id` | `str` | Unique contrast identifier |
+| `compound_id` | `str` | Normalized chemical identifier (e.g. `CID:3121`) |
+| `compound_name` | `str` | Chemical agent name (e.g. `Valproic Acid`) |
+| `dose_value` | `float \| None` | Numeric concentration/dose value (e.g. `200.0`) |
+| `dose_unit` | `str \| None` | Concentration unit (e.g. `uM`) |
+| `dose_original` | `str \| None` | Verbatim dose string (e.g. `200.0 uM`) |
+| `developmental_stage` | `str \| None` | Organoid age/stage (e.g. `Day 6`) |
+| `exposure_duration` | `float \| None` | Exposure duration value (e.g. `48.0`) |
+| `model_type` | `str \| None` | Organoid model system (e.g. `Cerebral Cortex Organoid`) |
+| `canonical_ensembl_gene_id`| `str` | Primary canonical Ensembl ID (e.g. `ENSG00000000003`) |
+| `gene_symbol` | `str \| None` | Approved gene symbol (e.g. `TSPAN6`) |
+| `base_mean` | `float` | DESeq2 normalized baseMean across contrast samples |
+| `log2_fold_change` | `float \| None` | Preserved log2 fold change from Stage 7 |
+| `log2_fold_change_se` | `float \| None` | Preserved log2FC standard error from Stage 7 |
+| `wald_statistic` | `float \| None` | Preserved Wald statistic from Stage 7 |
+| `p_value` | `float \| None` | Preserved two-tailed Wald p-value from Stage 7 |
+| `adjusted_p_value` | `float \| None` | Preserved Benjamini-Hochberg FDR from Stage 7 |
+| `response_direction` | `str` | Descriptive direction: `UP`, `DOWN`, `NO_DIRECTION`, `UNDETERMINED` |
+| `estimate_status` | `str` | Estimation state: `OK`, `ZERO_COUNTS`, `COOKS_OUTLIER`, `FIT_ERROR` |
+| `missing_reason` | `str \| None` | Explicit reason if statistical values are missing |
+| `independent_study_id` | `str` | Normalized independent study identifier (e.g. `GSE232218`) |
+| `cross_study_status` | `str` | Synthesis status: `SINGLE_STUDY_ONLY` |
+| `provenance` | `str` | Serialized JSON tracking upstream hashes and versions |
+
+---
+
+## 4. Reconciled Accounting on GSE232218 Pilot
+
+Audited directly on public **GSE232218** (Valproic Acid 200 µM in Day 6 human cortical organoids, 4 treated vs. 4 matched vehicle controls):
+
+```text
+Stage 7 Canonical Evaluated Genes                    60,207
+└── Stage 8A.1 Condition Records Produced            60,207 (100% 1:1 Preservation)
+    |-- Valid Statistically Tested Estimates:        32,140 (EstimateStatus.OK)
+    |-- Zero-Count Genes (baseMean == 0):            27,980 (EstimateStatus.ZERO_COUNTS)
+    \-- Cook's Distance Outliers:                        87 (EstimateStatus.COOKS_OUTLIER)
+
+Direction Breakdown (Descriptive Only):
+    |-- UP (log2FC > 0):                             16,284
+    |-- DOWN (log2FC < 0):                           15,943
+    |-- NO_DIRECTION (log2FC == 0):                       0
+    \-- UNDETERMINED (log2FC is None / NaN):         27,980 (Zero-count genes)
+
+Multi-Study Synthesis Boundary:
+    \-- SINGLE_STUDY_ONLY records:                   60,207 (100% of records)
+```
+
+### Verification Findings
+* **Numerical Preservation**: 0 mismatches across all 60,207 genes for $\log_2\text{FC}$, $\text{SE}$, Wald, $p$, and FDR.
+* **Gene Universe Conservation**: 100% of canonical genes from Stage 7 are preserved in the registry.
+* **Missing-Data Integrity**: 27,980 zero-count genes retain `None`/`NaN` for $\log_2\text{FC}$ and $\text{SE}$ with explicit `missing_reason` rather than being fabricated as `0.0`.
+* **Zero DNT Leakage**: 0 DNT labels or regulatory classifications accessed or present.
+
+---
+
+## 5. Architecture & Implementation Code Paths
+
+* **Public API**: [`src/features/cross_study/__init__.py`](../../../../src/features/cross_study/__init__.py)
+* **Data Models & Enums**: [`src/features/cross_study/models.py`](../../../../src/features/cross_study/models.py)
+* **Record Builder**: [`src/features/cross_study/builder.py`](../../../../src/features/cross_study/builder.py)
+* **Registry Construction**: [`src/features/cross_study/registry.py`](../../../../src/features/cross_study/registry.py)
+* **Quality Control Auditor**: [`src/features/cross_study/qc.py`](../../../../src/features/cross_study/qc.py)
+* **Serialization Services**: [`src/features/cross_study/serialization.py`](../../../../src/features/cross_study/serialization.py)
+* **Automated Test Suite**: [`tests/features/cross_study/`](../../../../tests/features/cross_study/) (25 passing unit and integration tests)
+* **Pilot Execution Runner**: [`scripts/run_vpa_pilot_stage8a.py`](../../../../scripts/run_vpa_pilot_stage8a.py)
+
+---
+
+## 6. Future Stage 8A.2 Comparability Boundary
+
+Stage 8A.2 will be designed when a second independent dataset (e.g. an independent organoid study testing Valproic Acid or another compound) completes Stages 1–7.
+
+Planned multi-study evaluation states:
+* `SINGLE_STUDY_ONLY`: Retained as single-study condition record (current status).
+* `MULTI_STUDY_CONTEXT_UNDER_REVIEW`: Multiple independent studies exist for compound; biological comparability under evaluation.
+* `NONCOMPARABLE_CONTEXT`: Discrepant developmental age, exposure window, or organoid platform prevents pooling.
+* `COMPARABLE_INDEPENDENT_STUDIES`: Rigorously verified biologically comparable independent studies eligible for random-effects meta-analysis.
+* `INSUFFICIENT_METADATA`: Incomplete regimen parameters prevent comparability determination.

@@ -1,7 +1,7 @@
 # DNT Label Curation
 
-**Historical Identifier**: Stage 9  
-**Scientific Name**: Developmental Neurotoxicity Reference Label Curation  
+**Historical Identifier**: Stage 9
+**Scientific Name**: Developmental Neurotoxicity Reference Label Curation
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---

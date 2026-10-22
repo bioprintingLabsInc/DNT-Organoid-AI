@@ -1,7 +1,7 @@
 # Gene Harmonization
 
-**Historical Identifier**: Step 6B  
-**Validation Status**: **VALIDATED** (Commit: `b904a41`)  
+**Historical Identifier**: Step 6B
+**Validation Status**: **VALIDATED** (Commit: `b904a41`)
 **Umbrella Position**: Data Intake — Failure Domain 4
 
 ---

@@ -1,7 +1,7 @@
 # Gene Coresponse & Network Features
 
-**Historical Identifier**: Stage 8B  
-**Scientific Name**: Gene Co-Response and Network Features  
+**Historical Identifier**: Stage 8B
+**Scientific Name**: Gene Co-Response and Network Features
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---

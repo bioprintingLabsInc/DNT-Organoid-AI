@@ -1,7 +1,7 @@
 # Compound-Safe Dataset Splitting
 
-**Historical Identifier**: Stage 10  
-**Scientific Name**: Compound-Safe Dataset Splitting and Leakage Controls  
+**Historical Identifier**: Stage 10
+**Scientific Name**: Compound-Safe Dataset Splitting and Leakage Controls
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---

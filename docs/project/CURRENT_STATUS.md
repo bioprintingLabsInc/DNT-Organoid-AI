@@ -1,9 +1,9 @@
 # Current Platform Status & Implementation Ledger
 
-**Last Updated**: 2026-10-13  
+**Last Updated**: 2026-10-13
 **Active Release Tag**: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)
-**Frozen Baseline Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`  
-**Test Suite Health**: **327 passed, 13 subtests passed** (0 failures, 100% passing)
+**Frozen Baseline Commit**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
+**Test Suite Health**: **352 passed, 13 subtests passed** (0 failures, 100% passing)
 
 ---
 
@@ -19,7 +19,7 @@
 | **Treatment-Control Response** | Step 7A | **VALIDATED** | `cd954f4` | `src/response_builder/`<br>`tests/response_builder/` |
 | **Differential Molecular Response** | Step 7B | **VALIDATED** | `f1a7ad8` | `src/differential_expression/`<br>`tests/differential_expression/` |
 | **Pathway & Signaling Features** | Stage 8C | **FROZEN v1** | `stage8c-v1-frozen`<br>(`7a69c25`) | `src/features/pathway/`<br>`tests/features/pathway/` |
-| **Cross-Study Gene Response Features** | Stage 8A | *PLANNED* | — | *No implementation yet* |
+| **Cross-Study Gene Response Features** | Stage 8A | **STAGE 8A.1 VALIDATED**<br>(Stage 8A.2 Planned) | `feature/cross-study-gene-response` | `src/features/cross_study/`<br>`tests/features/cross_study/` |
 | **Gene Coresponse & Network Features** | Stage 8B | *PLANNED* | — | *No implementation yet* |
 | **Compound-Gene-Pathway Relationships** | Stage 8D | *PLANNED* | — | *No implementation yet* |
 | **DNT Label Curation** | Stage 9 | *PLANNED* | — | *No implementation yet* |

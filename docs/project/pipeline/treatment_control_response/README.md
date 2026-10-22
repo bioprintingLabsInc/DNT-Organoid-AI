@@ -1,6 +1,6 @@
 # Treatment-Control Response Construction
 
-**Historical Identifier**: Step 7A  
+**Historical Identifier**: Step 7A
 **Validation Status**: **VALIDATED** (Commit: `cd954f4`)
 
 ---

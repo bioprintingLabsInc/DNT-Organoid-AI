@@ -1,7 +1,7 @@
 # Metadata Validation
 
-**Historical Identifier**: Steps 3–4  
-**Validation Status**: **VALIDATED** (Commit: `455265c`)  
+**Historical Identifier**: Steps 3–4
+**Validation Status**: **VALIDATED** (Commit: `455265c`)
 **Umbrella Position**: Data Intake — Failure Domain 2
 
 ---

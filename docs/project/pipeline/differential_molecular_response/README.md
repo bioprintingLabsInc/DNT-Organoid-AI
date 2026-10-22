@@ -1,6 +1,6 @@
 # Differential Molecular Response
 
-**Historical Identifier**: Step 7B  
+**Historical Identifier**: Step 7B
 **Validation Status**: **VALIDATED** (Commit: `f1a7ad8`)
 
 ---

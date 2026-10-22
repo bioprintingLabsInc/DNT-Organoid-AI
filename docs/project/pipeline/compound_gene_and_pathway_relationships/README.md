@@ -1,7 +1,7 @@
 # Compound-Gene & Pathway Relationships
 
-**Historical Identifier**: Stage 8D  
-**Scientific Name**: Compound-Gene and Compound-Pathway Relationships  
+**Historical Identifier**: Stage 8D
+**Scientific Name**: Compound-Gene and Compound-Pathway Relationships
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---

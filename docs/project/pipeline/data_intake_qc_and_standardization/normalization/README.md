@@ -1,7 +1,7 @@
 # Bulk RNA-seq Normalization
 
-**Historical Identifier**: Step 6C  
-**Validation Status**: **VALIDATED** (Commit: `5ce67cc`)  
+**Historical Identifier**: Step 6C
+**Validation Status**: **VALIDATED** (Commit: `5ce67cc`)
 **Umbrella Position**: Data Intake — Failure Domain 5
 
 ---

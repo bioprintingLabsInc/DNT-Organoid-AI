@@ -1,7 +1,7 @@
 # Ingestion & Format Detection
 
-**Historical Identifier**: Step 5  
-**Validation Status**: **VALIDATED** (Commit: `1bf8ddb`)  
+**Historical Identifier**: Step 5
+**Validation Status**: **VALIDATED** (Commit: `1bf8ddb`)
 **Umbrella Position**: Data Intake — Failure Domain 1
 
 ---

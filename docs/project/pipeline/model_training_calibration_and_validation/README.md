@@ -1,7 +1,7 @@
 # Model Training, Calibration & Validation
 
-**Historical Identifier**: Stage 12  
-**Scientific Name**: Model Training, Calibration, and Validation  
+**Historical Identifier**: Stage 12
+**Scientific Name**: Model Training, Calibration, and Validation
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---

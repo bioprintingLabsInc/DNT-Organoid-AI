@@ -1,7 +1,7 @@
 # Quality Control & Preprocessing
 
-**Historical Identifier**: Step 6A  
-**Validation Status**: **VALIDATED** (Commit: `3a8a7ef`)  
+**Historical Identifier**: Step 6A
+**Validation Status**: **VALIDATED** (Commit: `3a8a7ef`)
 **Umbrella Position**: Data Intake — Failure Domain 3
 
 ---

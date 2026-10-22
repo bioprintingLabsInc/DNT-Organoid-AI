@@ -1,7 +1,7 @@
 # DNT Signature Discovery
 
-**Historical Identifier**: Stage 11  
-**Scientific Name**: Developmental Neurotoxicity Transcriptomic Signature Discovery  
+**Historical Identifier**: Stage 11
+**Scientific Name**: Developmental Neurotoxicity Transcriptomic Signature Discovery
 **Status**: **STATUS: PLANNED — NO IMPLEMENTATION YET**
 
 ---
