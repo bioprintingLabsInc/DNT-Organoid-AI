@@ -1,0 +1,33 @@
+compute_target:
+  architecture: "linux-x86_64"
+  os: "Ubuntu 22.04 LTS / 24.04 LTS or Rocky Linux 9 / RHEL 9"
+  hardware_specifications:
+    physical_ram_gb_minimum: 64
+    physical_ram_gb_recommended: 64
+    cpu_cores_minimum: 16
+    cpu_cores_recommended: 16
+    scratch_storage_gb_minimum: 500
+    storage_type: "High-speed NVMe SSD or local fast SSD"
+    filesystem: "POSIX-compliant (ext4, XFS, or high-throughput Lustre/GPFS with locking support)"
+  memory_policy:
+    swap_substitute_permitted: false
+    enforce_physical_ram: true
+    rationale: "STAR index loading and multi-threaded alignment require true physical RAM to prevent thrashing, OOM killer signals, and SSD wear."
+  network_requirements:
+    outbound_https_access:
+      - "ftp.sra.ebi.ac.uk (ENA/SRA FASTQ downloads via HTTPS/FTP)"
+      - "www.ebi.ac.uk (ENA Portal API queries)"
+      - "ftp.ensembl.org (Ensembl Release 112 FASTA & GTF downloads)"
+      - "conda.anaconda.org (Conda package installation)"
+  storage_allocation_breakdown:
+    reference_fasta_and_gtf: 5.5
+    star_genome_index: 30.0
+    derived_bed12: 0.1
+    raw_fastqs_12_runs_24_files: 36.0
+    trimmed_fastqs_fastp: 30.0
+    coordinate_sorted_bams_12_runs: 60.0
+    bam_indexes_bai: 0.2
+    alignment_temp_buffers: 25.0
+    qc_reports_logs_evidence: 1.0
+    operational_safety_headroom: 312.2
+    total_scratch_volume_gb: 500.0

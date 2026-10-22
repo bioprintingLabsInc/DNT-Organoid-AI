@@ -1,0 +1,35 @@
+{
+  "ensembl_release": "112",
+  "genome_assembly": "GRCh38.p14",
+  "organism": "Homo sapiens",
+  "created_at_utc": "2026-10-22 21:00:00 UTC",
+  "references": {
+    "fasta": {
+      "filename": "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+      "source_url": "https://ftp.ensembl.org/pub/release-112/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+      "file_size_bytes": 881964081,
+      "publisher_checksum_type": "POSIX sum (System V)",
+      "expected_publisher_posix_sum": 22450,
+      "expected_publisher_posix_blocks": 861294,
+      "observed_publisher_posix_sum": 22450,
+      "observed_publisher_posix_blocks": 861294,
+      "publisher_verification_status": "VERIFIED_MATCH",
+      "sha256": "d8c3af0094a7bba6125763bad779ec18a81483c739c6ed122094bdf86c187b92"
+    },
+    "gtf": {
+      "filename": "Homo_sapiens.GRCh38.112.gtf.gz",
+      "source_url": "https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/Homo_sapiens.GRCh38.112.gtf.gz",
+      "file_size_bytes": 55529204,
+      "sha256": "8c87436bab973c871447743c2f5cbb2b557be0523fe6efe3ff33307a4c836002"
+    },
+    "bed12": {
+      "filename": "Homo_sapiens.GRCh38.112.bed",
+      "derivation_method": "Deterministic Ensembl GTF to standard BED12 conversion via src/quantification_bridge/bed_generator.py (0-based start, transcript_id name, thickStart/thickEnd CDS offsets, exon blockSizes/blockStarts)",
+      "source_gtf": "Homo_sapiens.GRCh38.112.gtf.gz",
+      "file_size_bytes": 31412653,
+      "total_transcripts": 254129,
+      "sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06"
+    }
+  },
+  "provenance_notes": "Lightweight governed reference metadata specification for PRJNA802072 quantification bridge. Large reference files remain gitignored and are independently downloaded or derived on target compute nodes."
+}
