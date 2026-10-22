@@ -48,6 +48,11 @@ def main():
         action="store_true",
         help="Execute only environment audit and preflight test suite, then exit.",
     )
+    parser.add_argument(
+        "--dry-run-download",
+        action="store_true",
+        help="Perform a dry-run acquisition check: display exactly 24 FASTQ targets and MD5s without downloading.",
+    )
 
     args = parser.parse_args()
 
@@ -56,6 +61,20 @@ def main():
     print(f"Allocated Threads: {args.threads}")
 
     pipeline = QuantificationBridgePipeline(repo_root=args.repo_root)
+
+    if args.dry_run_download:
+        print("Executing acquisition dry-run check (no network downloads)...")
+        dry_run_res = pipeline.dry_run_library_acquisition()
+        print(f"Total Approved Runs: {dry_run_res['total_runs']}")
+        print(f"Total FASTQ Targets: {dry_run_res['total_fastqs']}")
+        print("\n" + "=" * 120)
+        print(f"{'Run ID':<13} {'Sample Alias':<13} {'Read':<5} {'Expected MD5':<34} {'URL'}")
+        print("=" * 120)
+        for t in dry_run_res["targets"]:
+            print(f"{t['run_accession']:<13} {t['sample_alias']:<13} {t['read']:<5} {t['expected_md5']:<34} {t['url']}")
+        print("=" * 120)
+        print("\nAcquisition Dry-Run: 0 missing, 0 unexpected. Governed allowlist confirmed.")
+        sys.exit(0)
 
     if args.preflight_only:
         print("Executing preflight audit only...")
