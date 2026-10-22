@@ -24,6 +24,10 @@ Thumbs.db
 ~$*
 scratch/
 
+# Reference genomes and indices
+references/*
+!references/.gitkeep
+
 # Raw sequencing data and generated datasets
 data/raw/*
 data/interim/*
