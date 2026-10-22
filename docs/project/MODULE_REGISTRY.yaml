@@ -172,19 +172,19 @@ modules:
 
   - canonical_scientific_name: "Cross-Study Gene Response Features"
     historical_identifier: "Stage 8A"
-    status: "STAGE_8A1_VALIDATED"
-    implementation_status: "STAGE_8A1_IMPLEMENTED"
+    status: "STAGE_8A1_VALIDATED_GSE232218_PILOT"
+    implementation_status: "STAGE_8A1_IMPLEMENTED_VERIFIED_SINGLE_STUDY"
     primary_code_paths:
       - "src/features/cross_study/"
     test_paths:
       - "tests/features/cross_study/"
     config_paths: []
     principal_input: "DifferentialExpressionContrastResult objects from Differential Molecular Response"
-    principal_output: "ConditionGeneResponseRegistry and long-format gene-response dataset"
+    principal_output: "ConditionGeneResponseRegistry and long-format gene-response dataset. Future Stage 8A.2 multi-study synthesis remains planned without locked estimators."
     upstream_module: "Differential Molecular Response"
     downstream_module: "Compound/Study-Safe Dataset Splitting"
     governed_commit_or_tag: null
-    key_qc_invariant: "Never pool different chemical compounds; do not treat multiple doses/timepoints from the same experiment as independent studies; do not unweighted-average fold changes; preserve log2FC and SE alongside full experimental context."
+    key_qc_invariant: "Never pool different chemical compounds; do not treat multiple doses/timepoints from the same experiment as independent studies; do not unweighted-average fold changes; preserve log2FC, SE, Wald, p, FDR, and baseMean alongside full experimental context. Single-study evidence assigned CrossStudyStatus.SINGLE_STUDY_ONLY; no premature meta-analysis executed or estimator locked."
     first_troubleshooting_location: "docs/project/pipeline/cross_study_gene_response_features/README.md#1-scientific-objective--governing-design"
     leakage_constraints: "Feature extraction operates strictly on treatment-control contrast estimates; zero knowledge of DNT outcome labels."
 

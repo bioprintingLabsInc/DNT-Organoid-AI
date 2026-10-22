@@ -127,7 +127,7 @@ flowchart TD
 * **Goal**: Extract biologically meaningful, standardized feature representations from the unbiased molecular response.
 * **Components**:
   1. *Pathway & Signaling Features* (**FROZEN v1 - tag: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen)**; Stage 8C): Preranked GSEA using clusterProfiler for GO BP and KEGG based on finite Wald statistics, with strict preservation of the 32,140 statistically eligible gene universe.
-  2. *Cross-Study Gene Response Features* (Planned; Stage 8A): Random-effects meta-analysis pooling biologically comparable within-study effects ($\log_2\text{FC}$ and SE) across independent studies.
+  2. *Cross-Study Gene Response Features* (Stage 8A.1 Implemented & Verified on GSE232218 Pilot; Stage 8A.2 Multi-Study Synthesis Planned): Establishes a lossless condition-level gene response registry preserving within-study effects ($\log_2\text{FC}$ and SE) and experimental context. Stage 8A.2 will assess biological and statistical comparability across independent studies before prespecifying an appropriate synthesis method; non-comparable conditions remain separate and condition records remain permanently preserved.
   3. *Gene Coresponse & Networks* (Planned; Stage 8B):
      * *Case A (Static Annotation)*: Fixed external reference interactomes evaluated as static biological scaffolds before splitting.
      * *Case B (Adaptive Feature Extraction)*: Data-adaptive co-response modules learned strictly within the training partition or CV folds after dataset splitting.

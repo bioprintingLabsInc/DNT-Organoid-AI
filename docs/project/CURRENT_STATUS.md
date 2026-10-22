@@ -19,7 +19,7 @@
 | **Treatment-Control Response** | Step 7A | **VALIDATED** | `cd954f4` | `src/response_builder/`<br>`tests/response_builder/` |
 | **Differential Molecular Response** | Step 7B | **VALIDATED** | `f1a7ad8` | `src/differential_expression/`<br>`tests/differential_expression/` |
 | **Pathway & Signaling Features** | Stage 8C | **FROZEN v1** | `stage8c-v1-frozen`<br>(`7a69c25`) | `src/features/pathway/`<br>`tests/features/pathway/` |
-| **Cross-Study Gene Response Features** | Stage 8A | **STAGE 8A.1 VALIDATED**<br>(Stage 8A.2 Planned) | `feature/cross-study-gene-response` | `src/features/cross_study/`<br>`tests/features/cross_study/` |
+| **Cross-Study Gene Response Features** | Stage 8A | **STAGE_8A1_VALIDATED_GSE232218_PILOT**<br>(Stage 8A.2 Multi-Study Synthesis Planned) | `feature/cross-study-gene-response` | `src/features/cross_study/`<br>`tests/features/cross_study/` |
 | **Gene Coresponse & Network Features** | Stage 8B | *PLANNED* | — | *No implementation yet* |
 | **Compound-Gene-Pathway Relationships** | Stage 8D | *PLANNED* | — | *No implementation yet* |
 | **DNT Label Curation** | Stage 9 | *PLANNED* | — | *No implementation yet* |
@@ -27,6 +27,10 @@
 | **DNT Signature Discovery** | Stage 11 | *PLANNED* | — | *No implementation yet* |
 | **Model Training, Calibration & Validation** | Stage 12 | *PLANNED* | — | *No implementation yet* |
 | **Web Interface & Explorer** | App / Web | **VALIDATED** | `ca26d34` | `app.py`, `src/app/`<br>`tests/app/` |
+
+> [!NOTE]
+> **Stage 8A Boundary Notice**:
+> Stage 8A.1 condition-level gene response registry is implemented and verified on the single-study GSE232218 pilot. Genuine cross-study synthesis is **NOT** yet implemented. Stage 8A.2 (Multi-Study Synthesis & Comparability Evaluation) remains planned and will select an appropriate synthesis estimator only after a second independent dataset is qualified under biological and statistical comparability criteria.
 
 ---
 

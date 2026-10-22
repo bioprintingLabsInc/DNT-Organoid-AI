@@ -2,8 +2,9 @@
 
 **Historical Identifier**: Stage 8A
 **Scientific Name**: Cross-Study Gene Response Features
-**Current Milestone**: **Stage 8A.1 — Condition-Level Gene Response Registry (Implemented & Validated)**
-**Future Milestone**: **Stage 8A.2 — Multi-Study Synthesis & Comparability Evaluation (Planned)**
+**Current Milestone**: **Stage 8A.1 — Condition-Level Gene Response Registry (Implemented & Verified on GSE232218 Pilot)**
+**Current Status**: **STAGE_8A1_VALIDATED_GSE232218_PILOT**
+**Future Milestone**: **Stage 8A.2 — Multi-Study Synthesis & Comparability Evaluation (Planned — Not Implemented)**
 
 ---
 
@@ -13,8 +14,8 @@ The purpose of Cross-Study Gene Response Features is to synthesize gene-level mo
 
 > [!CRITICAL]
 > **Foundational Governance Principle**:
-> **Stage 8A.1 creates a condition-level gene-response registry. It does not by itself establish cross-study reproducibility.**
-> Cross-study synthesis (Stage 8A.2) will occur only after a second independent dataset is processed through Stages 1–7 and approved under formal comparability criteria.
+> **Stage 8A.1 creates a verified condition-level gene-response registry on a single-study pilot (GSE232218). It does not by itself establish cross-study reproducibility.**
+> Genuine cross-study synthesis is **NOT** yet implemented. Cross-study synthesis (Stage 8A.2) will occur only after a second independent dataset is processed through Stages 1–7 and approved under formal biological and statistical comparability criteria.
 
 ### Fundamental Unit of Stage 8A.1
 The fundamental scientific unit of Stage 8A.1 is:
@@ -39,8 +40,8 @@ Every gene evaluated by Stage 7B in a treatment-versus-matched-control contrast 
 5. **Single-Study Status (`SINGLE_STUDY_ONLY`)**:
    * Because the initial foundation uses GSE232218, all gene/compound records are assigned `CrossStudyStatus.SINGLE_STUDY_ONLY`.
    * The pipeline strictly prohibits generating pooled effects, between-study heterogeneity statistics ($\tau^2$, $I^2$), or reproducibility claims from a single study.
-6. **No Premature Meta-Analysis Locking**:
-   * DerSimonian-Laird, REML, fixed-effects pooling, or any other meta-analysis estimators are **not** locked or executed in Stage 8A.1.
+6. **No Premature Meta-Analysis Commitment / Method-Neutral Future Contract**:
+   * Stage 8A.2 will first determine whether multiple independent studies for the same compound and gene are biologically and statistically comparable. If synthesis is scientifically justified, an appropriate statistical synthesis method will be selected and prespecified at that stage based on the observed study structure, dependence, heterogeneity, number of studies, and experimental context. Stage 8A.1 does not lock fixed-effects, random-effects, DerSimonian-Laird, REML, Hartung-Knapp, or any other estimator.
 7. **No Arbitrary Comparability Thresholds**:
    * The pipeline does not invent arbitrary thresholds (e.g. "doses within 2× are comparable" or "stages within X days are comparable").
 8. **No Significance or Magnitude Filtering**:
@@ -133,13 +134,21 @@ Multi-Study Synthesis Boundary:
 
 ---
 
-## 6. Future Stage 8A.2 Comparability Boundary
+## 6. Future Stage 8A.2 Comparability Boundary (Planned — Not Implemented)
 
 Stage 8A.2 will be designed when a second independent dataset (e.g. an independent organoid study testing Valproic Acid or another compound) completes Stages 1–7.
 
+Stage 8A.2 will first determine whether multiple independent studies for the same compound and gene are biologically and statistically comparable. If synthesis is scientifically justified, an appropriate statistical synthesis method will be selected and prespecified at that stage based on the observed study structure, dependence, heterogeneity, number of studies, and experimental context. Stage 8A.1 does not lock fixed-effects, random-effects, DerSimonian-Laird, REML, Hartung-Knapp, or any other estimator.
+
+### Retained Core Governance Invariants for Stage 8A.2:
+* **Separation of Non-Comparable Conditions**: Non-comparable conditions (discrepant developmental age, exposure duration, model system) remain strictly separate and are never forcibly synthesized.
+* **Permanent Preservation of Condition Records**: Underlying Stage 8A.1 condition-level records remain permanently preserved and are never collapsed or discarded.
+* **No Automatic Synthesis**: No synthesis occurs merely because two studies test the same nominal chemical compound.
+* **No Premature Implementation**: Genuine cross-study synthesis is not implemented in Stage 8A.1; GSE232218 is evaluated strictly as a single-study foundation.
+
 Planned multi-study evaluation states:
-* `SINGLE_STUDY_ONLY`: Retained as single-study condition record (current status).
+* `SINGLE_STUDY_ONLY`: Retained as single-study condition record (current verified status).
 * `MULTI_STUDY_CONTEXT_UNDER_REVIEW`: Multiple independent studies exist for compound; biological comparability under evaluation.
 * `NONCOMPARABLE_CONTEXT`: Discrepant developmental age, exposure window, or organoid platform prevents pooling.
-* `COMPARABLE_INDEPENDENT_STUDIES`: Rigorously verified biologically comparable independent studies eligible for random-effects meta-analysis.
+* `COMPARABLE_INDEPENDENT_STUDIES`: Rigorously verified biologically and statistically comparable independent studies eligible for prespecified synthesis evaluation.
 * `INSUFFICIENT_METADATA`: Incomplete regimen parameters prevent comparability determination.
