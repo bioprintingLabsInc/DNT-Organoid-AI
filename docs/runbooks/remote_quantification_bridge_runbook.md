@@ -61,30 +61,40 @@ The target execution node must satisfy the governed specifications in [`config/q
 
 ## 4. Environment Provisioning on Remote Node
 
-### Option A: Explicit Lockfile Reproduction (Recommended)
-Reproduce the exact bit-for-bit validated bioinformatics toolchain:
+### Option A: Declarative Single-Step Recreation (Primary / Recommended)
+Provisions the complete governed environment including Conda toolchain, PyYAML 6.0.2, and pytest verification dependencies in a single deterministic operation:
 ```bash
 git clone -b feature/prjna802072-quantification-bridge <REPO_URL> DNT-Organoid-AI
 cd DNT-Organoid-AI
 
-conda create --name dnt_bridge --file config/quantification_bridge/environment_bridge.lock.txt -y
-conda activate dnt_bridge
-```
-
-### Option B: Declarative YAML Environment
-```bash
 conda env create -f config/quantification_bridge/environment_bridge.yml
 conda activate dnt_bridge
 ```
 
+### Option B: Two-Stage Governed Explicit Lockfile Reproduction
+For environments requiring strict URL/hash-pinned bit-for-bit package locks:
+```bash
+git clone -b feature/prjna802072-quantification-bridge <REPO_URL> DNT-Organoid-AI
+cd DNT-Organoid-AI
+
+# 1. Provision exact Conda-managed toolchain and binaries
+conda create --name dnt_bridge --file config/quantification_bridge/environment_bridge.conda.lock.txt -y
+conda activate dnt_bridge
+
+# 2. Provision exact Pip-managed test and verification dependencies (no-deps)
+pip install -r config/quantification_bridge/environment_bridge.pip.lock.txt --no-deps
+```
+
 ### Formally Governed Toolchain Versions
-- Python: `3.11.9`
-- fastp: `0.23.4`
-- STAR: `2.7.11b`
-- Subread / featureCounts: `2.0.6`
-- samtools: `1.19.2` (htslib 1.21)
-- RSeQC: `5.0.3` (`infer_experiment.py 5.0.2/5.0.3`)
-- UCSC tools: `gtfToGenePred` (release 469), `genePredToBed` (release 469)
+- **Python:** `3.11.9`
+- **fastp:** `0.23.4`
+- **STAR:** `2.7.11b`
+- **Subread / featureCounts:** `2.0.6`
+- **samtools:** `1.19.2` (htslib `1.21`)
+- **RSeQC:** Conda package `5.0.3` (*Note:* `infer_experiment.py` CLI outputs `5.0.2` due to upstream unbumped `__version__ = "5.0.2"` in the official bioconda release; package identity remains `5.0.3`)
+- **UCSC tools:** `gtfToGenePred` (release `469`), `genePredToBed` (release `469`)
+- **PyYAML:** `6.0.2`
+- **pytest stack:** `pytest==9.1.1`, `pluggy==1.7.0`, `iniconfig==2.3.1`, `pygments==2.21.0`
 
 ---
 

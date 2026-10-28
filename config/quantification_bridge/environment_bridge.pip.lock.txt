@@ -1,0 +1,13 @@
+# ==============================================================================
+# Exact Pip Package Lock for PRJNA802072 Quantification Bridge
+# ==============================================================================
+# Platform: linux-64 / cross-platform wheels
+# Generated from verified clean environment: dnt_bridge_clean_test
+# Purpose: Locks exact test and verification dependencies installed via pip.
+# Apply after Conda package creation:
+#   pip install -r config/quantification_bridge/environment_bridge.pip.lock.txt --no-deps
+# ==============================================================================
+iniconfig==2.3.1
+pluggy==1.7.0
+pygments==2.21.0
+pytest==9.1.1
