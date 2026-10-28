@@ -24,6 +24,18 @@ The routing layer must identify source format and RNA-seq modality before prepro
 
 Raw read inputs and processed matrices enter through different format-specific routes. Bulk, single-cell, and single-nucleus data retain their modality identity and receive modality-appropriate QC and preprocessing. Modalities must not be blindly combined or normalized together. Any later integration requires an explicit, scientifically reviewed decision and a traceable transformation.
 
+### Raw-read execution dispatch (Route.RAW_READ_PIPELINE)
+
+Inputs identified as raw sequencing reads (FASTQ) are dispatched through `Route.RAW_READ_PIPELINE` to the governed Quantification Bridge (`src/quantification_bridge/`). The bridge executes:
+1. Paired-end deterministic grouping and mate validation (`src/quantification_bridge/pairing.py`).
+2. Treatment-blind read-level QC and trimming (`fastp`).
+3. Splice-aware reference alignment (`STAR`).
+4. Empirical strandedness evidence gate (`RSeQC` infer_experiment.py -> halts for Owner review).
+5. Post-approval fragment quantification (`featureCounts`).
+6. Governed count-matrix adaptation.
+
+Upon completion of quantification, the bridge emits a canonical raw integer count matrix and canonical sample metadata, transitioning the workflow into `Route.BULK_RAW_COUNT_PIPELINE` (frozen Step 6A onward). Direct count matrices bypass the raw-read bridge and enter `Route.BULK_RAW_COUNT_PIPELINE` directly. Unextracted SRA containers are routed to `RAW_READ_PIPELINE` but halt with `RAW_READ_SRA_EXTRACTION_NOT_IMPLEMENTED`. PRJNA802072 serves as the initial governed dataset configuration and validation case using this generic route.
+
 ## Architectural principles
 
 ### Data integrity and provenance

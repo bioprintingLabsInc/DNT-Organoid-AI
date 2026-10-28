@@ -105,7 +105,8 @@ flowchart TD
 ### Data Intake, QC & Standardization (Implemented & Validated)
 * **Goal**: Convert heterogeneous public and in-house RNA-seq files into canonically identified, technically qualified, normalized expression matrices.
 * **Internal Layers**:
-  1. *Ingestion & Format Detection* (Step 5): Identifies format (`FASTQ`, `raw_counts`, `UMI_counts`, `H5AD`) and assigns modality route (`BULK_RAW_COUNT_PIPELINE`, etc.).
+  1. *Ingestion & Format Detection* (Step 5): Identifies format (`FASTQ`, `raw_counts`, `UMI_counts`, `H5AD`) and assigns modality route (`Route.RAW_READ_PIPELINE`, `Route.BULK_RAW_COUNT_PIPELINE`, etc.).
+     * *Raw-Read Quantification Route* (`Route.RAW_READ_PIPELINE`): Raw FASTQ inputs execute the governed Quantification Bridge (`fastp` QC -> `STAR` alignment -> `RSeQC` strandedness gate -> `featureCounts`), emitting canonical raw count matrices into `Route.BULK_RAW_COUNT_PIPELINE`. Direct count matrices bypass the raw-read bridge. PRJNA802072 serves as the initial governed dataset configuration and validation case.
   2. *Metadata Validation* (Steps 3–4): Validates study, experiment, assay, sample, and exposure records against the canonical schema.
   3. *Quality Control & Preprocessing* (Step 6A): Checks matrix integrity (integer counts, library size, zero fraction, replicate correlation).
   4. *Gene Harmonization* (Step 6B): Maps raw gene identifiers to canonical Ensembl Release 112 IDs while retaining unmapped genes.

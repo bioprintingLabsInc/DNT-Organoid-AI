@@ -20,13 +20,17 @@ modules:
     primary_code_paths:
       - "src/routing/"
       - "src/ingestion/"
+      - "src/quantification_bridge/"
     test_paths:
       - "tests/routing/"
       - "tests/ingestion/"
+      - "tests/quantification_bridge/"
     config_paths:
       - "config/metadata_schema.yaml"
+      - "config/quantification_bridge/reference_manifest.json"
+      - "config/quantification_bridge/pilot_manifest.json"
     principal_input: "Raw sequencing counts or expression matrix files (FASTQ, TSV, CSV, H5AD, GEO series matrix)"
-    principal_output: "Ingestion manifest with detected format and assigned modality route (e.g. ModalityRoute.BULK_RAW_COUNT_PIPELINE)"
+    principal_output: "Ingestion manifest with detected format, assigned modality route (Route.RAW_READ_PIPELINE, Route.BULK_RAW_COUNT_PIPELINE), and execution plan"
     upstream_module: "External Data / GEO Accession"
     downstream_module: "Metadata Validation"
     governed_commit_or_tag: "f1a7ad8"

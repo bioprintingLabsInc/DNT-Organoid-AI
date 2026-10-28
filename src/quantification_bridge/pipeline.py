@@ -40,6 +40,7 @@ from .manifest import (
     TARGET_ORGANISM,
     TARGET_SRA_STUDY,
 )
+from .pairing import FastqPair
 from .rseqc_runner import run_infer_experiment
 from .star_runner import align_reads_star, build_star_index
 from .validator import validate_paired_fastqs
@@ -385,43 +386,72 @@ class QuantificationBridgePipeline:
 
         return results
 
-    def validate_paired_fastqs_all(self) -> dict[str, Any]:
-        """Perform structural synchronization validation across all 12 downloaded library pairs."""
-        validation_results = {}
+    def pairs_from_approved_pilot_runs(self) -> tuple[FastqPair, ...]:
+        """Construct FastqPair records for the 12 approved pilot runs."""
+        pairs = []
         for sample in APPROVED_PILOT_RUNS:
-            r1_path = self.raw_fastqs_dir / f"{sample.run_accession}_1.fastq.gz"
-            r2_path = self.raw_fastqs_dir / f"{sample.run_accession}_2.fastq.gz"
-            print(f"Validating FASTQ pairing: {sample.run_accession} ({sample.sample_title})...")
-            v_res = validate_paired_fastqs(r1_path, r2_path, sample_records_to_check=100000)
-            validation_results[sample.run_accession] = v_res
+            pairs.append(
+                FastqPair(
+                    sample_id=sample.run_accession,
+                    r1_path=self.raw_fastqs_dir / f"{sample.run_accession}_1.fastq.gz",
+                    r2_path=self.raw_fastqs_dir / f"{sample.run_accession}_2.fastq.gz",
+                    assay_id=sample.experiment_accession,
+                    extra_metadata={
+                        "sample_title": sample.sample_title,
+                        "vpa_dose_um": sample.vpa_dose_um,
+                    },
+                )
+            )
+        return tuple(pairs)
 
+    def validate_paired_fastqs_pairs(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        sample_records_to_check: int = 100000,
+    ) -> dict[str, Any]:
+        """Perform structural synchronization validation across given library pairs."""
+        validation_results = {}
+        for pair in pairs:
+            print(f"Validating FASTQ pairing: {pair.sample_id}...")
+            v_res = validate_paired_fastqs(pair.r1_path, pair.r2_path, sample_records_to_check=sample_records_to_check)
+            validation_results[pair.sample_id] = v_res
         return validation_results
 
-    def run_fastp_all(self, threads: int = 16) -> dict[str, Any]:
-        """Execute governed treatment-blind fastp preprocessing for all 12 libraries."""
-        fastp_results = {}
-        for sample in APPROVED_PILOT_RUNS:
-            r1_in = self.raw_fastqs_dir / f"{sample.run_accession}_1.fastq.gz"
-            r2_in = self.raw_fastqs_dir / f"{sample.run_accession}_2.fastq.gz"
-            r1_out = self.trimmed_dir / f"{sample.run_accession}_trimmed_1.fastq.gz"
-            r2_out = self.trimmed_dir / f"{sample.run_accession}_trimmed_2.fastq.gz"
-            json_out = self.qc_reports_dir / f"{sample.run_accession}_fastp.json"
-            html_out = self.qc_reports_dir / f"{sample.run_accession}_fastp.html"
+    def validate_paired_fastqs_all(self) -> dict[str, Any]:
+        """Perform structural synchronization validation across all 12 downloaded library pairs."""
+        return self.validate_paired_fastqs_pairs(self.pairs_from_approved_pilot_runs())
 
-            print(f"Executing fastp for {sample.run_accession} ({sample.sample_title})...")
+    def run_fastp_pairs(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        threads: int = 16,
+    ) -> dict[str, Any]:
+        """Execute governed treatment-blind fastp preprocessing for given pairs."""
+        fastp_results = {}
+        for pair in pairs:
+            r1_out = self.trimmed_dir / f"{pair.sample_id}_trimmed_1.fastq.gz"
+            r2_out = self.trimmed_dir / f"{pair.sample_id}_trimmed_2.fastq.gz"
+            json_out = self.qc_reports_dir / f"{pair.sample_id}_fastp.json"
+            html_out = self.qc_reports_dir / f"{pair.sample_id}_fastp.html"
+
+            print(f"Executing fastp for {pair.sample_id}...")
             res = run_fastp_preprocessing(
-                raw_r1=r1_in,
-                raw_r2=r2_in,
+                raw_r1=pair.r1_path,
+                raw_r2=pair.r2_path,
                 out_r1=r1_out,
                 out_r2=r2_out,
                 json_report=json_out,
                 html_report=html_out,
-                sample_id=sample.run_accession,
+                sample_id=pair.sample_id,
                 threads=threads,
             )
-            fastp_results[sample.run_accession] = res
+            fastp_results[pair.sample_id] = res
 
         return fastp_results
+
+    def run_fastp_all(self, threads: int = 16) -> dict[str, Any]:
+        """Execute governed treatment-blind fastp preprocessing for all 12 libraries."""
+        return self.run_fastp_pairs(self.pairs_from_approved_pilot_runs(), threads=threads)
 
     def build_star_index(self, threads: int = 16) -> dict[str, Any]:
         """Generate governed STAR genome index."""
@@ -435,15 +465,19 @@ class QuantificationBridgePipeline:
         )
         return res
 
-    def align_12_libraries_star(self, threads: int = 16) -> dict[str, Any]:
-        """Align all 12 trimmed libraries using STAR and generate BAM indexes."""
+    def align_libraries_star_pairs(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        threads: int = 16,
+    ) -> dict[str, Any]:
+        """Align given trimmed library pairs using STAR and generate BAM indexes."""
         alignment_results = {}
-        for sample in APPROVED_PILOT_RUNS:
-            r1_trim = self.trimmed_dir / f"{sample.run_accession}_trimmed_1.fastq.gz"
-            r2_trim = self.trimmed_dir / f"{sample.run_accession}_trimmed_2.fastq.gz"
-            out_prefix = self.alignments_dir / f"{sample.run_accession}_"
+        for pair in pairs:
+            r1_trim = self.trimmed_dir / f"{pair.sample_id}_trimmed_1.fastq.gz"
+            r2_trim = self.trimmed_dir / f"{pair.sample_id}_trimmed_2.fastq.gz"
+            out_prefix = self.alignments_dir / f"{pair.sample_id}_"
 
-            print(f"Aligning {sample.run_accession} with STAR...")
+            print(f"Aligning {pair.sample_id} with STAR...")
             res = align_reads_star(
                 trimmed_r1=r1_trim,
                 trimmed_r2=r2_trim,
@@ -461,18 +495,25 @@ class QuantificationBridgePipeline:
 
             bai_path = Path(f"{bam_path}.bai")
             res["bai_path"] = str(bai_path)
-            alignment_results[sample.run_accession] = res
+            alignment_results[pair.sample_id] = res
 
         return alignment_results
 
-    def run_rseqc_strandedness_diagnostics(self) -> dict[str, Any]:
-        """Execute RSeQC infer_experiment.py across all 12 aligned BAMs."""
-        strandedness_results = {}
-        for sample in APPROVED_PILOT_RUNS:
-            bam_path = self.alignments_dir / f"{sample.run_accession}_Aligned.sortedByCoord.out.bam"
-            out_txt = self.qc_reports_dir / f"{sample.run_accession}_infer_experiment.txt"
+    def align_12_libraries_star(self, threads: int = 16) -> dict[str, Any]:
+        """Align all 12 trimmed libraries using STAR and generate BAM indexes."""
+        return self.align_libraries_star_pairs(self.pairs_from_approved_pilot_runs(), threads=threads)
 
-            print(f"Running RSeQC infer_experiment for {sample.run_accession}...")
+    def run_rseqc_strandedness_pairs(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+    ) -> dict[str, Any]:
+        """Execute RSeQC infer_experiment.py across aligned BAMs for given pairs."""
+        strandedness_results = {}
+        for pair in pairs:
+            bam_path = self.alignments_dir / f"{pair.sample_id}_Aligned.sortedByCoord.out.bam"
+            out_txt = self.qc_reports_dir / f"{pair.sample_id}_infer_experiment.txt"
+
+            print(f"Running RSeQC infer_experiment for {pair.sample_id}...")
             res = run_infer_experiment(
                 bam_path=bam_path,
                 bed_path=self.bed12_path,
@@ -480,12 +521,18 @@ class QuantificationBridgePipeline:
                 mapq_min=10,
                 output_txt_path=out_txt,
             )
-            strandedness_results[sample.run_accession] = res
+            strandedness_results[pair.sample_id] = res
 
         return strandedness_results
 
-    def serialize_strandedness_evidence(
+    def run_rseqc_strandedness_diagnostics(self) -> dict[str, Any]:
+        """Execute RSeQC infer_experiment.py across all 12 aligned BAMs."""
+        return self.run_rseqc_strandedness_pairs(self.pairs_from_approved_pilot_runs())
+
+    def serialize_strandedness_evidence_pairs(
         self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        study_id: str,
         env_metrics: dict[str, Any],
         preflight_metrics: dict[str, Any],
         ref_metrics: dict[str, Any],
@@ -496,8 +543,9 @@ class QuantificationBridgePipeline:
         alignment_metrics: dict[str, Any],
         strandedness_metrics: dict[str, Any],
     ) -> Path:
-        """Compile and serialize the authoritative prjna802072_strandedness_evidence.json."""
-        out_file = self.bridge_out_dir / "prjna802072_strandedness_evidence.json"
+        """Compile and serialize the authoritative strandedness evidence artifact."""
+        clean_study = re.sub(r"[^A-Za-z0-9_-]", "_", study_id).lower()
+        out_file = self.bridge_out_dir / f"{clean_study}_strandedness_evidence.json"
 
         # Determine dominant strand across all runs
         forward_fracs = [m.get("forward_fraction", 0.0) for m in strandedness_metrics.values() if m.get("forward_fraction") is not None]
@@ -519,12 +567,8 @@ class QuantificationBridgePipeline:
 
         evidence_payload = {
             "execution_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
-            "study_accession": TARGET_BIOPROJECT,
-            "sra_study": TARGET_SRA_STUDY,
-            "developmental_day": TARGET_DEVELOPMENTAL_DAY,
-            "organism": TARGET_ORGANISM,
-            "biological_replicate_unit": BIOLOGICAL_REPLICATE_UNIT,
-            "total_samples": len(APPROVED_PILOT_RUNS),
+            "study_accession": study_id,
+            "total_samples": len(pairs),
             "generated_timestamp_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
             "strandedness_summary": {
                 "mean_forward_fraction": round(mean_fwd, 4),
@@ -544,6 +588,91 @@ class QuantificationBridgePipeline:
         out_file.write_text(json.dumps(evidence_payload, indent=2), encoding="utf-8")
         print(f"Authoritative strandedness evidence written to {out_file}")
         return out_file
+
+    def serialize_strandedness_evidence(
+        self,
+        env_metrics: dict[str, Any],
+        preflight_metrics: dict[str, Any],
+        ref_metrics: dict[str, Any],
+        download_metrics: dict[str, Any],
+        pairing_metrics: dict[str, Any],
+        fastp_metrics: dict[str, Any],
+        star_index_metrics: dict[str, Any],
+        alignment_metrics: dict[str, Any],
+        strandedness_metrics: dict[str, Any],
+    ) -> Path:
+        """Compile and serialize the authoritative prjna802072_strandedness_evidence.json."""
+        return self.serialize_strandedness_evidence_pairs(
+            pairs=self.pairs_from_approved_pilot_runs(),
+            study_id=TARGET_BIOPROJECT,
+            env_metrics=env_metrics,
+            preflight_metrics=preflight_metrics,
+            ref_metrics=ref_metrics,
+            download_metrics=download_metrics,
+            pairing_metrics=pairing_metrics,
+            fastp_metrics=fastp_metrics,
+            star_index_metrics=star_index_metrics,
+            alignment_metrics=alignment_metrics,
+            strandedness_metrics=strandedness_metrics,
+        )
+
+    def execute_raw_read_route(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        study_id: str = "generic_study",
+        threads: int = 16,
+        stop_at_gate: bool = True,
+    ) -> str:
+        """Generic raw-read route execution through the strandedness evidence gate."""
+        print(f"=== GENERIC RAW-READ ROUTE EXECUTION: {study_id} ({len(pairs)} pairs) ===")
+        print("=== STAGE 1: ENVIRONMENT AUDIT ===")
+        env_metrics = self.record_environment_metrics()
+
+        print("=== STAGE 2: PREFLIGHT VALIDATION ===")
+        preflight_metrics = self.run_preflight_checks()
+
+        print("=== STAGE 3: REFERENCE VERIFICATION ===")
+        ref_metrics = self.acquire_and_verify_references()
+
+        print("=== STAGE 4: FASTQ STRUCTURAL VALIDATION ===")
+        pairing_metrics = self.validate_paired_fastqs_pairs(pairs)
+
+        print("=== STAGE 5: TREATMENT-BLIND FASTP PREPROCESSING ===")
+        fastp_metrics = self.run_fastp_pairs(pairs, threads=threads)
+
+        print("=== STAGE 6: STAR GENOME INDEXING ===")
+        star_index_metrics = self.build_star_index(threads=threads)
+
+        print("=== STAGE 7: STAR ALIGNMENT & BAM INDEXING ===")
+        alignment_metrics = self.align_libraries_star_pairs(pairs, threads=threads)
+
+        print("=== STAGE 8: RSeQC STRANDEDNESS INFERENCE ===")
+        strandedness_metrics = self.run_rseqc_strandedness_pairs(pairs)
+
+        print("=== STAGE 9: SERIALIZE STRANDEDNESS EVIDENCE ===")
+        evidence_path = self.serialize_strandedness_evidence_pairs(
+            pairs=pairs,
+            study_id=study_id,
+            env_metrics=env_metrics,
+            preflight_metrics=preflight_metrics,
+            ref_metrics=ref_metrics,
+            download_metrics={},
+            pairing_metrics=pairing_metrics,
+            fastp_metrics=fastp_metrics,
+            star_index_metrics=star_index_metrics,
+            alignment_metrics=alignment_metrics,
+            strandedness_metrics=strandedness_metrics,
+        )
+
+        if stop_at_gate:
+            print("================================================================================")
+            print("GATE REACHED: AWAITING_OWNER_STRANDEDNESS_DECISION")
+            print(f"Strandedness evidence artifact: {evidence_path}")
+            print("HALTING EXECUTION. Do NOT proceed to featureCounts until authorized by Owner.")
+            print("================================================================================")
+            return "AWAITING_OWNER_STRANDEDNESS_DECISION"
+
+        return "STRANDEDNESS_EVIDENCE_PRODUCED"
 
     def run_through_strandedness_gate(self, threads: int = 16) -> str:
         """Run entire upstream bridge through the strandedness evidence gate and STOP."""

@@ -18,6 +18,10 @@ Step 4: canonical metadata validation
 Step 5: asset registration, bounded inspection,
         format detection, consistency checking, routing
     │
+    ├── RAW_READ_PIPELINE
+    │       └── Quantification Bridge (fastp -> STAR -> RSeQC Gate -> featureCounts)
+    │           └── Emits canonical raw_counts -> BULK_RAW_COUNT_PIPELINE
+    │
     ├── BULK_RAW_COUNT_PIPELINE
     │       └── Step 6A: bulk RNA-seq raw-count QC
     │
