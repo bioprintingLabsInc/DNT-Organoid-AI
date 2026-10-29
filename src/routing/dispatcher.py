@@ -265,15 +265,24 @@ def dispatch_route_execution(
                 extractor_fn = extract_sra_to_fastq_pair
             pairs_list = []
             extracted_dir = Path("data/interim/sra_extracted")
+            temp_scratch_dir = Path("data/interim/sra_temp")
             for asset in plan.registered_assets:
                 if asset.local_path.suffix.lower() == ".sra":
                     sample_id = asset.assay_ids[0] if asset.assay_ids else asset.asset_id
                     try:
-                        p = extractor_fn(
-                            sra_path=asset.local_path,
-                            output_dir=extracted_dir / asset.local_path.stem,
-                            sample_id=sample_id,
-                        )
+                        try:
+                            p = extractor_fn(
+                                sra_path=asset.local_path,
+                                output_dir=extracted_dir / asset.local_path.stem,
+                                sample_id=sample_id,
+                                temp_dir=temp_scratch_dir / asset.local_path.stem,
+                            )
+                        except TypeError:
+                            p = extractor_fn(
+                                sra_path=asset.local_path,
+                                output_dir=extracted_dir / asset.local_path.stem,
+                                sample_id=sample_id,
+                            )
                         pairs_list.append(p)
                     except Exception as e:
                         return RouteExecutionResult(

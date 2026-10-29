@@ -325,3 +325,95 @@ class UniversalIngestionPhaseU1Tests(unittest.TestCase):
             res = dispatch_route_execution(plan, executor=mock_executor, sra_extractor=mock_sra_extractor)
             self.assertTrue(res.is_success)
             self.assertEqual("AWAITING_OWNER_STRANDEDNESS_DECISION", res.execution_state)
+
+    def test_sra_extract_to_fastq_pair_construction_and_provenance(self):
+        """Verify that extract_sra_to_fastq_pair constructs a standard FastqPair with SRA provenance in extra_metadata."""
+        from unittest.mock import patch
+        from src.quantification_bridge.sra_runner import SraExtractionResult, extract_sra_to_fastq_pair
+        from src.quantification_bridge.pairing import FastqPair
+
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            r1 = td_path / "SRR999_1.fastq"
+            r2 = td_path / "SRR999_2.fastq"
+            r1.write_text("@read1/1\nACGT\n+\nIIII\n", encoding="utf-8")
+            r2.write_text("@read1/2\nTGCA\n+\nJJJJ\n", encoding="utf-8")
+            temp_scratch = td_path / "temp_scratch"
+
+            mock_res = SraExtractionResult(
+                status="SRA_EXTRACTION_SUCCESS",
+                run_accession="SRR999",
+                layout="PAIRED",
+                fastq_r1=r1,
+                fastq_r2=r2,
+                tool_name="fasterq-dump",
+                tool_version="3.1.1",
+                output_dir=td_path,
+                temp_dir=temp_scratch,
+            )
+
+            with patch("src.quantification_bridge.sra_runner.extract_sra", return_value=mock_res):
+                pair = extract_sra_to_fastq_pair(
+                    sra_path="dummy.sra",
+                    output_dir=td_path,
+                    sample_id="sample_test",
+                    biological_replicate_id="rep_2",
+                    condition_id="cond_vpa",
+                    temp_dir=temp_scratch,
+                    assay_id="assay_001",
+                )
+
+                # 1. Assert FastqPair public dataclass structure
+                self.assertIsInstance(pair, FastqPair)
+                self.assertEqual("sample_test", pair.sample_id)
+                self.assertEqual(r1, pair.r1_path)
+                self.assertEqual(r2, pair.r2_path)
+                self.assertEqual("assay_001", pair.assay_id)
+
+                # 2. Assert provenance preservation in extra_metadata
+                meta = pair.extra_metadata
+                self.assertEqual("SRR999", meta["run_accession"])
+                self.assertEqual("rep_2", meta["biological_replicate_id"])
+                self.assertEqual("cond_vpa", meta["condition_id"])
+                self.assertEqual("SRA_EXTRACTION_SUCCESS", meta["sra_extraction_status"])
+                self.assertEqual("fasterq-dump", meta["sra_extraction_tool"])
+                self.assertEqual("3.1.1", meta["sra_extraction_version"])
+                self.assertEqual(str(temp_scratch), meta["sra_temp_dir"])
+
+                # 3. Assert downstream serializability
+                d = pair.to_dict()
+                self.assertEqual("sample_test", d["sample_id"])
+                self.assertEqual(str(r1), d["r1_path"])
+                self.assertEqual("SRR999", d["extra_metadata"]["run_accession"])
+
+    def test_fasterq_dump_command_and_temp_storage_governance(self):
+        """Verify deterministic fasterq-dump command construction and governed scratch directory handling."""
+        from src.quantification_bridge.sra_runner import build_fasterq_dump_command, extract_sra
+
+        # 1. Deterministic command generation with separate output and temp options
+        cmd = build_fasterq_dump_command(
+            tool_bin="/usr/bin/fasterq-dump",
+            sra_path="/data/SRR123.sra",
+            output_dir="/data/output",
+            temp_dir="/data/scratch",
+            threads=8,
+        )
+        self.assertEqual(
+            "/usr/bin/fasterq-dump --split-files -O /data/output -t /data/scratch -e 8 -f /data/SRR123.sra",
+            cmd,
+        )
+
+        # 2. extract_sra validates file existence and creates separate output & temp directories
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            sra_file = base / "test.sra"
+            sra_file.write_bytes(b"dummy-sra-data")
+            out_dir = base / "out"
+            temp_dir = base / "scratch_governed"
+
+            self.assertFalse(out_dir.exists())
+            self.assertFalse(temp_dir.exists())
+
+            # Missing SRA file raises FileNotFoundError
+            with self.assertRaises(FileNotFoundError):
+                extract_sra(base / "nonexistent.sra", output_dir=out_dir, temp_dir=temp_dir)

@@ -2,6 +2,7 @@
 
 Converts .sra archive containers into paired or single FASTQ files,
 verifies tool version, detects read layout (paired-end vs single-end),
+enforces governed separate temporary scratch storage,
 and constructs canonical FastqPair objects for downstream quantification.
 """
 
@@ -30,6 +31,7 @@ class SraExtractionResult:
     tool_name: str
     tool_version: str
     output_dir: Path
+    temp_dir: Path
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,7 +43,19 @@ class SraExtractionResult:
             "tool_name": self.tool_name,
             "tool_version": self.tool_version,
             "output_dir": str(self.output_dir),
+            "temp_dir": str(self.temp_dir),
         }
+
+
+def build_fasterq_dump_command(
+    tool_bin: str,
+    sra_path: str,
+    output_dir: str,
+    temp_dir: str,
+    threads: int = 6,
+) -> str:
+    """Build deterministic fasterq-dump command string enforcing governed scratch storage."""
+    return f"{tool_bin} --split-files -O {output_dir} -t {temp_dir} -e {threads} -f {sra_path}"
 
 
 def probe_sra_tools() -> dict[str, Any]:
@@ -83,13 +97,19 @@ def extract_sra(
     threads: int = 6,
     temp_dir: str | Path | None = None,
 ) -> SraExtractionResult:
-    """Extract an SRA archive to FASTQ files via fasterq-dump / fastq-dump."""
+    """Extract an SRA archive to FASTQ files via fasterq-dump / fastq-dump with governed temp storage."""
     sra_p = Path(sra_path).resolve()
     if not sra_p.is_file():
         raise FileNotFoundError(f"SRA file not found: {sra_p}")
 
     out_p = Path(output_dir).resolve()
     out_p.mkdir(parents=True, exist_ok=True)
+
+    if temp_dir is None:
+        temp_p = out_p / "_tmp_scratch"
+    else:
+        temp_p = Path(temp_dir).resolve()
+    temp_p.mkdir(parents=True, exist_ok=True)
 
     run_acc = sra_p.stem
     tools = probe_sra_tools()
@@ -98,10 +118,17 @@ def extract_sra(
 
     wsl_sra = to_wsl_path(sra_p)
     wsl_out = to_wsl_path(out_p)
+    wsl_temp = to_wsl_path(temp_p)
 
     cmd_bin = tools["path"]
     if "fasterq-dump" in tools["tool_name"]:
-        cmd = f"{cmd_bin} --split-files -O {wsl_out} -e {threads} -f {wsl_sra}"
+        cmd = build_fasterq_dump_command(
+            tool_bin=cmd_bin,
+            sra_path=wsl_sra,
+            output_dir=wsl_out,
+            temp_dir=wsl_temp,
+            threads=threads,
+        )
     else:
         cmd = f"{cmd_bin} --split-files --outdir {wsl_out} {wsl_sra}"
 
@@ -125,6 +152,7 @@ def extract_sra(
             tool_name=tools["tool_name"],
             tool_version=tools["tool_version"],
             output_dir=out_p,
+            temp_dir=temp_p,
         )
     elif single.is_file():
         return SraExtractionResult(
@@ -136,6 +164,7 @@ def extract_sra(
             tool_name=tools["tool_name"],
             tool_version=tools["tool_version"],
             output_dir=out_p,
+            temp_dir=temp_p,
         )
     else:
         # Check if files without _1 exist or gzipped
@@ -154,6 +183,7 @@ def extract_sra(
             tool_name=tools["tool_name"],
             tool_version=tools["tool_version"],
             output_dir=out_p,
+            temp_dir=temp_p,
         )
 
 
@@ -164,17 +194,28 @@ def extract_sra_to_fastq_pair(
     biological_replicate_id: str = "rep1",
     condition_id: str = "unassigned",
     threads: int = 6,
+    temp_dir: str | Path | None = None,
+    assay_id: str | None = None,
 ) -> FastqPair:
-    """Extract SRA archive and wrap as a verified FastqPair object."""
-    extraction = extract_sra(sra_path, output_dir=output_dir, threads=threads)
+    """Extract SRA archive and wrap as a verified FastqPair object conforming to established FastqPair contract."""
+    extraction = extract_sra(sra_path, output_dir=output_dir, threads=threads, temp_dir=temp_dir)
     if extraction.layout != "PAIRED" or extraction.fastq_r2 is None:
         raise ValueError(f"Run {extraction.run_accession} is {extraction.layout}; only paired-end libraries are supported by the pipeline.")
 
+    extra = {
+        "run_accession": extraction.run_accession,
+        "biological_replicate_id": biological_replicate_id,
+        "condition_id": condition_id,
+        "sra_extraction_status": extraction.status,
+        "sra_extraction_tool": extraction.tool_name,
+        "sra_extraction_version": extraction.tool_version,
+        "sra_temp_dir": str(extraction.temp_dir),
+    }
+
     return FastqPair(
-        run_accession=extraction.run_accession,
         sample_id=sample_id,
-        biological_replicate_id=biological_replicate_id,
-        condition_id=condition_id,
         r1_path=extraction.fastq_r1,
         r2_path=extraction.fastq_r2,
+        assay_id=assay_id,
+        extra_metadata=extra,
     )
