@@ -170,28 +170,23 @@ def plan_route_execution(metadata: dict[str, Any]) -> RouteExecutionPlan:
     if selected_route == Route.RAW_READ_PIPELINE:
         detected_formats = {r.detected_format for r in routing_results}
         if "SRA" in detected_formats:
-            findings.append(
-                AssetFinding(
-                    "WARNING",
-                    "sra_extraction_unimplemented",
-                    "executor",
-                    "SRA container extraction to FASTQ is not implemented; raw-read execution cannot proceed.",
-                )
-            )
+            provenance = {
+                "detected_format": "SRA",
+                "selected_route": "RAW_READ_PIPELINE",
+                "sra_extraction_adapter": "fasterq-dump",
+                "raw_read_executor": "quantification_bridge",
+                "emitted_format": "raw_counts",
+                "downstream_route": "BULK_RAW_COUNT_PIPELINE",
+            }
             return RouteExecutionPlan(
                 route=Route.RAW_READ_PIPELINE,
-                status="RAW_READ_SRA_EXTRACTION_NOT_IMPLEMENTED",
-                executor_id=None,
-                target_format=None,
-                downstream_route=None,
+                status="READY_FOR_EXECUTION",
+                executor_id="quantification_bridge",
+                target_format="raw_counts",
+                downstream_route=Route.BULK_RAW_COUNT_PIPELINE,
                 registered_assets=registrations,
                 routing_results=routing_results,
-                provenance_chain={
-                    "detected_format": "SRA",
-                    "selected_route": "RAW_READ_PIPELINE",
-                    "executor": None,
-                    "status": "RAW_READ_SRA_EXTRACTION_NOT_IMPLEMENTED",
-                },
+                provenance_chain=provenance,
                 findings=tuple(findings),
                 metadata=metadata,
             )
@@ -238,6 +233,7 @@ def plan_route_execution(metadata: dict[str, Any]) -> RouteExecutionPlan:
 def dispatch_route_execution(
     plan: RouteExecutionPlan,
     executor: Any = None,
+    sra_extractor: Any = None,
     **kwargs: Any,
 ) -> RouteExecutionResult:
     """Dispatch a validated execution plan to its registered executor engine.
@@ -260,19 +256,50 @@ def dispatch_route_execution(
 
     # Route: RAW_READ_PIPELINE -> quantification_bridge
     if plan.executor_id == "quantification_bridge":
-        from src.quantification_bridge.pairing import group_fastq_pairs
-        try:
-            pairs = group_fastq_pairs(plan.registered_assets, plan.metadata)
-        except Exception as e:
-            return RouteExecutionResult(
-                plan=plan,
-                is_success=False,
-                execution_state="FASTQ_PAIRING_FAILED",
-                emitted_asset_path=None,
-                emitted_format=None,
-                provenance_record=plan.provenance_chain,
-                error_message=f"FASTQ pairing validation failed: {e}",
-            )
+        has_sra = any(r.local_path.suffix.lower() == ".sra" for r in plan.registered_assets)
+        if has_sra:
+            if sra_extractor is not None:
+                extractor_fn = sra_extractor
+            else:
+                from src.quantification_bridge.sra_runner import extract_sra_to_fastq_pair
+                extractor_fn = extract_sra_to_fastq_pair
+            pairs_list = []
+            extracted_dir = Path("data/interim/sra_extracted")
+            for asset in plan.registered_assets:
+                if asset.local_path.suffix.lower() == ".sra":
+                    sample_id = asset.assay_ids[0] if asset.assay_ids else asset.asset_id
+                    try:
+                        p = extractor_fn(
+                            sra_path=asset.local_path,
+                            output_dir=extracted_dir / asset.local_path.stem,
+                            sample_id=sample_id,
+                        )
+                        pairs_list.append(p)
+                    except Exception as e:
+                        return RouteExecutionResult(
+                            plan=plan,
+                            is_success=False,
+                            execution_state="SRA_EXTRACTION_FAILED",
+                            emitted_asset_path=None,
+                            emitted_format=None,
+                            provenance_record=plan.provenance_chain,
+                            error_message=f"SRA extraction failed: {e}",
+                        )
+            pairs = tuple(pairs_list)
+        else:
+            from src.quantification_bridge.pairing import group_fastq_pairs
+            try:
+                pairs = group_fastq_pairs(plan.registered_assets, plan.metadata)
+            except Exception as e:
+                return RouteExecutionResult(
+                    plan=plan,
+                    is_success=False,
+                    execution_state="FASTQ_PAIRING_FAILED",
+                    emitted_asset_path=None,
+                    emitted_format=None,
+                    provenance_record=plan.provenance_chain,
+                    error_message=f"FASTQ pairing validation failed: {e}",
+                )
 
         if executor is not None:
             # Custom / mock executor provided (e.g. for testing)

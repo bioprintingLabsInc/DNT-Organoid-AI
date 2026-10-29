@@ -57,6 +57,8 @@ def _select_route(asset: RegisteredAsset, detection: Detection) -> tuple[Route, 
         return _manual("H5AD requires compatible scRNA_seq or snRNA_seq metadata", "h5ad_modality")
     if detected == "processed_expression_matrix":
         return Route.PROCESSED_EXPRESSION_PIPELINE, ()
+    if detected == "differential_expression_table":
+        return Route.DIFFERENTIAL_EXPRESSION_PIPELINE, ()
     if detected == "RDS":
         return _manual("RDS object contents are not interpreted automatically", "rds_manual_review")
     return Route.MANUAL_REVIEW, ()

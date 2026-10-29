@@ -1,6 +1,8 @@
 """Non-mutating bulk count-matrix parsing and structural QC."""
+from collections import Counter
 import csv
 from dataclasses import dataclass
+import gzip
 from pathlib import Path
 from .result import Finding, Severity
 
@@ -10,16 +12,28 @@ class CountMatrix:
 
 def read_matrix(path: str|Path, rules: dict) -> tuple[CountMatrix|None,list[Finding]]:
     findings=[]; path=Path(path)
+    if path.suffix.lower() == ".xlsx":
+        from src.ingestion.xlsx_reader import read_xlsx_count_matrix
+        matrix, xlsx_findings, _ = read_xlsx_count_matrix(path, rules)
+        return matrix, xlsx_findings
+
+    is_gz = path.suffix.lower() == ".gz"
+    is_csv = path.name.lower().endswith(".csv.gz") or path.suffix.lower() == ".csv"
     try:
-        with path.open(encoding="utf-8-sig", newline="") as stream:
-            rows = list(csv.reader(stream, delimiter="," if path.suffix.lower()==".csv" else "\t"))
+        if is_gz:
+            with gzip.open(path, mode="rt", encoding="utf-8-sig", newline="") as stream:
+                rows = list(csv.reader(stream, delimiter="," if is_csv else "	"))
+        else:
+            with path.open(encoding="utf-8-sig", newline="") as stream:
+                rows = list(csv.reader(stream, delimiter="," if is_csv else "	"))
     except (OSError,UnicodeError,csv.Error) as e: return None,[Finding(Severity.ERROR,"malformed_matrix","dataset",None,"matrix",str(e))]
     if not rows or not any(rows): return None,[Finding(Severity.ERROR,"malformed_matrix","dataset",None,"matrix","Matrix is empty.")]
     header=rows[0]
     if not header or not header[0].strip(): findings.append(Finding(Severity.ERROR,"gene_identifier_column_required","dataset",None,"header[0]","Gene identifier column is missing."))
     samples=tuple(header[1:])
     if not samples: findings.append(Finding(Severity.ERROR,"sample_columns_required","dataset",None,"header","At least one sample column is required."))
-    for s in sorted({x for x in samples if samples.count(x)>1}): findings.append(Finding(Severity.ERROR,"unique_sample_identifiers_required","sample",s,"header","Duplicate sample identifier."))
+    sample_counts = Counter(samples)
+    for s in sorted([x for x, c in sample_counts.items() if c > 1]): findings.append(Finding(Severity.ERROR,"unique_sample_identifiers_required","sample",s,"header","Duplicate sample identifier."))
     genes=[]; values=[[] for _ in samples]
     for i,row in enumerate(rows[1:],1):
         if not row or not any(cell.strip() for cell in row): findings.append(Finding(Severity.ERROR,"empty_row","gene",None,f"row[{i}]","Empty row.")); continue
@@ -34,7 +48,8 @@ def read_matrix(path: str|Path, rules: dict) -> tuple[CountMatrix|None,list[Find
             if not number.is_integer(): findings.append(Finding(Severity.ERROR,"integer_like_counts_required","sample",samples[j],f"row[{i}].{samples[j]}","Count must be integer-like."))
             values[j].append(int(number))
     if any(f.severity==Severity.ERROR for f in findings): return None,findings
-    for gene in sorted({x for x in genes if genes.count(x)>1}): findings.append(Finding(Severity.REVIEW,"duplicate_gene_identifiers","gene",gene,"gene_id","Duplicate gene identifier; no aggregation performed."))
+    gene_counts = Counter(genes)
+    for gene in sorted([x for x, c in gene_counts.items() if c > 1]): findings.append(Finding(Severity.REVIEW,"duplicate_gene_identifiers","gene",gene,"gene_id","Duplicate gene identifier; no aggregation performed."))
     for i,gene in enumerate(genes):
         if values and all(col[i]==0 for col in values): findings.append(Finding(Severity.INFO,"zero_only_genes","gene",gene,f"gene[{i}]","Gene has zero counts in every sample."))
     for sample,col in zip(samples,values):

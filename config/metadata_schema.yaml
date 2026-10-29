@@ -70,6 +70,7 @@ controlled_vocabularies:
     - H5AD
     - RDS
     - processed_expression_matrix
+    - differential_expression_table
     - other
   dnt_reference_state: [positive, negative_reference, unresolved_uncertain]
   asset_availability: [available, restricted, unavailable]

@@ -209,20 +209,18 @@ class RouterDispatchIntegrationTests(unittest.TestCase):
                 group_fastq_pairs(assets, metadata=metadata)
             self.assertIn("Duplicate", str(ctx.exception))
 
-    def test_sra_route_marks_extraction_unimplemented(self):
-        """SRA container input routes to RAW_READ_PIPELINE with explicit unimplemented state."""
+    def test_sra_route_plans_and_dispatches_extraction(self):
+        """SRA container input routes to RAW_READ_PIPELINE with fasterq-dump extraction adapter."""
         with tempfile.TemporaryDirectory() as tmpdir:
             sra_path = write_asset(Path(tmpdir) / "reads.sra", "sra")
             metadata = routing_metadata(sra_path, "SRA")
             plan = plan_route_execution(metadata)
 
             self.assertEqual(Route.RAW_READ_PIPELINE, plan.route)
-            self.assertEqual("RAW_READ_SRA_EXTRACTION_NOT_IMPLEMENTED", plan.status)
-            self.assertIsNone(plan.executor_id)
-
-            res = dispatch_route_execution(plan)
-            self.assertFalse(res.is_success)
-            self.assertEqual("RAW_READ_SRA_EXTRACTION_NOT_IMPLEMENTED", res.execution_state)
+            self.assertEqual("READY_FOR_EXECUTION", plan.status)
+            self.assertEqual("quantification_bridge", plan.executor_id)
+            self.assertEqual(Route.BULK_RAW_COUNT_PIPELINE, plan.downstream_route)
+            self.assertEqual("fasterq-dump", plan.provenance_chain.get("sra_extraction_adapter"))
 
     def test_synthetic_raw_read_output_satisfies_frozen_step6a_contract(self):
         """Synthetic featureCounts converted matrix satisfies the exact Step 6A bulk count contract."""
