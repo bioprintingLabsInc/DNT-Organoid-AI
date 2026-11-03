@@ -1,0 +1,45 @@
+MAGE-TAB Version	1.1
+Investigation Title	RNA sequencing data of human dorsal forebrain organoids treated with valproic acid against untreated controls
+Experiment Description	This dataset contains RNA sequencing data of 48 human dorsal forebrain organoids on day 50 of differentiation. Half of the samples were treated with the antiepileptic drug valproic acid (VPA) from day 21 to day 50 of differentiation, while the remaining served as untreated controls. This dataset was generated to investigate how VPA influences early human cortical development at the transcriptional level.
+Experimental Design	compound treatment design
+Experimental Design Term Source REF	EFO
+Experimental Design Term Accession Number	EFO:0001755
+Experimental Factor Name	compound	dose
+Experimental Factor Type	compound	dose
+Experimental Factor Term Source REF	EFO	EFO
+Experimental Factor Term Accession Number	CHEBI_24431	EFO_0000428
+Person Last Name	Branco	Yentür
+Person First Name	Lízia	Zeynep
+Person Mid Initials
+Person Email	lizia.branco@kit.edu	zeynep.yentuer@partner.kit.edu
+Person Phone
+Person Fax
+Person Address	Wolfgang-Gaede-Straße 1a, 76131 Karlsruhe	Wolfgang-Gaede-Straße 1a, 76131 Karlsruhe
+Person Affiliation	Karlsruhe Institute of Technology	Karlsruhe Institute of Technology
+Person Roles	submitter	data analyst;experiment performer
+Date of Experiment	
+Public Release Date	2025-12-31
+PubMed ID
+Publication DOI
+Publication Author List
+Publication Title
+Publication Status
+Publication Status Term Source REF
+Publication Status Term Accession Number
+Protocol Name	P-MTAB-153433	P-MTAB-153434	P-MTAB-153435	P-MTAB-153436
+Protocol Type	sample collection protocol	nucleic acid extraction protocol	nucleic acid library construction protocol	nucleic acid sequencing protocol
+Protocol Term Source REF	EFO	EFO	EFO	EFO
+Protocol Term Accession Number	EFO_0005518	EFO_0002944	EFO_0004184	EFO_0004170
+Protocol Description	Organoids were homogenized in the RLT buffer from RNeasy MiniKit (Qiagen, Cat. no.74106) on ice, and stoted at -80C until RNA extraction.	mRNA was isolated from organoids using the RNeasy MiniKit (Qiagen, Cat. no.74106) following manufacturer’s instructions	non-directional poly-A enrichment	Paired-end 150 bp
+Protocol Hardware				Illumina NovaSeq 6000
+Protocol Software				
+Term Source Name	EFO
+Term Source File	http://www.ebi.ac.uk/efo/
+Term Source Version
+SDRF File	E-MTAB-15191.sdrf.txt
+Comment[AEExperimentType]	RNA-seq of coding RNA
+Comment[TemplateType]	Cell line - High-throughput sequencing
+Comment[SecondaryAccession]	ERP173130
+Comment[SequenceDataURI]	http://www.ebi.ac.uk/ena/data/view/ERR15094545-ERR15094545	http://www.ebi.ac.uk/ena/data/view/ERR15094545-ERR15094546	http://www.ebi.ac.uk/ena/data/view/ERR15094546-ERR15094547	http://www.ebi.ac.uk/ena/data/view/ERR15094547-ERR15094548	http://www.ebi.ac.uk/ena/data/view/ERR15094548-ERR15094549	http://www.ebi.ac.uk/ena/data/view/ERR15094549-ERR15094550	http://www.ebi.ac.uk/ena/data/view/ERR15094550-ERR15094551	http://www.ebi.ac.uk/ena/data/view/ERR15094551-ERR15094552	http://www.ebi.ac.uk/ena/data/view/ERR15094552-ERR15094553	http://www.ebi.ac.uk/ena/data/view/ERR15094553-ERR15094554	http://www.ebi.ac.uk/ena/data/view/ERR15094554-ERR15094555	http://www.ebi.ac.uk/ena/data/view/ERR15094555-ERR15094556	http://www.ebi.ac.uk/ena/data/view/ERR15094556-ERR15094557	http://www.ebi.ac.uk/ena/data/view/ERR15094557-ERR15094558	http://www.ebi.ac.uk/ena/data/view/ERR15094558-ERR15094559	http://www.ebi.ac.uk/ena/data/view/ERR15094559-ERR15094560	http://www.ebi.ac.uk/ena/data/view/ERR15094560-ERR15094560
+Comment[Submitted Name]	RNA sequencing data of human dorsal forebrain organoids treated with valproic acid against untreated controls
+Comment[ArrayExpressAccession]	E-MTAB-15191
