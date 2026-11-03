@@ -413,11 +413,11 @@ def ingest_published_deg_table(
         developmental_age_or_stage_at_exposure=ctx["developmental_age_or_stage_at_exposure"],
         design_formula=metadata.get(
             "published_design_formula",
-            "~ condition (published_summary; batch awareness in DEG model not explicitly specified in source)",
+            "unspecified",
         ),
         design_rationale=metadata.get(
             "published_design_rationale",
-            "Published differential expression summary statistics; source publication does not explicitly specify a batch-aware GLM formula for Table S2.",
+            "Published differential expression summary statistics; statistical model and formula not specified in source publication.",
         ),
         gene_results=tuple(gene_results),
         excluded_genes=tuple(excluded_genes),

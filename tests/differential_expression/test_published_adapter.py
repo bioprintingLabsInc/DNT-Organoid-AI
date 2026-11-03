@@ -370,7 +370,7 @@ class PublishedDegAdapterTests(unittest.TestCase):
         prov = contrast_res.r_environment_info
         self.assertEqual("unspecified", prov["analysis_method"])
         self.assertNotIn("DESeq2", prov["analysis_method"])
-        self.assertIn("batch awareness in DEG model not explicitly specified in source", contrast_res.design_formula)
+        self.assertEqual("unspecified", contrast_res.design_formula)
 
 if __name__ == "__main__":
     unittest.main()
