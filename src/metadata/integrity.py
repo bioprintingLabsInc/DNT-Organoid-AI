@@ -174,27 +174,47 @@ class MetadataIntegrityChecker:
                 )
                 continue
 
-            if rel_val_status == "needs_review":
+            ALLOWED_VALIDATION_STATUSES = {"not_validated", "valid", "valid_with_warnings", "invalid"}
+
+            if rel_val_status not in ALLOWED_VALIDATION_STATUSES:
                 findings.append(
                     IntegrityFinding(
-                        severity=Severity.WARNING,
-                        rule="relationship_requires_review",
+                        severity=Severity.ERROR,
+                        rule="invalid_validation_status",
                         entity_type="treatment_control_relationships",
                         entity_id=rel_id,
-                        field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
-                        message=f"Comparison '{rel_id}' is marked as requiring manual review.",
+                        field_path=f"treatment_control_relationships[relationship_id='{rel_id}'].metadata_validation_status",
+                        message=(
+                            f"Comparison '{rel_id}' has invalid metadata_validation_status '{rel_val_status}'. "
+                            f"Allowed statuses: {sorted(ALLOWED_VALIDATION_STATUSES)}."
+                        ),
                     )
                 )
 
-            if len(ctrl_cids) > 1 and rel_val_status != "validated":
+            if rel_val_status == "invalid":
                 findings.append(
                     IntegrityFinding(
-                        severity=Severity.WARNING,
+                        severity=Severity.ERROR,
+                        rule="invalid_relationship",
+                        entity_type="treatment_control_relationships",
+                        entity_id=rel_id,
+                        field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                        message=f"Comparison '{rel_id}' has validation status 'invalid'; relationship is blocked.",
+                    )
+                )
+
+            if len(ctrl_cids) > 1:
+                findings.append(
+                    IntegrityFinding(
+                        severity=Severity.ERROR,
                         rule="ambiguous_matched_control",
                         entity_type="treatment_control_relationships",
                         entity_id=rel_id,
                         field_path=f"treatment_control_relationships[relationship_id='{rel_id}'].matched_control_condition_ids",
-                        message=f"Comparison '{rel_id}' specifies multiple candidate matched controls {ctrl_cids} without resolved consensus.",
+                        message=(
+                            f"Comparison '{rel_id}' specifies multiple candidate matched controls {ctrl_cids}. "
+                            "Ambiguous control matching is prohibited without confirmed resolution to a single control; comparison is blocked."
+                        ),
                     )
                 )
 

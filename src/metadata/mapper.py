@@ -603,7 +603,7 @@ class CanonicalMetadataMapper:
                         is_ambiguous = True
 
                 if is_ambiguous:
-                    # AMBIGUOUS: Do NOT guess an arbitrary control!
+                    # AMBIGUOUS: Do NOT guess an arbitrary control and do NOT establish speculative or pooled relationships!
                     findings.append(
                         MappingFinding(
                             severity="WARNING",
@@ -611,35 +611,12 @@ class CanonicalMetadataMapper:
                             field_path=f"conditions[condition_id='{t_cid}']",
                             message=(
                                 f"Treatment condition '{t_cid}' has multiple candidate matched controls: {compatible_controls}. "
-                                "Relationship cannot be guessed automatically and requires manual review."
+                                "Automatic matching cannot be established without guessing; relationship remains blocked until "
+                                "appropriate experimental evidence or human review resolves it."
                             ),
                         )
                     )
-                    rel_id = f"rel_{t_cid}_ambiguous"
-                    relationships.append(
-                        {
-                            "relationship_id": rel_id,
-                            "treatment_condition_ids": [t_cid],
-                            "matched_control_condition_ids": list(compatible_controls),
-                            "matching_basis": make_value_record(
-                                "Ambiguous match: multiple source-supported candidate controls available. Manual curator review required to select primary reference.",
-                                "Ambiguous match: multiple source-supported candidate controls available. Manual curator review required to select primary reference.",
-                                "treatment_control_relationships",
-                                rel_id,
-                                "matching_basis",
-                                "matching_basis",
-                            ),
-                            "relationship_notes": make_value_record(
-                                f"Candidate controls: {', '.join(compatible_controls)}",
-                                f"Candidate controls: {', '.join(compatible_controls)}",
-                                "treatment_control_relationships",
-                                rel_id,
-                                "relationship_notes",
-                                "relationship_notes",
-                            ),
-                            "metadata_validation_status": "needs_review",
-                        }
-                    )
+                    # Relationship is NOT established; treatment condition remains unlinked and blocked downstream.
                 else:
                     assert selected_control is not None
                     rel_id = f"rel_{t_cid}_vs_{selected_control}"

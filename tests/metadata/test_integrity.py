@@ -97,14 +97,36 @@ class TestMetadataIntegrityChecker:
         assert not res.is_valid
         assert any(f.rule == "developmental_stage_mismatch" for f in res.findings)
 
-    def test_ambiguous_matched_controls_detected(self):
+    def test_ambiguous_matched_controls_prohibited_in_integrity(self):
         doc = canonical_bulk_study()
-        # Add a second control condition and assign both to relationship with needs_review
+        # Add a second control condition and assign both to relationship
         doc["conditions"].append(dict(doc["conditions"][0], condition_id="cond_ctrl_2"))
         doc["treatment_control_relationships"][0]["matched_control_condition_ids"].append("cond_ctrl_2")
+        doc["treatment_control_relationships"][0]["metadata_validation_status"] = "valid"
+
+        checker = MetadataIntegrityChecker()
+        res = checker.check(doc)
+        assert not res.is_valid
+        assert res.status == ValidationStatus.INVALID
+        assert any(f.rule == "ambiguous_matched_control" and f.severity == Severity.ERROR for f in res.findings)
+
+    def test_invalid_validation_status_detected(self):
+        doc = canonical_bulk_study()
+        # Attempt to use 'needs_review' or another non-schema status
         doc["treatment_control_relationships"][0]["metadata_validation_status"] = "needs_review"
 
         checker = MetadataIntegrityChecker()
         res = checker.check(doc)
-        assert any(f.rule == "ambiguous_matched_control" for f in res.findings)
-        assert any(f.rule == "relationship_requires_review" for f in res.findings)
+        assert not res.is_valid
+        assert res.status == ValidationStatus.INVALID
+        assert any(f.rule == "invalid_validation_status" and f.severity == Severity.ERROR for f in res.findings)
+
+    def test_invalid_relationship_status_blocked(self):
+        doc = canonical_bulk_study()
+        doc["treatment_control_relationships"][0]["metadata_validation_status"] = "invalid"
+
+        checker = MetadataIntegrityChecker()
+        res = checker.check(doc)
+        assert not res.is_valid
+        assert res.status == ValidationStatus.INVALID
+        assert any(f.rule == "invalid_relationship" and f.severity == Severity.ERROR for f in res.findings)
