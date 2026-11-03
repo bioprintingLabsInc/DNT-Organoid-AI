@@ -291,9 +291,24 @@ def ingest_published_deg_table(
             if row.log2_fold_change is None or math.isnan(row.log2_fold_change) or math.isinf(row.log2_fold_change):
                 res_status = "NON_ESTIMABLE"
                 res_notes = "Published log2FoldChange is missing, NaN, or infinite"
-            elif row.p_value is None and row.adjusted_p_value is None and row.log2_fold_change is not None:
-                res_status = "OUTLIER"
-                res_notes = "Significance statistics omitted or filtered as outlier in published table"
+            elif (row.p_value is None or row.adjusted_p_value is None) and row.log2_fold_change is not None:
+                # Check if the source table explicitly documents an outlier reason
+                outlier_reason = None
+                for k, v in row.extra_fields.items():
+                    k_lower = k.lower()
+                    v_str = str(v).lower() if v is not None else ""
+                    if any(term in k_lower for term in ("outlier", "cooks", "filter_reason", "status")):
+                        if any(term in v_str for term in ("outlier", "cooks")):
+                            outlier_reason = f"{k}: {v}"
+                            break
+
+                if outlier_reason:
+                    res_status = "OUTLIER"
+                    res_notes = f"Outlier established by original statistical source ({outlier_reason})"
+                else:
+                    # Never invent or assume Cook's distance outlier without source verification
+                    res_status = "MISSING_STATISTICS"
+                    res_notes = "Significance statistics omitted or unavailable in published table without documented reason"
             else:
                 res_status = "OK"
                 res_notes = None

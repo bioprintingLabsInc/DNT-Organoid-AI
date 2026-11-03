@@ -13,7 +13,7 @@ HDF5_MAGIC = b"\x89HDF\r\n\x1a\n"
 SRA_MAGIC = b"NCBI.sra"
 
 GENE_ALIASES = {"gene", "gene_id", "gene_name", "gene_symbol", "symbol", "ensembl_id", "id", "feature_id"}
-EFFECT_ALIASES = {"log2foldchange", "logfc", "log2fc", "lfc", "fold_change", "foldchange", "log2_fc", "beta"}
+EFFECT_ALIASES = {"log2foldchange", "log2_fold_change", "logfc", "log2fc", "lfc", "log2_fc", "beta", "estimate", "log2(fold_change)"}
 STAT_ALIASES = {"pvalue", "p_value", "p.value", "pval", "p_val", "padj", "p_adj", "adj.p.val", "fdr", "qval", "qvalue", "q_value"}
 
 

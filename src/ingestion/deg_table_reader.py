@@ -31,10 +31,16 @@ GENE_ID_ALIASES = {
 GENE_SYMBOL_ALIASES = {
     "gene_name", "genename", "gene_symbol", "symbol", "hgnc_symbol", "approved_symbol",
 }
-EFFECT_ALIASES = {
+# Unambiguous log2 effect size aliases
+LOG2_EFFECT_ALIASES = {
     "log2foldchange", "log2_fold_change", "logfc", "log2fc", "lfc",
-    "fold_change", "foldchange", "log2_fc", "beta", "estimate", "log2(fold_change)",
+    "log2_fc", "beta", "estimate", "log2(fold_change)", "log2_ratio", "log2ratio",
 }
+# Ambiguous or linear fold-change aliases that MUST NOT be interpreted as log2 without explicit confirmation
+AMBIGUOUS_EFFECT_ALIASES = {
+    "fold_change", "foldchange", "fc", "fold_diff", "folddifference", "linear_fold_change", "ratio",
+}
+EFFECT_ALIASES = LOG2_EFFECT_ALIASES
 PVAL_ALIASES = {
     "pvalue", "p_value", "p.value", "pval", "p_val", "p",
 }
@@ -167,13 +173,28 @@ def discover_deg_columns(
 
     # 3. Effect Size (log2 fold change)
     if "log2fc" not in col_indices:
+        # Check unambiguous log2 effect size aliases
         for idx, h in enumerate(cleaned_headers):
-            if h in EFFECT_ALIASES:
+            if h in LOG2_EFFECT_ALIASES:
                 col_indices["log2fc"] = idx
                 col_mapping["log2fc"] = headers[idx]
                 break
 
-    if "log2fc" not in col_indices:
+        # Check for ambiguous linear fold change columns
+        if "log2fc" not in col_indices:
+            for idx, h in enumerate(cleaned_headers):
+                if h in AMBIGUOUS_EFFECT_ALIASES:
+                    findings.append(
+                        AssetFinding(
+                            "ERROR",
+                            "ambiguous_effect_scale",
+                            "deg_table",
+                            f"Header '{headers[idx]}' is an ordinary or ambiguous fold-change column. Ordinary linear fold change cannot be automatically interpreted as log2 fold change without explicit confirmation via column_mapping or scale declaration.",
+                        )
+                    )
+                    break
+
+    if "log2fc" not in col_indices and not any(f.rule == "ambiguous_effect_scale" for f in findings):
         findings.append(
             AssetFinding(
                 "ERROR",

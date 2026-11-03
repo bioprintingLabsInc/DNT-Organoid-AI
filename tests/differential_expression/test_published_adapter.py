@@ -51,12 +51,12 @@ class PublishedDegAdapterTests(unittest.TestCase):
             meta = {
                 "dataset": {"study_id": "test_study"},
                 "agent_name": "valproic acid",
-                "concentration_or_dose": 50.0,
+                "concentration_or_dose": 1.0,
                 "concentration_or_dose_unit": "millimolar",
-                "exposure_duration": 24.0,
-                "exposure_duration_unit": "hours",
-                "treatment_replicate_count": 3,
-                "control_replicate_count": 3,
+                "exposure_duration": 29.0,
+                "exposure_duration_unit": "days",
+                "treatment_replicate_count": 8,
+                "control_replicate_count": 8,
             }
 
             contrast_res, table_data = ingest_published_deg_table(p, meta)
@@ -109,10 +109,10 @@ class PublishedDegAdapterTests(unittest.TestCase):
             self.assertAlmostEqual(0.15, rec.log2_fold_change)
             self.assertAlmostEqual(0.78, rec.adjusted_p_value)
 
-    def test_outlier_na_pvalues_preserved_with_cooks_outlier_status(self):
-        """DESeq2 outlier filtering (NA p-value with estimable log2FC) is preserved and mapped to COOKS_OUTLIER."""
+    def test_unexplained_missing_pvalues_remain_unexplained_not_cooks_outlier(self):
+        """Missing p-values without source-verified outlier reason remain unexplained missing statistics."""
         with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "cooks_outlier.tsv"
+            p = Path(td) / "missing_p.tsv"
             p.write_text(
                 "gene_id\tlog2FoldChange\tpvalue\tpadj\n"
                 "ENSG00000101017\t4.5\tNA\tNA\n",
@@ -127,13 +127,40 @@ class PublishedDegAdapterTests(unittest.TestCase):
 
             contrast_res, _ = ingest_published_deg_table(p, meta)
             self.assertEqual(1, len(contrast_res.gene_results))
+            g = contrast_res.gene_results[0]
+            # Must NOT be labeled OUTLIER when no source reason exists
+            self.assertEqual("MISSING_STATISTICS", g.result_status)
+            self.assertIsNone(g.p_value)
+
+            records = build_records_for_contrast(contrast_res)
+            self.assertEqual(1, len(records))
+            # Frozen Stage 8A.1 model classifies missing estimates without outlier label as INVALID_STATISTIC
+            self.assertEqual(EstimateStatus.INVALID_STATISTIC, records[0].estimate_status)
+            self.assertEqual(ResponseDirection.UP, records[0].response_direction)
+
+    def test_source_established_outlier_preserved_as_cooks_outlier(self):
+        """When source table explicitly establishes an outlier reason, it is mapped to COOKS_OUTLIER."""
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "source_outlier.tsv"
+            p.write_text(
+                "gene_id\tlog2FoldChange\tpvalue\tpadj\tstatus\n"
+                "ENSG00000101017\t4.5\tNA\tNA\tcooks_outlier\n",
+                encoding="utf-8",
+            )
+            meta = {
+                "dataset": {"study_id": "test_study"},
+                "agent_name": "rotenone",
+                "treatment_replicate_count": 3,
+                "control_replicate_count": 3,
+            }
+
+            contrast_res, _ = ingest_published_deg_table(p, meta)
+            self.assertEqual(1, len(contrast_res.gene_results))
             self.assertEqual("OUTLIER", contrast_res.gene_results[0].result_status)
-            self.assertIsNone(contrast_res.gene_results[0].p_value)
 
             records = build_records_for_contrast(contrast_res)
             self.assertEqual(1, len(records))
             self.assertEqual(EstimateStatus.COOKS_OUTLIER, records[0].estimate_status)
-            self.assertEqual(ResponseDirection.UP, records[0].response_direction)
 
     def test_duplicate_canonical_collisions_audited(self):
         """Duplicate rows mapping to the same canonical Ensembl ID are audited as collisions without silent averaging."""
@@ -161,7 +188,7 @@ class PublishedDegAdapterTests(unittest.TestCase):
             self.assertEqual("ENSG00000101017", collision.canonical_gene_id)
 
     def test_under_replicated_contrast_flagged(self):
-        """Contrast with only 1 biological replicate is FLAGGED rather than ELIGIBLE."""
+        """Contrast with only 1 biological replicate is flagged for review rather than ELIGIBLE."""
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "single_rep.tsv"
             p.write_text(
@@ -180,26 +207,32 @@ class PublishedDegAdapterTests(unittest.TestCase):
             self.assertFalse(contrast_res.is_inferentially_eligible)
 
     def test_real_published_dataset_vpa_dorsal_forebrain_organoid_tsv(self):
-        """Real published DEG validation: Human dorsal forebrain organoids exposed to valproate (PMC13441967)."""
+        """Real published DEG validation: Human dorsal forebrain organoids exposed to valproate (PMC13441967).
+        Reconciled experimental metadata: 1 mM VPA from Day 21 to Day 50 (29 days) across 4 differentiation batches (N=8).
+        """
         fixture_path = Path("tests/fixtures/vpa_organoid_deg_published.tsv")
         self.assertTrue(fixture_path.is_file(), f"Real fixture missing at {fixture_path}")
 
         meta = {
             "dataset": {
                 "study_id": "E-MTAB-15191",
-                "cohort_id": "cohort_dorsal_forebrain_organoid",
+                "cohort_id": "cohort_dorsal_forebrain_organoids_bioni010c",
             },
             "agent_name": "valproic acid",
             "agent_identifier": "CHEBI:39867",
-            "concentration_or_dose": 50.0,
+            "concentration_or_dose": 1.0,
             "concentration_or_dose_unit": "millimolar",
-            "exposure_duration": 24.0,
-            "exposure_duration_unit": "hours",
-            "developmental_age_or_stage_at_exposure": "embryo stage",
-            "treatment_replicate_count": 3,
-            "control_replicate_count": 3,
-            "treatment_condition_id": "VPA_50mM",
-            "control_condition_id": "Vehicle_Control",
+            "exposure_start_time_or_stage": "Day 21 of differentiation",
+            "developmental_age_or_stage_at_exposure": "Day 21 of differentiation",
+            "treatment_collection_age_or_stage": "Day 50",
+            "exposure_duration": 29.0,
+            "exposure_duration_unit": "days",
+            "treatment_replicate_count": 8,
+            "control_replicate_count": 8,
+            "treatment_sample_ids": ["AB66V1", "AB66V2", "AB67V1", "AB67V2", "AB69V1", "AB69V2", "AB70V1", "AB70V2"],
+            "control_sample_ids": ["AB66C1", "AB66C2", "AB67C1", "AB67C2", "AB69C1", "AB69C2", "AB70C1", "AB70C2"],
+            "treatment_condition_id": "VPA_1mM_D21_D50",
+            "control_condition_id": "Vehicle_Control_D50",
             "published_analysis_method": "DESeq2",
         }
 
@@ -244,23 +277,27 @@ class PublishedDegAdapterTests(unittest.TestCase):
         self.assertEqual("ENSG00000101017", r0.canonical_ensembl_gene_id)
         self.assertEqual("CD40", r0.gene_symbol)
         self.assertEqual("valproic acid", r0.compound_name)
-        self.assertEqual(50.0, r0.dose_value)
+        self.assertEqual(1.0, r0.dose_value)
         self.assertEqual("millimolar", r0.dose_unit)
-        self.assertEqual(24.0, r0.exposure_duration)
-        self.assertEqual("hours", r0.exposure_duration_unit)
+        self.assertEqual(29.0, r0.exposure_duration)
+        self.assertEqual("days", r0.exposure_duration_unit)
         self.assertEqual(ResponseDirection.UP, r0.response_direction)
         self.assertIsNone(r0.log2_fold_change_se)  # Not invented!
 
     def test_real_published_dataset_vpa_dorsal_forebrain_organoid_xlsx(self):
-        """Real published DEG validation via Excel (.xlsx) workbook without external dependencies."""
+        """Real published DEG validation via Excel (.xlsx) workbook with reconciled metadata."""
         fixture_path = Path("tests/fixtures/vpa_organoid_deg_published.xlsx")
         self.assertTrue(fixture_path.is_file(), f"Real XLSX fixture missing at {fixture_path}")
 
         meta = {
             "dataset": {"study_id": "E-MTAB-15191"},
             "agent_name": "valproic acid",
-            "treatment_replicate_count": 3,
-            "control_replicate_count": 3,
+            "concentration_or_dose": 1.0,
+            "concentration_or_dose_unit": "millimolar",
+            "exposure_duration": 29.0,
+            "exposure_duration_unit": "days",
+            "treatment_replicate_count": 8,
+            "control_replicate_count": 8,
         }
 
         contrast_res, table_data = ingest_published_deg_table(
@@ -278,6 +315,48 @@ class PublishedDegAdapterTests(unittest.TestCase):
         results_by_sym = {g.approved_symbol: g for g in contrast_res.gene_results if g.approved_symbol}
         self.assertIn("CD40", results_by_sym)
         self.assertAlmostEqual(3.39707825, results_by_sym["CD40"].log2_fold_change, places=4)
+
+    def test_full_published_deg_table_38870_genes(self):
+        """Test full published DEG table (Table S2, 38,870 genes) ensuring zero silent drop and complete conservation."""
+        fixture_path = Path("tests/fixtures/Table_S2.xlsx")
+        if not fixture_path.is_file():
+            self.skipTest("tests/fixtures/Table_S2.xlsx not present")
+
+        meta = {
+            "dataset": {
+                "study_id": "E-MTAB-15191",
+                "cohort_id": "cohort_dorsal_forebrain_organoids_bioni010c",
+            },
+            "agent_name": "valproic acid",
+            "agent_identifier": "CHEBI:39867",
+            "concentration_or_dose": 1.0,
+            "concentration_or_dose_unit": "millimolar",
+            "exposure_duration": 29.0,
+            "exposure_duration_unit": "days",
+            "treatment_replicate_count": 8,
+            "control_replicate_count": 8,
+            "treatment_sample_ids": ["AB66V1", "AB66V2", "AB67V1", "AB67V2", "AB69V1", "AB69V2", "AB70V1", "AB70V2"],
+            "control_sample_ids": ["AB66C1", "AB66C2", "AB67C1", "AB67C2", "AB69C1", "AB69C2", "AB70C1", "AB70C2"],
+            "treatment_condition_id": "VPA_1mM_D21_to_D50",
+            "control_condition_id": "Vehicle_Control_D50",
+            "published_analysis_method": "DESeq2",
+        }
+
+        contrast_res, table_data = ingest_published_deg_table(
+            fixture_path,
+            meta,
+            sheet_name="VPAvsCTRL_all_genes",
+        )
+
+        self.assertEqual(ContrastStatus.ELIGIBLE, contrast_res.status)
+        self.assertEqual(38870, contrast_res.total_input_genes_count)
+        self.assertEqual(38455, contrast_res.eligible_canonical_genes_count)
+        self.assertEqual(415, contrast_res.excluded_genes_count)
+        self.assertTrue(contrast_res.is_gene_universe_conserved)
+
+        # Check conversion to Stage 8A.1 feature records for all 38,455 canonical genes
+        records = build_records_for_contrast(contrast_res)
+        self.assertEqual(38455, len(records))
 
 
 if __name__ == "__main__":

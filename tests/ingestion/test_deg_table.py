@@ -222,5 +222,33 @@ class DegTableReaderTests(unittest.TestCase):
             self.assertAlmostEqual(0.0005, data.rows[0].adjusted_p_value)
 
 
+    def test_ordinary_fold_change_rejected_without_explicit_confirmation(self):
+        """Ambiguous linear fold change (e.g. fold_change, fc) is NEVER automatically treated as log2FC."""
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "linear_fc.tsv"
+            p.write_text(
+                "gene_id\tfold_change\tpvalue\tpadj\n"
+                "ENSG1\t2.0\t0.01\t0.05\n",
+                encoding="utf-8",
+            )
+            data = read_deg_table(p)
+            self.assertFalse(data.is_valid)
+            self.assertTrue(any(f.rule == "ambiguous_effect_scale" for f in data.findings))
+
+    def test_ordinary_fold_change_accepted_with_explicit_confirmation(self):
+        """Ambiguous fold change is accepted only when caller provides explicit confirmation override."""
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "linear_fc.tsv"
+            p.write_text(
+                "gene_id\tfold_change\tpvalue\tpadj\n"
+                "ENSG1\t2.0\t0.01\t0.05\n",
+                encoding="utf-8",
+            )
+            # Caller explicitly states this column represents log2fc
+            data = read_deg_table(p, column_mapping={"log2fc": "fold_change"})
+            self.assertTrue(data.is_valid)
+            self.assertAlmostEqual(2.0, data.rows[0].log2_fold_change)
+
+
 if __name__ == "__main__":
     unittest.main()
