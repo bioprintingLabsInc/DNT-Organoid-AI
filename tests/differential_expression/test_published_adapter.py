@@ -233,7 +233,7 @@ class PublishedDegAdapterTests(unittest.TestCase):
             "control_sample_ids": ["AB66C1", "AB66C2", "AB67C1", "AB67C2", "AB69C1", "AB69C2", "AB70C1", "AB70C2"],
             "treatment_condition_id": "VPA_1mM_D21_D50",
             "control_condition_id": "Vehicle_Control_D50",
-            "published_analysis_method": "DESeq2",
+            "published_analysis_method": "Novogene (unspecified differential expression pipeline; Fig 2B reports t-test padj, Table S2 provides log2FoldChange, pvalue, padj)",
         }
 
         contrast_res, table_data = ingest_published_deg_table(fixture_path, meta)
@@ -247,7 +247,7 @@ class PublishedDegAdapterTests(unittest.TestCase):
         # Check provenance
         prov = contrast_res.r_environment_info
         self.assertEqual("published_deg_table_ingestion_v2_u3", prov["source_pipeline"])
-        self.assertEqual("DESeq2", prov["analysis_method"])
+        self.assertEqual("Novogene (unspecified differential expression pipeline; Fig 2B reports t-test padj, Table S2 provides log2FoldChange, pvalue, padj)", prov["analysis_method"])
         self.assertEqual(500, prov["total_rows_parsed"])
 
         # Check known published marker genes from the paper
@@ -339,7 +339,7 @@ class PublishedDegAdapterTests(unittest.TestCase):
             "control_sample_ids": ["AB66C1", "AB66C2", "AB67C1", "AB67C2", "AB69C1", "AB69C2", "AB70C1", "AB70C2"],
             "treatment_condition_id": "VPA_1mM_D21_to_D50",
             "control_condition_id": "Vehicle_Control_D50",
-            "published_analysis_method": "DESeq2",
+            "published_analysis_method": "Novogene (unspecified differential expression pipeline; Fig 2B reports t-test padj, Table S2 provides log2FoldChange, pvalue, padj)",
         }
 
         contrast_res, table_data = ingest_published_deg_table(
@@ -358,6 +358,19 @@ class PublishedDegAdapterTests(unittest.TestCase):
         records = build_records_for_contrast(contrast_res)
         self.assertEqual(38455, len(records))
 
+
+    def test_default_analysis_method_is_unspecified_not_deseq2(self):
+        """When published_analysis_method is not supplied, it defaults to 'unspecified', never 'DESeq2'."""
+        fixture_path = Path("tests/fixtures/vpa_organoid_deg_published.tsv")
+        meta = {
+            "dataset": {"study_id": "E-MTAB-15191"},
+            "agent_name": "valproic acid",
+        }
+        contrast_res, _ = ingest_published_deg_table(fixture_path, meta)
+        prov = contrast_res.r_environment_info
+        self.assertEqual("unspecified", prov["analysis_method"])
+        self.assertNotIn("DESeq2", prov["analysis_method"])
+        self.assertIn("batch awareness in DEG model not explicitly specified in source", contrast_res.design_formula)
 
 if __name__ == "__main__":
     unittest.main()

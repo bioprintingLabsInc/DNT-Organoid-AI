@@ -379,7 +379,7 @@ def ingest_published_deg_table(
 
     provenance_info = {
         "source_pipeline": "published_deg_table_ingestion_v2_u3",
-        "analysis_method": metadata.get("published_analysis_method", "DESeq2"),
+        "analysis_method": metadata.get("published_analysis_method", "unspecified"),
         "source_file": str(path_p),
         "sheet_name": table_data.sheet_name,
         "columns_discovered": table_data.column_mapping,
@@ -411,8 +411,14 @@ def ingest_published_deg_table(
         exposure_duration=ctx["exposure_duration"],
         exposure_duration_unit=ctx["exposure_duration_unit"],
         developmental_age_or_stage_at_exposure=ctx["developmental_age_or_stage_at_exposure"],
-        design_formula="~ condition (published_summary)",
-        design_rationale="Published differential expression summary statistics; ingested directly without count-based re-estimation.",
+        design_formula=metadata.get(
+            "published_design_formula",
+            "~ condition (published_summary; batch awareness in DEG model not explicitly specified in source)",
+        ),
+        design_rationale=metadata.get(
+            "published_design_rationale",
+            "Published differential expression summary statistics; source publication does not explicitly specify a batch-aware GLM formula for Table S2.",
+        ),
         gene_results=tuple(gene_results),
         excluded_genes=tuple(excluded_genes),
         total_input_genes_count=table_data.total_rows,
