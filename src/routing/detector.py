@@ -46,18 +46,33 @@ def detect_format(asset: RegisteredAsset, inspection: Inspection) -> Detection:
 def _detect_xlsx(asset: RegisteredAsset, inspection: Inspection) -> Detection:
     from src.ingestion.xlsx_reader import classify_xlsx_workbook
     selected, all_sheets, findings, prov = classify_xlsx_workbook(asset.local_path)
-    if findings:
-        return Detection(None, Confidence.LOW, (), tuple(findings))
+    if not findings:
+        evidence = (
+            ".xlsx workbook",
+            f"selected count sheet '{selected}'",
+            f"{len(all_sheets)} total sheets",
+            "non-negative integer-like values",
+        )
+        if asset.declared_format == "raw_counts" and asset.modalities == ("bulk_rna_seq",):
+            return Detection("raw_counts", Confidence.HIGH, evidence + ("declared raw_counts with bulk modality",))
+        return Detection("raw_counts", Confidence.MEDIUM, evidence)
 
-    evidence = (
-        ".xlsx workbook",
-        f"selected count sheet '{selected}'",
-        f"{len(all_sheets)} total sheets",
-        "non-negative integer-like values",
-    )
-    if asset.declared_format == "raw_counts" and asset.modalities == ("bulk_rna_seq",):
-        return Detection("raw_counts", Confidence.HIGH, evidence + ("declared raw_counts with bulk modality",))
-    return Detection("raw_counts", Confidence.MEDIUM, evidence)
+    # Check if this Excel workbook contains a differential expression summary sheet
+    try:
+        from src.ingestion.deg_table_reader import read_deg_table
+        deg_data = read_deg_table(asset.local_path)
+        if deg_data.is_valid:
+            evidence = (
+                ".xlsx workbook",
+                f"selected differential expression sheet '{deg_data.sheet_name}'",
+                f"{len(all_sheets)} total sheets",
+                f"identified columns: {deg_data.column_mapping}",
+            )
+            return Detection("differential_expression_table", Confidence.HIGH, evidence)
+    except Exception:
+        pass
+
+    return Detection(None, Confidence.LOW, (), tuple(findings))
 
 
 def _detect_fastq(path: Path, inspection: Inspection) -> Detection:

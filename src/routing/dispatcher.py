@@ -66,7 +66,7 @@ class RouteExecutionResult:
         }
 
 
-def plan_route_execution(metadata: dict[str, Any]) -> RouteExecutionPlan:
+def plan_route_execution(metadata: dict[str, Any], enable_u3_deg_execution: bool = False) -> RouteExecutionPlan:
     """Inspect canonical metadata, route registered assets, and construct an execution plan.
 
     Enforces:
@@ -212,7 +212,29 @@ def plan_route_execution(metadata: dict[str, Any]) -> RouteExecutionPlan:
             metadata=metadata,
         )
 
-    # Case C: Other planned routes
+    # Case C: Differential Expression Table Pipeline (Phase U3.1)
+    if selected_route == Route.DIFFERENTIAL_EXPRESSION_PIPELINE and (enable_u3_deg_execution or metadata.get("enable_deg_execution")):
+        provenance = {
+            "input_format": "differential_expression_table",
+            "selected_route": "DIFFERENTIAL_EXPRESSION_PIPELINE",
+            "executor": "deg_table_pipeline_runner",
+            "target_format": "differential_expression_contrast_result",
+            "downstream_route": None,
+        }
+        return RouteExecutionPlan(
+            route=Route.DIFFERENTIAL_EXPRESSION_PIPELINE,
+            status="READY_FOR_EXECUTION",
+            executor_id="deg_table_pipeline_runner",
+            target_format="differential_expression_contrast_result",
+            downstream_route=None,
+            registered_assets=registrations,
+            routing_results=routing_results,
+            provenance_chain=provenance,
+            findings=tuple(findings),
+            metadata=metadata,
+        )
+
+    # Case D: Other planned routes
     return RouteExecutionPlan(
         route=selected_route,
         status="EXECUTION_NOT_IMPLEMENTED",
@@ -347,6 +369,52 @@ def dispatch_route_execution(
             emitted_asset_path=plan.registered_assets[0].local_path if plan.registered_assets else None,
             emitted_format="raw_counts",
             provenance_record=plan.provenance_chain,
+        )
+
+    # Route: DIFFERENTIAL_EXPRESSION_PIPELINE -> deg_table_pipeline_runner (Phase U3.1)
+    if plan.executor_id == "deg_table_pipeline_runner":
+        if executor is not None:
+            return executor(plan.registered_assets, plan=plan, **kwargs)
+
+        from src.differential_expression.published_adapter import ingest_published_deg_table
+        from src.response_builder.models import ContrastStatus
+
+        if not plan.registered_assets:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="NO_ASSETS",
+                emitted_asset_path=None,
+                emitted_format=None,
+                provenance_record=plan.provenance_chain,
+                error_message="No registered assets to execute.",
+            )
+
+        asset = plan.registered_assets[0]
+        sheet_name = plan.metadata.get("sheet_name") or kwargs.get("sheet_name")
+        contrast_res, table_data = ingest_published_deg_table(
+            asset.local_path,
+            plan.metadata,
+            sheet_name=sheet_name,
+            **kwargs,
+        )
+        is_success = contrast_res.status != ContrastStatus.BLOCKED
+        return RouteExecutionResult(
+            plan=plan,
+            is_success=is_success,
+            execution_state="COMPLETED" if is_success else "EXECUTION_BLOCKED",
+            emitted_asset_path=asset.local_path,
+            emitted_format="differential_expression_contrast_result",
+            provenance_record={
+                **plan.provenance_chain,
+                "execution_state": "COMPLETED" if is_success else "EXECUTION_BLOCKED",
+                "contrast_id": contrast_res.contrast_id,
+                "total_genes": contrast_res.total_input_genes_count,
+                "eligible_canonical_genes": contrast_res.eligible_canonical_genes_count,
+                "excluded_genes": contrast_res.excluded_genes_count,
+            },
+            artifacts={"contrast_result": contrast_res, "table_data": table_data},
+            error_message=None if is_success else "Published DEG table execution blocked due to fatal errors.",
         )
 
     return RouteExecutionResult(
