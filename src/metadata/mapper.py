@@ -102,6 +102,21 @@ def _find_attribute_value(
     return None, None
 
 
+def _is_control_record(record: RawSampleRecord, rules: dict[str, tuple[str, ...]], defaults: dict[str, Any]) -> bool:
+    """Determine whether a raw record represents a control condition."""
+    raw_cond_status, _ = _find_attribute_value(record, rules["condition_status"])
+    cond_str = _clean_str(raw_cond_status) or defaults.get("condition_status")
+    status_lower = cond_str.lower() if cond_str else ""
+    if any(k in status_lower for k in ["control", "ctrl", "baseline", "untreated", "vehicle", "none", "dmso"]):
+        return True
+    if "treat" in status_lower or "exposed" in status_lower or "vpa" in status_lower:
+        return False
+    raw_agent_check, _ = _find_attribute_value(record, rules["agent_name"])
+    if raw_agent_check and str(raw_agent_check).lower() in ["none", "untreated", "vehicle", "control"]:
+        return True
+    return False
+
+
 class CanonicalMetadataMapper:
     """Maps raw extracted metadata records into canonical schema dictionaries."""
 
@@ -228,6 +243,21 @@ class CanonicalMetadataMapper:
 
         seen_sample_ids: set[str] = set()
 
+        # Pre-scan control records to determine if heterogeneous control groups exist in the study
+        ctrl_signatures: set[tuple[str, str, str, str]] = set()
+        for rec in raw_records:
+            if _is_control_record(rec, self.rules, self.defaults):
+                raw_c_type, _ = _find_attribute_value(rec, self.rules["control_type"])
+                c_type = _clean_str(raw_c_type) or "vehicle"
+                raw_ag, _ = _find_attribute_value(rec, self.rules["agent_name"])
+                c_ag = _clean_str(raw_ag) or ""
+                raw_stage, _ = _find_attribute_value(rec, self.rules["developmental_stage"])
+                c_stage = _clean_str(raw_stage) or ""
+                raw_cl, _ = _find_attribute_value(rec, self.rules["cell_line"])
+                c_cl = _clean_str(raw_cl) or ""
+                ctrl_signatures.add((c_type, c_ag, c_stage, c_cl))
+        has_multiple_control_groups = len(ctrl_signatures) > 1
+
         for idx, rec in enumerate(raw_records):
             sid = rec.sample_id
             if sid in seen_sample_ids:
@@ -349,8 +379,22 @@ class CanonicalMetadataMapper:
             # Construct Grouping Condition ID
             # Group by: treatment/control + agent + dose + duration
             if is_control:
-                cond_id = f"cond_{exp_id}_control"
-                cond_label = "Vehicle Control"
+                raw_ctrl_type, ctrl_type_key = _find_attribute_value(rec, self.rules["control_type"])
+                clean_ctrl_type = _clean_str(raw_ctrl_type) or "vehicle"
+                if clean_ctrl_type not in ["vehicle", "untreated", "positive_reference", "negative_reference", "other"]:
+                    clean_ctrl_type = "vehicle"
+
+                if has_multiple_control_groups:
+                    quals = [clean_ctrl_type]
+                    if clean_agent and clean_agent.lower() not in ("control", "ctrl", "vehicle", "none", "mock", "untreated", ""):
+                        quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower()))
+                    if clean_stage:
+                        quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_stage.lower()))
+                    cond_id = f"cond_{exp_id}_control_{'_'.join(quals)}"
+                    cond_label = f"Control ({' '.join(quals)})"
+                else:
+                    cond_id = f"cond_{exp_id}_control"
+                    cond_label = "Vehicle Control"
             else:
                 agent_slug = re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower())
                 dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit}"
@@ -366,10 +410,6 @@ class CanonicalMetadataMapper:
                     "metadata_validation_status": "not_validated",
                 }
                 if is_control:
-                    raw_ctrl_type, ctrl_type_key = _find_attribute_value(rec, self.rules["control_type"])
-                    clean_ctrl_type = _clean_str(raw_ctrl_type) or "vehicle"
-                    if clean_ctrl_type not in ["vehicle", "untreated", "positive_reference", "negative_reference", "other"]:
-                        clean_ctrl_type = "vehicle"
                     cond_dict["control_type"] = make_value_record(clean_ctrl_type, clean_ctrl_type, "conditions", cond_id, "control_type", ctrl_type_key)
                 conditions_map[cond_id] = cond_dict
 
@@ -441,6 +481,8 @@ class CanonicalMetadataMapper:
         )
 
         # 5. Treatment-Control Relationships
+        # Controls are matched ONLY using sufficient source-supported experimental information.
+        # Ambiguous, missing, or conflicting relationships require review rather than being guessed.
         relationships: list[dict[str, Any]] = []
         control_cond_ids = [c["condition_id"] for c in conditions_map.values() if c["treatment_control_status"]["normalized_value"] == "control"]
         treatment_cond_ids = [c["condition_id"] for c in conditions_map.values() if c["treatment_control_status"]["normalized_value"] == "treatment"]
@@ -455,24 +497,169 @@ class CanonicalMetadataMapper:
                 )
             )
         elif control_cond_ids and treatment_cond_ids:
+            # Build profile for each condition to support attribute-aware matching
+            cond_profiles: dict[str, dict[str, Any]] = {}
+            for cid, cond in conditions_map.items():
+                c_samples = [s for s in samples if s["condition_id"] == cid]
+                c_exp = exposures_map.get(f"exp_{cid}", {})
+
+                bio_srcs = {s["biological_source_id"] for s in c_samples if s.get("biological_source_id")}
+                org_ctxs = {s["organoid_context_id"] for s in c_samples if s.get("organoid_context_id")}
+
+                stages: set[str] = set()
+                for s in c_samples:
+                    st_val = s.get("developmental_age_or_stage_at_collection", {}).get("normalized_value") or s.get("developmental_age_or_stage_at_collection", {}).get("original_value")
+                    if st_val:
+                        stages.add(str(st_val).strip().lower())
+                exp_st = c_exp.get("developmental_age_or_stage_at_exposure", {}).get("normalized_value") or c_exp.get("developmental_age_or_stage_at_exposure", {}).get("original_value")
+                if exp_st:
+                    stages.add(str(exp_st).strip().lower())
+
+                durs: set[str] = set()
+                for s in c_samples:
+                    dur_val = s.get("collection_time_relative_to_exposure", {}).get("normalized_value")
+                    if dur_val:
+                        durs.add(str(dur_val).strip().lower())
+                exp_dur_val = c_exp.get("exposure_duration", {}).get("normalized_value") or c_exp.get("exposure_duration", {}).get("original_value")
+                exp_dur_u = c_exp.get("exposure_duration_unit", {}).get("normalized_value") or c_exp.get("exposure_duration_unit", {}).get("original_value")
+                if exp_dur_val is not None and exp_dur_u is not None:
+                    durs.add(f"{exp_dur_val} {exp_dur_u}".strip().lower())
+
+                vehs: set[str] = set()
+                veh_val = c_exp.get("vehicle", {}).get("normalized_value") or c_exp.get("vehicle", {}).get("original_value")
+                if veh_val:
+                    vehs.add(str(veh_val).strip().lower())
+
+                cond_profiles[cid] = {
+                    "role": cond["treatment_control_status"]["normalized_value"],
+                    "bio_sources": bio_srcs,
+                    "org_contexts": org_ctxs,
+                    "stages": stages,
+                    "durations": durs,
+                    "vehicles": vehs,
+                }
+
             for t_cid in treatment_cond_ids:
-                rel_id = f"rel_{t_cid}_vs_{control_cond_ids[0]}"
-                relationships.append(
-                    {
-                        "relationship_id": rel_id,
-                        "treatment_condition_ids": [t_cid],
-                        "matched_control_condition_ids": [control_cond_ids[0]],
-                        "matching_basis": make_value_record(
-                            "Same study, cell line, organoid context, developmental stage, and duration",
-                            "Same study, cell line, organoid context, developmental stage, and duration",
-                            "treatment_control_relationships",
-                            rel_id,
-                            "matching_basis",
-                            "matching_basis",
-                        ),
-                        "metadata_validation_status": "not_validated",
-                    }
-                )
+                t_prof = cond_profiles[t_cid]
+
+                # Filter candidate controls by hard biological model compatibility
+                compatible_controls: list[str] = []
+                for c_cid in control_cond_ids:
+                    c_prof = cond_profiles[c_cid]
+
+                    # Biological source check
+                    if t_prof["bio_sources"] and c_prof["bio_sources"]:
+                        if not (t_prof["bio_sources"] & c_prof["bio_sources"]):
+                            continue
+
+                    # Organoid context check
+                    if t_prof["org_contexts"] and c_prof["org_contexts"]:
+                        if not (t_prof["org_contexts"] & c_prof["org_contexts"]):
+                            continue
+
+                    # Developmental stage check
+                    if t_prof["stages"] and c_prof["stages"]:
+                        if not (t_prof["stages"] & c_prof["stages"]):
+                            continue
+
+                    compatible_controls.append(c_cid)
+
+                if not compatible_controls:
+                    findings.append(
+                        MappingFinding(
+                            severity="ERROR",
+                            rule="unmatched_treatment_condition",
+                            field_path=f"conditions[condition_id='{t_cid}']",
+                            message=(
+                                f"Treatment condition '{t_cid}' has no compatible matched control condition "
+                                "(conflicting biological source, organoid context, or developmental stage). "
+                                "Cannot automatically construct relationship without manual review."
+                            ),
+                        )
+                    )
+                    continue
+
+                # If multiple biologically compatible controls, attempt duration or vehicle refinement
+                selected_control: str | None = None
+                is_ambiguous = False
+
+                if len(compatible_controls) == 1:
+                    selected_control = compatible_controls[0]
+                else:
+                    # Attempt duration-matching if duration info exists
+                    if t_prof["durations"]:
+                        dur_matched = [c for c in compatible_controls if cond_profiles[c]["durations"] & t_prof["durations"]]
+                        if len(dur_matched) == 1:
+                            selected_control = dur_matched[0]
+
+                    # If still unresolved, attempt vehicle-matching if vehicle info exists
+                    if selected_control is None and t_prof["vehicles"]:
+                        veh_matched = [c for c in compatible_controls if cond_profiles[c]["vehicles"] & t_prof["vehicles"]]
+                        if len(veh_matched) == 1:
+                            selected_control = veh_matched[0]
+
+                    # If still unresolved after all source-supported attributes: mark ambiguous!
+                    if selected_control is None:
+                        is_ambiguous = True
+
+                if is_ambiguous:
+                    # AMBIGUOUS: Do NOT guess an arbitrary control!
+                    findings.append(
+                        MappingFinding(
+                            severity="WARNING",
+                            rule="ambiguous_matched_control",
+                            field_path=f"conditions[condition_id='{t_cid}']",
+                            message=(
+                                f"Treatment condition '{t_cid}' has multiple candidate matched controls: {compatible_controls}. "
+                                "Relationship cannot be guessed automatically and requires manual review."
+                            ),
+                        )
+                    )
+                    rel_id = f"rel_{t_cid}_ambiguous"
+                    relationships.append(
+                        {
+                            "relationship_id": rel_id,
+                            "treatment_condition_ids": [t_cid],
+                            "matched_control_condition_ids": list(compatible_controls),
+                            "matching_basis": make_value_record(
+                                "Ambiguous match: multiple source-supported candidate controls available. Manual curator review required to select primary reference.",
+                                "Ambiguous match: multiple source-supported candidate controls available. Manual curator review required to select primary reference.",
+                                "treatment_control_relationships",
+                                rel_id,
+                                "matching_basis",
+                                "matching_basis",
+                            ),
+                            "relationship_notes": make_value_record(
+                                f"Candidate controls: {', '.join(compatible_controls)}",
+                                f"Candidate controls: {', '.join(compatible_controls)}",
+                                "treatment_control_relationships",
+                                rel_id,
+                                "relationship_notes",
+                                "relationship_notes",
+                            ),
+                            "metadata_validation_status": "needs_review",
+                        }
+                    )
+                else:
+                    assert selected_control is not None
+                    rel_id = f"rel_{t_cid}_vs_{selected_control}"
+                    basis_desc = "Matched on study, biological source, organoid context, developmental stage, and duration"
+                    relationships.append(
+                        {
+                            "relationship_id": rel_id,
+                            "treatment_condition_ids": [t_cid],
+                            "matched_control_condition_ids": [selected_control],
+                            "matching_basis": make_value_record(
+                                basis_desc,
+                                basis_desc,
+                                "treatment_control_relationships",
+                                rel_id,
+                                "matching_basis",
+                                "matching_basis",
+                            ),
+                            "metadata_validation_status": "not_validated",
+                        }
+                    )
 
         canonical_doc: dict[str, Any] = {
             "studies": studies,

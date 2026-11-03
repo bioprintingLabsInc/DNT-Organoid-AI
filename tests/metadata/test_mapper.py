@@ -182,3 +182,62 @@ class TestCanonicalMetadataMapper:
         error_findings = [f for f in result.findings if f.severity.value == "ERROR" or f.severity == "ERROR"]
         assert not error_findings, f"Validator found errors: {error_findings}"
         assert result.status in (ValidationStatus.VALID, ValidationStatus.VALID_WITH_WARNINGS)
+
+    def test_unmatched_treatment_condition_due_to_stage_mismatch(self):
+        """Treatment Day 30 vs Control Day 60 cannot be automatically paired; must halt without guessing."""
+        ctx = StudyContext(study_id="study_mismatch", source_type="public", experiment_id="exp_01")
+        recs = [
+            RawSampleRecord(
+                sample_id="ctrl_d60_1",
+                attributes={"condition": "control", "dose": "0", "stage": "Day 60", "cell_line": "WTC11"},
+                source_file="meta.csv",
+                source_locator="row_1",
+            ),
+            RawSampleRecord(
+                sample_id="trt_d30_1",
+                attributes={"condition": "treatment", "compound": "VPA", "dose": "100", "dose_unit": "uM", "stage": "Day 30", "cell_line": "WTC11"},
+                source_file="meta.csv",
+                source_locator="row_2",
+            ),
+        ]
+        mapper = CanonicalMetadataMapper()
+        canonical_doc, findings = mapper.map_study(ctx, recs, source_reference="meta.csv")
+
+        # Must report unmatched_treatment_condition ERROR finding and refuse to guess
+        assert any(f.rule == "unmatched_treatment_condition" for f in findings)
+        assert len(canonical_doc["treatment_control_relationships"]) == 0
+
+    def test_ambiguous_matched_controls_triggers_needs_review(self):
+        """Multiple candidate controls with identical stages/sources must NOT be guessed; requires review."""
+        ctx = StudyContext(study_id="study_ambig", source_type="public", experiment_id="exp_01")
+        recs = [
+            # Two distinct controls: vehicle DMSO and untreated
+            RawSampleRecord(
+                sample_id="ctrl_veh_1",
+                attributes={"condition": "control", "control_type": "vehicle", "compound": "DMSO", "stage": "Day 45", "cell_line": "WTC11"},
+                source_file="meta.csv",
+                source_locator="row_1",
+            ),
+            RawSampleRecord(
+                sample_id="ctrl_untreat_1",
+                attributes={"condition": "control", "control_type": "untreated", "compound": "untreated", "stage": "Day 45", "cell_line": "WTC11"},
+                source_file="meta.csv",
+                source_locator="row_2",
+            ),
+            RawSampleRecord(
+                sample_id="trt_1",
+                attributes={"condition": "treatment", "compound": "VPA", "dose": "100", "dose_unit": "uM", "stage": "Day 45", "cell_line": "WTC11"},
+                source_file="meta.csv",
+                source_locator="row_3",
+            ),
+        ]
+        mapper = CanonicalMetadataMapper()
+        canonical_doc, findings = mapper.map_study(ctx, recs, source_reference="meta.csv")
+
+        # Must emit ambiguous_matched_control WARNING
+        assert any(f.rule == "ambiguous_matched_control" for f in findings)
+        # Relationship must be marked needs_review and list all candidate controls rather than guessing
+        assert len(canonical_doc["treatment_control_relationships"]) == 1
+        rel = canonical_doc["treatment_control_relationships"][0]
+        assert rel["metadata_validation_status"] == "needs_review"
+        assert len(rel["matched_control_condition_ids"]) == 2

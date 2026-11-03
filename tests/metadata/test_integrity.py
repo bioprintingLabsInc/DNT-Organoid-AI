@@ -71,3 +71,40 @@ class TestMetadataIntegrityChecker:
         res = checker.check(doc)
         assert not res.is_valid
         assert any(f.rule == "cross_species_comparison_prohibited" for f in res.findings)
+
+    def test_treatment_control_role_inconsistency_detected(self):
+        doc = canonical_bulk_study()
+        # Invert roles: assign a control condition into treatment_condition_ids
+        ctrl_cid = doc["conditions"][0]["condition_id"]
+        doc["treatment_control_relationships"][0]["treatment_condition_ids"] = [ctrl_cid]
+
+        checker = MetadataIntegrityChecker()
+        res = checker.check(doc)
+        assert not res.is_valid
+        assert any(f.rule == "treatment_control_role_inconsistency" for f in res.findings)
+
+    def test_developmental_stage_mismatch_detected(self):
+        doc = canonical_bulk_study()
+        # Set control samples to Day 60 and treatment samples to Day 30
+        for s in doc["samples"]:
+            if "c" in s["sample_id"]:
+                s["developmental_age_or_stage_at_collection"] = reported("Day 60")
+            elif "t" in s["sample_id"]:
+                s["developmental_age_or_stage_at_collection"] = reported("Day 30")
+
+        checker = MetadataIntegrityChecker()
+        res = checker.check(doc)
+        assert not res.is_valid
+        assert any(f.rule == "developmental_stage_mismatch" for f in res.findings)
+
+    def test_ambiguous_matched_controls_detected(self):
+        doc = canonical_bulk_study()
+        # Add a second control condition and assign both to relationship with needs_review
+        doc["conditions"].append(dict(doc["conditions"][0], condition_id="cond_ctrl_2"))
+        doc["treatment_control_relationships"][0]["matched_control_condition_ids"].append("cond_ctrl_2")
+        doc["treatment_control_relationships"][0]["metadata_validation_status"] = "needs_review"
+
+        checker = MetadataIntegrityChecker()
+        res = checker.check(doc)
+        assert any(f.rule == "ambiguous_matched_control" for f in res.findings)
+        assert any(f.rule == "relationship_requires_review" for f in res.findings)

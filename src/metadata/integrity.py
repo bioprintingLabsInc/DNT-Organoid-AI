@@ -159,6 +159,7 @@ class MetadataIntegrityChecker:
             rel_id = rel.get("relationship_id")
             trt_cids = rel.get("treatment_condition_ids", [])
             ctrl_cids = rel.get("matched_control_condition_ids", [])
+            rel_val_status = rel.get("metadata_validation_status")
 
             if not ctrl_cids:
                 findings.append(
@@ -172,6 +173,58 @@ class MetadataIntegrityChecker:
                     )
                 )
                 continue
+
+            if rel_val_status == "needs_review":
+                findings.append(
+                    IntegrityFinding(
+                        severity=Severity.WARNING,
+                        rule="relationship_requires_review",
+                        entity_type="treatment_control_relationships",
+                        entity_id=rel_id,
+                        field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                        message=f"Comparison '{rel_id}' is marked as requiring manual review.",
+                    )
+                )
+
+            if len(ctrl_cids) > 1 and rel_val_status != "validated":
+                findings.append(
+                    IntegrityFinding(
+                        severity=Severity.WARNING,
+                        rule="ambiguous_matched_control",
+                        entity_type="treatment_control_relationships",
+                        entity_id=rel_id,
+                        field_path=f"treatment_control_relationships[relationship_id='{rel_id}'].matched_control_condition_ids",
+                        message=f"Comparison '{rel_id}' specifies multiple candidate matched controls {ctrl_cids} without resolved consensus.",
+                    )
+                )
+
+            # Role consistency check
+            for t_cid in trt_cids:
+                t_role = conditions.get(t_cid, {}).get("treatment_control_status", {}).get("normalized_value")
+                if t_role == "control":
+                    findings.append(
+                        IntegrityFinding(
+                            severity=Severity.ERROR,
+                            rule="treatment_control_role_inconsistency",
+                            entity_type="treatment_control_relationships",
+                            entity_id=rel_id,
+                            field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                            message=f"Condition '{t_cid}' assigned as treatment in '{rel_id}' has declared status 'control'.",
+                        )
+                    )
+            for c_cid in ctrl_cids:
+                c_role = conditions.get(c_cid, {}).get("treatment_control_status", {}).get("normalized_value")
+                if c_role == "treatment":
+                    findings.append(
+                        IntegrityFinding(
+                            severity=Severity.ERROR,
+                            rule="treatment_control_role_inconsistency",
+                            entity_type="treatment_control_relationships",
+                            entity_id=rel_id,
+                            field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                            message=f"Condition '{c_cid}' assigned as control in '{rel_id}' has declared status 'treatment'.",
+                        )
+                    )
 
             for t_cid in trt_cids:
                 t_samples = samples_by_condition.get(t_cid, [])
@@ -217,6 +270,54 @@ class MetadataIntegrityChecker:
                                 entity_id=rel_id,
                                 field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
                                 message=f"Comparison compares distinct organoid types: treatment={t_contexts}, control={c_contexts}.",
+                            )
+                        )
+
+                    # Check developmental stage consistency
+                    t_stages = {
+                        s.get("developmental_age_or_stage_at_collection", {}).get("normalized_value")
+                        or s.get("developmental_age_or_stage_at_collection", {}).get("original_value")
+                        for s in t_samples
+                    }
+                    c_stages = {
+                        s.get("developmental_age_or_stage_at_collection", {}).get("normalized_value")
+                        or s.get("developmental_age_or_stage_at_collection", {}).get("original_value")
+                        for s in c_samples
+                    }
+                    clean_t_stages = {str(x).strip().lower() for x in t_stages if x and str(x).strip().lower() not in ("nan", "none", "unknown", "")}
+                    clean_c_stages = {str(x).strip().lower() for x in c_stages if x and str(x).strip().lower() not in ("nan", "none", "unknown", "")}
+                    if clean_t_stages and clean_c_stages and not (clean_t_stages & clean_c_stages):
+                        findings.append(
+                            IntegrityFinding(
+                                severity=Severity.ERROR,
+                                rule="developmental_stage_mismatch",
+                                entity_type="treatment_control_relationships",
+                                entity_id=rel_id,
+                                field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                                message=f"Comparison compares mismatched developmental stages: treatment={clean_t_stages}, control={clean_c_stages}. Cannot be compared without manual review.",
+                            )
+                        )
+
+                    # Check biological source / cell line consistency
+                    t_sources = {
+                        bio_sources[s["biological_source_id"]]["cell_line_or_source_identifier"]["original_value"]
+                        for s in t_samples if s.get("biological_source_id") in bio_sources
+                    }
+                    c_sources = {
+                        bio_sources[s["biological_source_id"]]["cell_line_or_source_identifier"]["original_value"]
+                        for s in c_samples if s.get("biological_source_id") in bio_sources
+                    }
+                    clean_t_sources = {str(x).strip() for x in t_sources if x and str(x).strip().lower() not in ("nan", "none", "unknown", "")}
+                    clean_c_sources = {str(x).strip() for x in c_sources if x and str(x).strip().lower() not in ("nan", "none", "unknown", "")}
+                    if clean_t_sources and clean_c_sources and not (clean_t_sources & clean_c_sources):
+                        findings.append(
+                            IntegrityFinding(
+                                severity=Severity.WARNING,
+                                rule="mismatched_biological_sources",
+                                entity_type="treatment_control_relationships",
+                                entity_id=rel_id,
+                                field_path=f"treatment_control_relationships[relationship_id='{rel_id}']",
+                                message=f"Comparison compares distinct biological sources/cell lines: treatment={clean_t_sources}, control={clean_c_sources}. Requires manual review.",
                             )
                         )
 
