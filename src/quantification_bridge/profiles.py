@@ -382,23 +382,25 @@ def run_profile_preflight_checks(
     data_dir: Path | None = None,
     ref_dir: Path | None = None,
     enforce_physical_ram: bool = False,
-    validate_pilot: bool = True,
+    validate_pilot: bool = False,
+    study_id: str | None = None,
 ) -> PreflightCheckResult:
     """Validate resource compatibility, tool availability, and pilot consistency against an execution profile."""
     hardware = probe_hardware_baseline(data_dir, ref_dir)
     tools = probe_tool_inventory()
     findings: list[PreflightFinding] = []
 
-    # 0. Pilot Configuration & Manifest Consistency Check
-    if validate_pilot:
+    # 0. Pilot Configuration & Manifest Consistency Check (PRJNA802072 Benchmark Only)
+    should_validate_pilot = validate_pilot or (study_id == TARGET_BIOPROJECT)
+    if should_validate_pilot:
         try:
-            validate_pilot_configuration()
+            validate_pilot_configuration(study_id=study_id)
         except Exception as e:
             findings.append(
                 PreflightFinding(
                     severity="FATAL",
                     code="pilot_configuration_invalid",
-                    message=f"Technical pilot configuration consistency failure: {e}",
+                    message=f"PRJNA802072 technical pilot configuration consistency failure: {e}",
                     remediation="Reconcile execution_profiles.yaml technical_pilot_specification with approved manifest.py.",
                 )
             )
@@ -411,21 +413,27 @@ def run_profile_preflight_checks(
                     severity="FATAL",
                     code=f"tool_missing_{t_name}",
                     message=f"Required bioinformatics tool '{t_name}' not found on PATH or in conda environment.",
-                    remediation="Activate dnt_bridge environment or run 'conda env create -f config/quantification_bridge/environment_bridge.yml'.",
+                    remediation=f"Activate dnt_bridge environment or run 'conda env create -f config/quantification_bridge/environment_bridge.yml'.",
                 )
             )
 
-    # 2. Physical RAM & Memory Headroom Verification
-    # Calculate estimated STAR index memory footprint in RAM
+    # 2. Physical RAM & Process Memory Verification
+    # Suffix Array and index footprint calculation
     if profile.genome_sa_sparse_d >= 4:
-        est_star_ram = 10.4 if profile.genome_sa_index_nbases <= 13 else 12.0
+        est_star_ram = 9.98 if profile.genome_sa_index_nbases <= 12 else (10.39 if profile.genome_sa_index_nbases <= 13 else 12.0)
     elif profile.genome_sa_sparse_d >= 2:
         est_star_ram = 18.0
     else:
         est_star_ram = 34.0
 
+    # Total estimated process RSS: index in memory + thread alignment stacks + I/O buffers
+    thread_overhead = 0.12 * profile.threads
+    est_process_rss = est_star_ram + thread_overhead + 0.25
+    os_overhead = 0.50
+    total_node_ram_needed = est_process_rss + os_overhead
+
     effective_ram = hardware.physical_ram_gb
-    headroom_gb = effective_ram - est_star_ram
+    headroom_gb = effective_ram - total_node_ram_needed
 
     if effective_ram < profile.physical_ram_gb_min:
         msg = (
@@ -451,50 +459,55 @@ def run_profile_preflight_checks(
                 )
             )
 
-    # Check RAM Headroom
-    if effective_ram < est_star_ram:
-        deficit = est_star_ram - effective_ram
+    # Process Memory Headroom Check
+    # Note: Swap availability does NOT make low physical memory acceptable for production alignment.
+    if effective_ram < est_process_rss:
+        deficit = est_process_rss - effective_ram
         findings.append(
             PreflightFinding(
-                severity="WARNING" if not enforce_physical_ram else "FATAL",
-                code="insufficient_ram_for_index",
+                severity="FATAL" if enforce_physical_ram else "WARNING",
+                code="insufficient_ram_for_process",
                 message=(
-                    f"Physical RAM ({effective_ram:.1f} GB) is below estimated STAR index footprint "
-                    f"({est_star_ram:.1f} GB). Linux kernel will push at least {deficit:.1f} GB into swap during alignment."
+                    f"CRITICAL MEMORY CONSTRAINT: Estimated process memory requirement ({est_process_rss:.2f} GB) "
+                    f"exceeds physical RAM ({effective_ram:.2f} GB) by {deficit:.2f} GB. Swap availability does NOT "
+                    f"make low physical memory acceptable for production alignment; severe I/O thrashing will occur."
                 ),
-                remediation="Ensure swap space is active and fast, or utilize an institutional node.",
+                remediation="Allocate additional physical RAM to node or run on institutional HPC server.",
             )
         )
-    elif headroom_gb < 2.0:
+    elif headroom_gb < 0.5:
         findings.append(
             PreflightFinding(
                 severity="WARNING",
                 code="narrow_memory_headroom",
                 message=(
-                    f"Physical RAM headroom is narrow ({headroom_gb:.1f} GB remaining beyond estimated STAR index "
-                    f"footprint of {est_star_ram:.1f} GB). Background processes could trigger swap thrashing."
+                    f"Physical RAM headroom is narrow ({headroom_gb:.2f} GB remaining beyond estimated STAR process RSS "
+                    f"of {est_process_rss:.2f} GB and OS overhead). Close unneeded host applications."
                 ),
-                remediation="Close unneeded host applications and restrict STAR threads to 2-4.",
+                remediation="Close unneeded host applications and restrict STAR threads to 2.",
             )
         )
 
     # Check Total Virtual Memory (RAM + Swap)
     total_vm = hardware.physical_ram_gb + hardware.swap_gb
-    if total_vm < est_star_ram + 4.0:
+    if total_vm < est_process_rss + 4.0:
         findings.append(
             PreflightFinding(
                 severity="FATAL",
                 code="insufficient_total_virtual_memory",
                 message=(
                     f"Total virtual memory ({total_vm:.1f} GB = {hardware.physical_ram_gb:.1f} GB RAM + "
-                    f"{hardware.swap_gb:.1f} GB swap) is insufficient for STAR ({est_star_ram + 4.0:.1f} GB required)."
+                    f"{hardware.swap_gb:.1f} GB swap) is insufficient for STAR ({est_process_rss + 4.0:.1f} GB required)."
                 ),
                 remediation="Increase swap allocation in /etc/wsl.conf or .wslconfig to at least 32 GB.",
             )
         )
 
-    # 3. Peak Storage Safeguards (2-Sample Pilot: 58.4 GB; Full Study: 270.0 GB)
-    pilot_min_disk = 60.0  # 58.4 GB peak rounded with margin
+    # 3. Peak Storage Safeguards
+    # 2-sample pilot: sequential peak 53.26 GB, concurrent peak 58.49 GB, safe free-space threshold: 70.0 GB.
+    # Full 12-sample study: 270.0 GB.
+    pilot_min_disk = 55.0  # Absolute minimum execution barrier
+    pilot_safe_disk = 70.0 # Recommended safe free space
     full_min_disk = 270.0
 
     if hardware.data_dir_free_gb < pilot_min_disk:
@@ -503,10 +516,22 @@ def run_profile_preflight_checks(
                 severity="FATAL",
                 code="insufficient_disk_space_pilot",
                 message=(
-                    f"Free storage on data directory ({hardware.data_dir_free_gb:.1f} GB) is below the minimum required "
-                    f"for 2-sample pilot execution ({pilot_min_disk:.1f} GB required; references + index + FASTQs + BAMs)."
+                    f"Free storage on data directory ({hardware.data_dir_free_gb:.1f} GB) is below the absolute minimum "
+                    f"required for 2-sample pilot execution ({pilot_min_disk:.1f} GB required; references + index + FASTQs + BAMs)."
                 ),
-                remediation="Free space on data disk or set DNT_DATA_DIR to a disk volume with at least 60 GB free.",
+                remediation="Free space on data disk or set DNT_DATA_DIR to a disk volume with at least 70 GB free.",
+            )
+        )
+    elif hardware.data_dir_free_gb < pilot_safe_disk:
+        findings.append(
+            PreflightFinding(
+                severity="WARNING",
+                code="low_disk_space_pilot_margin",
+                message=(
+                    f"Free storage ({hardware.data_dir_free_gb:.1f} GB) accommodates the 2-sample pilot peak (53.3 GB) "
+                    f"but is below the recommended safe operating margin ({pilot_safe_disk:.1f} GB)."
+                ),
+                remediation="Consider freeing additional space to ensure at least 70 GB free during alignment.",
             )
         )
     elif hardware.data_dir_free_gb < full_min_disk:
@@ -515,7 +540,7 @@ def run_profile_preflight_checks(
                 severity="WARNING",
                 code="low_disk_space_full_study",
                 message=(
-                    f"Free storage ({hardware.data_dir_free_gb:.1f} GB) satisfies the 2-sample pilot ({pilot_min_disk:.1f} GB), "
+                    f"Free storage ({hardware.data_dir_free_gb:.1f} GB) satisfies the 2-sample pilot ({pilot_safe_disk:.1f} GB), "
                     f"but is below the full 12-sample study requirement ({full_min_disk:.1f} GB)."
                 ),
                 remediation="Ensure additional storage before launching the complete 12-sample cohort.",
@@ -604,16 +629,23 @@ def evaluate_qc_metric(
     return "PASS", f"Metric '{metric_name}' ({value}) satisfies evaluation criteria."
 
 
-def validate_pilot_configuration(config_path: Path | None = None) -> dict[str, Any]:
+def validate_pilot_configuration(
+    config_path: Path | None = None,
+    study_id: str | None = None,
+) -> dict[str, Any]:
     """Strictly validate pilot configuration against authoritative manifest.py and pilot_manifest.json.
 
-    Enforces that:
-    1. Study accession is PRJNA802072 and SRP357550.
-    2. Control run is exactly SRR17834920 (0 uM VPA, Day 28).
-    3. Treatment run is exactly SRR17834905 (250 uM VPA, Day 28).
-    4. Prohibited accessions (e.g. hallucinated SRR17826941/SRR17826944) and prohibited doses (e.g. 1000 uM / 1 mM)
-       are strictly rejected.
+    NOTE: Restrictions below are strictly scoped to the PRJNA802072 benchmark cohort.
+    If another valid study (e.g. E-MTAB-15191 or GSE232218) is analyzed, PRJNA802072
+    pilot constraints do not restrict it.
     """
+    if study_id is not None and study_id != TARGET_BIOPROJECT:
+        return {
+            "status": "NON_PRJNA802072_STUDY_ACCEPTED",
+            "study_accession": study_id,
+            "message": f"Study '{study_id}' is not PRJNA802072; benchmark pilot constraints do not apply.",
+        }
+
     cfg = load_execution_profiles(config_path)
     pilot_spec = cfg.get("technical_pilot_specification")
     if not pilot_spec:

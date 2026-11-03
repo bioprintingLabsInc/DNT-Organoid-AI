@@ -69,7 +69,7 @@ def test_get_execution_profile_explicit_and_env():
     assert eval_prof.name == "workstation_evaluation"
     assert eval_prof.physical_ram_gb_min <= 16.0
     assert eval_prof.genome_sa_sparse_d == 4
-    assert eval_prof.genome_sa_index_nbases == 13
+    assert eval_prof.genome_sa_index_nbases == 12
     assert eval_prof.external_sort_enabled is True
     assert eval_prof.samtools_sort_mem_per_thread == "1G"
 
@@ -229,13 +229,18 @@ def test_quantification_bridge_pipeline_profile_integration():
 
 
 def test_validate_pilot_configuration_valid():
-    """Assert validate_pilot_configuration succeeds with current configuration."""
+    """Assert validate_pilot_configuration succeeds with PRJNA802072 and accepts other studies."""
     res = validate_pilot_configuration()
     assert res["status"] == "PILOT_CONFIGURATION_VALID"
     assert res["control_run"] == "SRR17834920"
     assert res["treatment_run"] == "SRR17834905"
     assert res["control_dose_um"] == 0.0
     assert res["treatment_dose_um"] == 250.0
+
+    # Non-PRJNA802072 studies must not be blocked by PRJNA802072 pilot constraints
+    res_other = validate_pilot_configuration(study_id="E-MTAB-15191")
+    assert res_other["status"] == "NON_PRJNA802072_STUDY_ACCEPTED"
+    assert res_other["study_accession"] == "E-MTAB-15191"
 
 
 def test_preflight_safeguards_memory_headroom_and_storage():

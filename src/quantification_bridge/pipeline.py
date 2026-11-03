@@ -62,12 +62,14 @@ class QuantificationBridgePipeline:
         self,
         repo_root: str | Path | None = None,
         profile_name: str | None = None,
+        study_id: str = TARGET_BIOPROJECT,
     ) -> None:
         if repo_root is not None:
             self.repo_root = Path(repo_root).resolve()
         else:
             self.repo_root = Path(__file__).resolve().parents[2]
 
+        self.study_id = study_id
         self.profile: ExecutionProfile = get_execution_profile(profile_name)
         paths = resolve_pipeline_paths(self.repo_root)
         self.data_dir = paths["data_dir"]
@@ -97,13 +99,20 @@ class QuantificationBridgePipeline:
         self.bed12_path = paths["bed12_path"]
         self.star_index_dir = paths["star_index_dir"]
 
-    def run_profile_checks(self, enforce_physical_ram: bool = False) -> PreflightCheckResult:
-        """Execute resource and tool preflight checks against active execution profile."""
+    def run_profile_checks(
+        self,
+        enforce_physical_ram: bool = False,
+        validate_pilot: bool | None = None,
+    ) -> PreflightCheckResult:
+        """Execute resource, tool, and pilot preflight checks against active execution profile."""
+        should_validate_pilot = validate_pilot if validate_pilot is not None else (self.study_id == TARGET_BIOPROJECT)
         return run_profile_preflight_checks(
             profile=self.profile,
             data_dir=self.data_dir,
             ref_dir=self.ref_dir,
             enforce_physical_ram=enforce_physical_ram,
+            validate_pilot=should_validate_pilot,
+            study_id=self.study_id,
         )
 
     def record_environment_metrics(self) -> dict[str, Any]:

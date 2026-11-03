@@ -69,20 +69,20 @@ profiles:
 
   workstation_evaluation:
     display_name: "Evaluation Workstation / Local Machine"
-    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4, nbases 13) + sequential samtools streaming."
+    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4, nbases 12, 2 threads) + sequential samtools streaming."
     hardware_minimum:
       physical_ram_gb: 11.5
-      cpu_cores: 4
-      storage_gb: 100.0
-      memory_headroom_minimum_gb: 2.0
-      estimated_peak_ram_gb: 10.5
+      cpu_cores: 2
+      storage_gb: 70.0
+      memory_headroom_minimum_gb: 0.5
+      estimated_peak_process_rss_gb: 10.47
     star:
       genome_sa_sparse_d: 4
-      genome_sa_index_nbases: 13
-      limit_genome_generate_ram: 18000000000
+      genome_sa_index_nbases: 12
+      limit_genome_generate_ram: 10000000000
       bam_sort_mode: "Unsorted"
       limit_bam_sort_ram: 0
-      threads: 4
+      threads: 2
     samtools:
       external_sort_enabled: true
       sort_mem_per_thread: "1G"
@@ -161,7 +161,10 @@ software_inventory:
     role: "SRA archive extraction with scratch disk governance"
 
 # Governed Technical Pilot Specification (PRJNA802072 Day 28: 0 uM vs 250 uM)
+# NOTE: Restrictions below are strictly scoped to the PRJNA802072 benchmark cohort.
+# They do NOT restrict general quantification bridge execution for other valid studies or concentrations.
 technical_pilot_specification:
+  cohort_name: "PRJNA802072_pilot_day28"
   study_accession: "PRJNA802072"
   sra_study: "SRP357550"
   developmental_day: 28
@@ -183,16 +186,48 @@ technical_pilot_specification:
     - "SRR17826941"  # Hallucinated accession rejected by consistency checks
     - "SRR17826944"  # Hallucinated accession rejected by consistency checks
 
-# Component-by-Component Storage Capacity Requirements
+# Stage-by-Stage Storage Schedule & Peak Disk Capacity Requirements
+# Based on Ensembl GRCh38.112 primary assembly, STAR sparseD 4 index, and 2 pilot paired FASTQ runs.
 storage_requirements:
-  pilot_2_sample_peak_gb: 58.4
-  full_study_12_sample_peak_gb: 270.0
-  breakdown_pilot_gb:
-    reference_assets_compressed_and_uncompressed: 5.5
-    star_sparse_index_d4_nbases13: 10.4
-    raw_fastqs_2_runs: 9.4
-    trimmed_fastqs_2_runs: 8.5
-    star_alignment_peak_bams_and_sort_buffers: 25.0
-    qc_and_diagnostics_reports: 0.1
-    safety_margin_gb: 6.6
-    total_recommended_free_space_gb: 65.0
+  stage_by_stage_schedule_gb:
+    stage_1_reference_download:
+      compressed_fasta_gz: 0.84
+      compressed_gtf_gz: 0.05
+      cumulative_disk_gb: 0.89
+    stage_2_reference_decompression:
+      uncompressed_fasta: 3.10
+      uncompressed_gtf: 1.50
+      derived_bed12: 0.02
+      retained_archives: 0.89
+      cumulative_disk_gb: 5.51
+    stage_3_star_index_generation:
+      sparse_index_d4_nbases12: 9.98
+      temporary_genome_generate_sort_buffers: 3.00
+      peak_during_index_generation_gb: 18.49
+      cumulative_disk_post_indexing_gb: 15.49
+    stage_4_pilot_fastq_acquisition:
+      raw_fastqs_srr17834920: 4.60
+      raw_fastqs_srr17834905: 4.80
+      cumulative_disk_gb: 24.89
+    stage_5_fastp_trimming:
+      trimmed_fastqs_2_runs: 8.50
+      qc_json_html_reports: 0.05
+      cumulative_disk_gb: 33.44
+    stage_6_sample1_star_and_sort:
+      sample1_unsorted_bam: 4.80
+      sample1_samtools_sort_peak_buffers: 9.60
+      sample1_sorted_bam_and_bai: 4.81
+      peak_during_sample1_sort_gb: 47.84
+      cumulative_disk_post_sample1_gb: 38.25
+    stage_7_sample2_star_and_sort:
+      sample2_unsorted_bam: 5.00
+      sample2_samtools_sort_peak_buffers: 10.00
+      sample2_sorted_bam_and_bai: 5.01
+      peak_during_sample2_sort_gb: 53.26
+      cumulative_disk_post_sample2_gb: 43.26
+  peak_disk_usage_gb:
+    concurrent_peak_without_intermediate_cleanup: 58.49
+    sequential_peak_with_per_sample_sort_cleanup: 53.26
+    safety_margin_gb: 11.51
+    minimum_safe_free_space_required_gb: 70.0
+    full_study_12_sample_peak_gb: 270.0
