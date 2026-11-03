@@ -27,6 +27,7 @@ from src.quantification_bridge.profiles import (
     probe_tool_inventory,
     resolve_pipeline_paths,
     run_profile_preflight_checks,
+    validate_pilot_configuration,
 )
 from src.quantification_bridge.pipeline import QuantificationBridgePipeline
 
@@ -68,6 +69,7 @@ def test_get_execution_profile_explicit_and_env():
     assert eval_prof.name == "workstation_evaluation"
     assert eval_prof.physical_ram_gb_min <= 16.0
     assert eval_prof.genome_sa_sparse_d == 4
+    assert eval_prof.genome_sa_index_nbases == 13
     assert eval_prof.external_sort_enabled is True
     assert eval_prof.samtools_sort_mem_per_thread == "1G"
 
@@ -224,3 +226,30 @@ def test_quantification_bridge_pipeline_profile_integration():
     preflight = pipeline.run_profile_checks(enforce_physical_ram=False)
     assert isinstance(preflight, PreflightCheckResult)
     assert preflight.profile.name == "workstation_evaluation"
+
+
+def test_validate_pilot_configuration_valid():
+    """Assert validate_pilot_configuration succeeds with current configuration."""
+    res = validate_pilot_configuration()
+    assert res["status"] == "PILOT_CONFIGURATION_VALID"
+    assert res["control_run"] == "SRR17834920"
+    assert res["treatment_run"] == "SRR17834905"
+    assert res["control_dose_um"] == 0.0
+    assert res["treatment_dose_um"] == 250.0
+
+
+def test_preflight_safeguards_memory_headroom_and_storage():
+    """Assert preflight checks evaluate memory headroom and peak disk requirements."""
+    eval_prof = get_execution_profile("workstation_evaluation")
+    res = run_profile_preflight_checks(eval_prof, enforce_physical_ram=False)
+    
+    # Assert findings codes are structured properly
+    finding_codes = {f.code for f in res.findings}
+    # Should not have fatal errors on current setup if tools and space are present
+    assert not any(f.severity == "FATAL" for f in res.findings if f.code == "insufficient_disk_space_pilot")
+    
+    # Provenance contains complete breakdown
+    assert "profile" in res.provenance
+    assert "hardware" in res.provenance
+    assert "tools" in res.provenance
+

@@ -23,6 +23,7 @@ def build_star_index(
     sjdb_overhang: int = 149,
     threads: int = 8,
     sparse_d: int = 1,
+    genome_sa_index_nbases: int = 14,
     limit_ram: int | None = None,
 ) -> dict[str, Any]:
     """Generate STAR genome index using Ensembl GRCh38 primary assembly FASTA and GTF."""
@@ -61,6 +62,7 @@ def build_star_index(
         f"--sjdbGTFfile {actual_gtf} "
         f"--sjdbOverhang {sjdb_overhang} "
         f"--genomeSAsparseD {sparse_d} "
+        f"--genomeSAindexNbases {genome_sa_index_nbases} "
         f"--runThreadN {threads}"
     )
     if limit_ram is not None and limit_ram > 0:
@@ -79,6 +81,7 @@ def build_star_index(
         "sjdb_overhang": sjdb_overhang,
         "threads": threads,
         "genome_sa_sparse_d": sparse_d,
+        "genome_sa_index_nbases": genome_sa_index_nbases,
         "limit_genome_generate_ram": limit_ram,
     }
 

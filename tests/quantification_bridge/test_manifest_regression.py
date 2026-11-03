@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.quantification_bridge.manifest import (
+    APPROVED_2_SAMPLE_TECHNICAL_PILOT,
     APPROVED_PILOT_RUNS,
     APPROVED_RUN_ACCESSIONS,
     BIOLOGICAL_REPLICATE_UNIT,
@@ -13,7 +14,9 @@ from src.quantification_bridge.manifest import (
     TARGET_DEVELOPMENTAL_DAY,
     TARGET_ORGANISM,
     TARGET_SRA_STUDY,
+    get_approved_technical_pilot_runs,
 )
+from src.quantification_bridge.profiles import validate_pilot_configuration
 
 # Governed immutable ground truth allowlist
 EXPECTED_CONTROL_MAP = {
@@ -149,3 +152,87 @@ def test_metadata_reconciliation_rejection():
     }
 
     assert mismatched_record["sample_alias"] != sample.sample_title, "Should detect alias discrepancy"
+
+
+def test_approved_2_sample_technical_pilot_invariance():
+    """Assert approved 2-sample technical pilot contains exactly SRR17834920 and SRR17834905 at 250 uM Day 28."""
+    pilot = get_approved_technical_pilot_runs()
+    assert len(pilot) == 2, f"Expected exactly 2 technical pilot runs, got {len(pilot)}"
+    
+    ctrl = pilot[0]
+    trt = pilot[1]
+
+    # Exact control identity
+    assert ctrl.run_accession == "SRR17834920", f"Expected control SRR17834920, got {ctrl.run_accession}"
+    assert ctrl.sample_title == "VPA_0_1_1"
+    assert ctrl.vpa_dose_um == 0.0
+    assert ctrl.developmental_day == 28
+    assert ctrl.condition_group == "control"
+
+    # Exact treatment identity
+    assert trt.run_accession == "SRR17834905", f"Expected treatment SRR17834905, got {trt.run_accession}"
+    assert trt.sample_title == "VPA_250_1_1"
+    assert trt.vpa_dose_um == 250.0
+    assert trt.developmental_day == 28
+    assert trt.condition_group == "treatment"
+
+    # Strict rejection of hallucinated or confused accessions
+    forbidden_accessions = {"SRR17826941", "SRR17826944"}
+    pilot_runs = {ctrl.run_accession, trt.run_accession}
+    assert not pilot_runs.intersection(forbidden_accessions), "Hallucinated accession present in technical pilot!"
+
+    # Strict rejection of 1 mM / 1000 uM (which belongs to E-MTAB-15191, not PRJNA802072)
+    assert ctrl.vpa_dose_um != 1000.0, "1 mM VPA mistakenly configured for control!"
+    assert trt.vpa_dose_um != 1000.0, "1 mM VPA mistakenly configured for treatment (must be 250 uM for PRJNA802072 Day 28)!"
+
+
+def test_technical_pilot_consistency_with_execution_profile():
+    """Assert validate_pilot_configuration enforces agreement between manifest and YAML config."""
+    res = validate_pilot_configuration()
+    assert res["status"] == "PILOT_CONFIGURATION_VALID"
+    assert res["control_run"] == "SRR17834920"
+    assert res["treatment_run"] == "SRR17834905"
+    assert res["control_dose_um"] == 0.0
+    assert res["treatment_dose_um"] == 250.0
+
+
+def test_rejection_of_hallucinated_1mm_and_unapproved_accessions():
+    """Assert validate_pilot_configuration detects and rejects prohibited accessions or concentrations."""
+    import tempfile
+    import yaml
+
+    config_path = Path(__file__).resolve().parents[2] / "config" / "quantification_bridge" / "execution_profiles.yaml"
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+    # Case 1: Corrupted concentration (e.g. 1000 uM / 1 mM)
+    corrupted_cfg_1 = dict(cfg)
+    corrupted_cfg_1["technical_pilot_specification"] = dict(cfg["technical_pilot_specification"])
+    corrupted_cfg_1["technical_pilot_specification"]["treatment"] = dict(cfg["technical_pilot_specification"]["treatment"])
+    corrupted_cfg_1["technical_pilot_specification"]["treatment"]["dose_um"] = 1000.0
+
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
+        yaml.dump(corrupted_cfg_1, f)
+        temp_file_1 = Path(f.name)
+
+    try:
+        with pytest.raises(ValueError, match="Treatment dose mismatch|Prohibited dose detected"):
+            validate_pilot_configuration(temp_file_1)
+    finally:
+        temp_file_1.unlink(missing_ok=True)
+
+    # Case 2: Hallucinated accession (e.g. SRR17826941)
+    corrupted_cfg_2 = dict(cfg)
+    corrupted_cfg_2["technical_pilot_specification"] = dict(cfg["technical_pilot_specification"])
+    corrupted_cfg_2["technical_pilot_specification"]["treatment"] = dict(cfg["technical_pilot_specification"]["treatment"])
+    corrupted_cfg_2["technical_pilot_specification"]["treatment"]["run_accession"] = "SRR17826941"
+
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
+        yaml.dump(corrupted_cfg_2, f)
+        temp_file_2 = Path(f.name)
+
+    try:
+        with pytest.raises(ValueError, match="Treatment run mismatch|Prohibited run accession"):
+            validate_pilot_configuration(temp_file_2)
+    finally:
+        temp_file_2.unlink(missing_ok=True)
+

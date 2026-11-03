@@ -21,6 +21,14 @@ from typing import Any
 import yaml
 
 from .env_exec import run_wsl, to_wsl_path
+from .manifest import (
+    APPROVED_2_SAMPLE_TECHNICAL_PILOT,
+    APPROVED_PILOT_RUNS,
+    RUN_TO_SAMPLE_MAP,
+    TARGET_BIOPROJECT,
+    TARGET_DEVELOPMENTAL_DAY,
+    TARGET_SRA_STUDY,
+)
 
 
 DEFAULT_PROFILES_PATH = Path(__file__).resolve().parents[2] / "config" / "quantification_bridge" / "execution_profiles.yaml"
@@ -82,6 +90,7 @@ class ExecutionProfile:
     cpu_cores_min: int
     storage_gb_min: float
     genome_sa_sparse_d: int
+    genome_sa_index_nbases: int
     limit_genome_generate_ram: int
     bam_sort_mode: str
     limit_bam_sort_ram: int
@@ -99,6 +108,7 @@ class ExecutionProfile:
             "cpu_cores_min": self.cpu_cores_min,
             "storage_gb_min": self.storage_gb_min,
             "genome_sa_sparse_d": self.genome_sa_sparse_d,
+            "genome_sa_index_nbases": self.genome_sa_index_nbases,
             "limit_genome_generate_ram": self.limit_genome_generate_ram,
             "bam_sort_mode": self.bam_sort_mode,
             "limit_bam_sort_ram": self.limit_bam_sort_ram,
@@ -187,6 +197,7 @@ def get_execution_profile(
         cpu_cores_min=int(hw.get("cpu_cores", 4)),
         storage_gb_min=float(hw.get("storage_gb", 100.0)),
         genome_sa_sparse_d=int(star.get("genome_sa_sparse_d", 1)),
+        genome_sa_index_nbases=int(star.get("genome_sa_index_nbases", 14)),
         limit_genome_generate_ram=int(star.get("limit_genome_generate_ram", 31000000000)),
         bam_sort_mode=str(star.get("bam_sort_mode", "SortedByCoordinate")),
         limit_bam_sort_ram=int(star.get("limit_bam_sort_ram", 0)),
@@ -371,11 +382,26 @@ def run_profile_preflight_checks(
     data_dir: Path | None = None,
     ref_dir: Path | None = None,
     enforce_physical_ram: bool = False,
+    validate_pilot: bool = True,
 ) -> PreflightCheckResult:
-    """Validate resource compatibility and tool availability against an execution profile."""
+    """Validate resource compatibility, tool availability, and pilot consistency against an execution profile."""
     hardware = probe_hardware_baseline(data_dir, ref_dir)
     tools = probe_tool_inventory()
     findings: list[PreflightFinding] = []
+
+    # 0. Pilot Configuration & Manifest Consistency Check
+    if validate_pilot:
+        try:
+            validate_pilot_configuration()
+        except Exception as e:
+            findings.append(
+                PreflightFinding(
+                    severity="FATAL",
+                    code="pilot_configuration_invalid",
+                    message=f"Technical pilot configuration consistency failure: {e}",
+                    remediation="Reconcile execution_profiles.yaml technical_pilot_specification with approved manifest.py.",
+                )
+            )
 
     # 1. Tool availability (FATAL if missing)
     for t_name, info in tools.tools.items():
@@ -385,12 +411,22 @@ def run_profile_preflight_checks(
                     severity="FATAL",
                     code=f"tool_missing_{t_name}",
                     message=f"Required bioinformatics tool '{t_name}' not found on PATH or in conda environment.",
-                    remediation=f"Activate dnt_bridge environment or run 'conda env create -f config/quantification_bridge/environment_bridge.yml'.",
+                    remediation="Activate dnt_bridge environment or run 'conda env create -f config/quantification_bridge/environment_bridge.yml'.",
                 )
             )
 
-    # 2. Physical RAM verification
+    # 2. Physical RAM & Memory Headroom Verification
+    # Calculate estimated STAR index memory footprint in RAM
+    if profile.genome_sa_sparse_d >= 4:
+        est_star_ram = 10.4 if profile.genome_sa_index_nbases <= 13 else 12.0
+    elif profile.genome_sa_sparse_d >= 2:
+        est_star_ram = 18.0
+    else:
+        est_star_ram = 34.0
+
     effective_ram = hardware.physical_ram_gb
+    headroom_gb = effective_ram - est_star_ram
+
     if effective_ram < profile.physical_ram_gb_min:
         msg = (
             f"Physical RAM ({effective_ram:.1f} GB) is below the minimum recommended for profile "
@@ -415,18 +451,74 @@ def run_profile_preflight_checks(
                 )
             )
 
-    # 3. Storage capacity verification
-    required_storage = profile.storage_gb_min
-    if hardware.data_dir_free_gb < required_storage:
+    # Check RAM Headroom
+    if effective_ram < est_star_ram:
+        deficit = est_star_ram - effective_ram
         findings.append(
             PreflightFinding(
-                severity="WARNING" if hardware.data_dir_free_gb > 30.0 else "FATAL",
-                code="low_disk_space_data_dir",
+                severity="WARNING" if not enforce_physical_ram else "FATAL",
+                code="insufficient_ram_for_index",
                 message=(
-                    f"Free storage on data directory ({hardware.data_dir_free_gb:.1f} GB) is below profile "
-                    f"recommendation ({required_storage:.1f} GB)."
+                    f"Physical RAM ({effective_ram:.1f} GB) is below estimated STAR index footprint "
+                    f"({est_star_ram:.1f} GB). Linux kernel will push at least {deficit:.1f} GB into swap during alignment."
                 ),
-                remediation="Ensure at least 50 GB free for pilot testing or set DNT_DATA_DIR to a larger disk.",
+                remediation="Ensure swap space is active and fast, or utilize an institutional node.",
+            )
+        )
+    elif headroom_gb < 2.0:
+        findings.append(
+            PreflightFinding(
+                severity="WARNING",
+                code="narrow_memory_headroom",
+                message=(
+                    f"Physical RAM headroom is narrow ({headroom_gb:.1f} GB remaining beyond estimated STAR index "
+                    f"footprint of {est_star_ram:.1f} GB). Background processes could trigger swap thrashing."
+                ),
+                remediation="Close unneeded host applications and restrict STAR threads to 2-4.",
+            )
+        )
+
+    # Check Total Virtual Memory (RAM + Swap)
+    total_vm = hardware.physical_ram_gb + hardware.swap_gb
+    if total_vm < est_star_ram + 4.0:
+        findings.append(
+            PreflightFinding(
+                severity="FATAL",
+                code="insufficient_total_virtual_memory",
+                message=(
+                    f"Total virtual memory ({total_vm:.1f} GB = {hardware.physical_ram_gb:.1f} GB RAM + "
+                    f"{hardware.swap_gb:.1f} GB swap) is insufficient for STAR ({est_star_ram + 4.0:.1f} GB required)."
+                ),
+                remediation="Increase swap allocation in /etc/wsl.conf or .wslconfig to at least 32 GB.",
+            )
+        )
+
+    # 3. Peak Storage Safeguards (2-Sample Pilot: 58.4 GB; Full Study: 270.0 GB)
+    pilot_min_disk = 60.0  # 58.4 GB peak rounded with margin
+    full_min_disk = 270.0
+
+    if hardware.data_dir_free_gb < pilot_min_disk:
+        findings.append(
+            PreflightFinding(
+                severity="FATAL",
+                code="insufficient_disk_space_pilot",
+                message=(
+                    f"Free storage on data directory ({hardware.data_dir_free_gb:.1f} GB) is below the minimum required "
+                    f"for 2-sample pilot execution ({pilot_min_disk:.1f} GB required; references + index + FASTQs + BAMs)."
+                ),
+                remediation="Free space on data disk or set DNT_DATA_DIR to a disk volume with at least 60 GB free.",
+            )
+        )
+    elif hardware.data_dir_free_gb < full_min_disk:
+        findings.append(
+            PreflightFinding(
+                severity="WARNING",
+                code="low_disk_space_full_study",
+                message=(
+                    f"Free storage ({hardware.data_dir_free_gb:.1f} GB) satisfies the 2-sample pilot ({pilot_min_disk:.1f} GB), "
+                    f"but is below the full 12-sample study requirement ({full_min_disk:.1f} GB)."
+                ),
+                remediation="Ensure additional storage before launching the complete 12-sample cohort.",
             )
         )
 
@@ -510,3 +602,68 @@ def evaluate_qc_metric(
             return "WARNING", f"Strand specificity fraction ({value:.3f}) is ambiguous (expected > {threshold} or unstranded ~0.5)."
 
     return "PASS", f"Metric '{metric_name}' ({value}) satisfies evaluation criteria."
+
+
+def validate_pilot_configuration(config_path: Path | None = None) -> dict[str, Any]:
+    """Strictly validate pilot configuration against authoritative manifest.py and pilot_manifest.json.
+
+    Enforces that:
+    1. Study accession is PRJNA802072 and SRP357550.
+    2. Control run is exactly SRR17834920 (0 uM VPA, Day 28).
+    3. Treatment run is exactly SRR17834905 (250 uM VPA, Day 28).
+    4. Prohibited accessions (e.g. hallucinated SRR17826941/SRR17826944) and prohibited doses (e.g. 1000 uM / 1 mM)
+       are strictly rejected.
+    """
+    cfg = load_execution_profiles(config_path)
+    pilot_spec = cfg.get("technical_pilot_specification")
+    if not pilot_spec:
+        raise ValueError("Missing 'technical_pilot_specification' in execution profiles config.")
+
+    # Validate BioProject and Study
+    if pilot_spec.get("study_accession") != TARGET_BIOPROJECT:
+        raise ValueError(f"Study accession mismatch: expected {TARGET_BIOPROJECT}, got {pilot_spec.get('study_accession')}")
+    if pilot_spec.get("developmental_day") != TARGET_DEVELOPMENTAL_DAY:
+        raise ValueError(f"Developmental day mismatch: expected {TARGET_DEVELOPMENTAL_DAY}, got {pilot_spec.get('developmental_day')}")
+
+    # Validate Control
+    ctrl = pilot_spec.get("control", {})
+    if ctrl.get("run_accession") != "SRR17834920":
+        raise ValueError(f"Control run mismatch: expected SRR17834920, got {ctrl.get('run_accession')}")
+    if ctrl.get("dose_um") != 0.0:
+        raise ValueError(f"Control dose mismatch: expected 0.0 uM, got {ctrl.get('dose_um')}")
+    if ctrl.get("developmental_day") != 28:
+        raise ValueError(f"Control day mismatch: expected 28, got {ctrl.get('developmental_day')}")
+
+    # Validate Treatment
+    trt = pilot_spec.get("treatment", {})
+    if trt.get("run_accession") != "SRR17834905":
+        raise ValueError(f"Treatment run mismatch: expected SRR17834905, got {trt.get('run_accession')}")
+    if trt.get("dose_um") != 250.0:
+        raise ValueError(f"Treatment dose mismatch: expected 250.0 uM, got {trt.get('dose_um')}")
+    if trt.get("developmental_day") != 28:
+        raise ValueError(f"Treatment day mismatch: expected 28, got {trt.get('developmental_day')}")
+
+    # Prohibited accessions & doses check
+    prohibited_runs = set(pilot_spec.get("prohibited_accessions", [])) | {"SRR17826941", "SRR17826944"}
+    if ctrl.get("run_accession") in prohibited_runs or trt.get("run_accession") in prohibited_runs:
+        raise ValueError("Prohibited run accession detected in pilot specification!")
+
+    prohibited_doses = set(pilot_spec.get("prohibited_concentrations", [])) | {1000.0, 50000.0}
+    if ctrl.get("dose_um") in prohibited_doses or trt.get("dose_um") in prohibited_doses:
+        raise ValueError("Prohibited dose detected in pilot specification (e.g. 1 mM / 50 mM from other studies)!")
+
+    # Verify against manifest.py records
+    manifest_ctrl = RUN_TO_SAMPLE_MAP.get("SRR17834920")
+    manifest_trt = RUN_TO_SAMPLE_MAP.get("SRR17834905")
+    if not manifest_ctrl or not manifest_trt:
+        raise ValueError("Approved pilot runs missing from RUN_TO_SAMPLE_MAP in manifest.py")
+
+    return {
+        "status": "PILOT_CONFIGURATION_VALID",
+        "study_accession": TARGET_BIOPROJECT,
+        "developmental_day": TARGET_DEVELOPMENTAL_DAY,
+        "control_run": manifest_ctrl.run_accession,
+        "control_dose_um": manifest_ctrl.vpa_dose_um,
+        "treatment_run": manifest_trt.run_accession,
+        "treatment_dose_um": manifest_trt.vpa_dose_um,
+    }

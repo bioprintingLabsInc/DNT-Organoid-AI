@@ -33,6 +33,7 @@ from .bed_generator import generate_bed12_from_gtf
 from .env_exec import run_wsl, to_wsl_path
 from .fastp_runner import run_fastp_preprocessing
 from .manifest import (
+    APPROVED_2_SAMPLE_TECHNICAL_PILOT,
     APPROVED_PILOT_RUNS,
     APPROVED_RUN_ACCESSIONS,
     BIOLOGICAL_REPLICATE_UNIT,
@@ -346,13 +347,14 @@ class QuantificationBridgePipeline:
             "bed12_sha256": observed_bed_sha,
         }
 
-    def dry_run_library_acquisition(self) -> dict[str, Any]:
+    def dry_run_library_acquisition(self, technical_pilot_only: bool = False) -> dict[str, Any]:
         """Perform a governed dry-run of ENA acquisition without downloading any files.
 
-        Validates all 12 runs and 24 FASTQ targets against config/quantification_bridge/pilot_manifest.json.
+        Validates targets against config/quantification_bridge/pilot_manifest.json and manifest.py.
         """
+        sample_cohort = APPROVED_2_SAMPLE_TECHNICAL_PILOT if technical_pilot_only else APPROVED_PILOT_RUNS
         targets = []
-        for sample in APPROVED_PILOT_RUNS:
+        for sample in sample_cohort:
             targets.append({
                 "run_accession": sample.run_accession,
                 "sample_alias": sample.sample_title,
@@ -374,25 +376,30 @@ class QuantificationBridgePipeline:
             data = json.loads(manifest_file.read_text(encoding="utf-8"))
             json_runs = set(s["run_accession"] for s in data["samples"])
             target_runs = set(t["run_accession"] for t in targets)
-            missing = json_runs - target_runs
-            unexpected = target_runs - json_runs
-            assert not missing, f"Manifest divergence: missing runs {missing}"
-            assert not unexpected, f"Manifest divergence: unexpected runs {unexpected}"
+            if not technical_pilot_only:
+                missing = json_runs - target_runs
+                unexpected = target_runs - json_runs
+                assert not missing, f"Manifest divergence: missing runs {missing}"
+                assert not unexpected, f"Manifest divergence: unexpected runs {unexpected}"
+            else:
+                assert target_runs.issubset(json_runs), f"Technical pilot targets {target_runs} not in pilot_manifest.json"
 
         return {
             "status": "DRY_RUN_SUCCESS",
-            "total_runs": len(APPROVED_PILOT_RUNS),
+            "technical_pilot_only": technical_pilot_only,
+            "total_runs": len(sample_cohort),
             "total_fastqs": len(targets),
-            "run_ids": list(APPROVED_RUN_ACCESSIONS),
+            "run_ids": [s.run_accession for s in sample_cohort],
             "targets": targets,
         }
 
-    def acquire_and_verify_libraries(self) -> dict[str, Any]:
-        """Download all 24 FASTQ files for the 12 approved pilot runs directly from ENA."""
+    def acquire_and_verify_libraries(self, technical_pilot_only: bool = False) -> dict[str, Any]:
+        """Download FASTQ files directly from ENA (either 2 technical pilot runs or all 12 cohort runs)."""
+        sample_cohort = APPROVED_2_SAMPLE_TECHNICAL_PILOT if technical_pilot_only else APPROVED_PILOT_RUNS
         results = {}
-        print(f"Acquiring 12 approved pilot libraries ({len(APPROVED_PILOT_RUNS) * 2} FASTQ files)...")
+        print(f"Acquiring {len(sample_cohort)} approved libraries ({len(sample_cohort) * 2} FASTQ files)...")
 
-        for sample in APPROVED_PILOT_RUNS:
+        for sample in sample_cohort:
             r1_dest = self.raw_fastqs_dir / f"{sample.run_accession}_1.fastq.gz"
             r2_dest = self.raw_fastqs_dir / f"{sample.run_accession}_2.fastq.gz"
 
@@ -407,6 +414,24 @@ class QuantificationBridgePipeline:
             }
 
         return results
+
+    def pairs_from_approved_technical_pilot_runs(self) -> tuple[FastqPair, ...]:
+        """Construct FastqPair records for the 2 approved technical pilot runs (SRR17834920 and SRR17834905)."""
+        pairs = []
+        for sample in APPROVED_2_SAMPLE_TECHNICAL_PILOT:
+            pairs.append(
+                FastqPair(
+                    sample_id=sample.run_accession,
+                    r1_path=self.raw_fastqs_dir / f"{sample.run_accession}_1.fastq.gz",
+                    r2_path=self.raw_fastqs_dir / f"{sample.run_accession}_2.fastq.gz",
+                    assay_id=sample.experiment_accession,
+                    extra_metadata={
+                        "sample_title": sample.sample_title,
+                        "vpa_dose_um": sample.vpa_dose_um,
+                    },
+                )
+            )
+        return tuple(pairs)
 
     def pairs_from_approved_pilot_runs(self) -> tuple[FastqPair, ...]:
         """Construct FastqPair records for the 12 approved pilot runs."""
@@ -480,16 +505,18 @@ class QuantificationBridgePipeline:
         self,
         threads: int | None = None,
         sparse_d: int | None = None,
+        genome_sa_index_nbases: int | None = None,
         limit_ram: int | None = None,
     ) -> dict[str, Any]:
         """Generate governed STAR genome index using active execution profile parameters."""
         eff_threads = threads if threads is not None else self.profile.threads
         eff_sparse_d = sparse_d if sparse_d is not None else self.profile.genome_sa_sparse_d
+        eff_nbases = genome_sa_index_nbases if genome_sa_index_nbases is not None else self.profile.genome_sa_index_nbases
         eff_limit_ram = limit_ram if limit_ram is not None else self.profile.limit_genome_generate_ram
 
         print(
             f"Building STAR genome index at {self.star_index_dir} "
-            f"(threads={eff_threads}, sparse_d={eff_sparse_d}, limit_ram={eff_limit_ram})..."
+            f"(threads={eff_threads}, sparse_d={eff_sparse_d}, nbases={eff_nbases}, limit_ram={eff_limit_ram})..."
         )
         res = build_star_index(
             fasta_path=self.fasta_path,
@@ -498,6 +525,7 @@ class QuantificationBridgePipeline:
             sjdb_overhang=149,
             threads=eff_threads,
             sparse_d=eff_sparse_d,
+            genome_sa_index_nbases=eff_nbases,
             limit_ram=eff_limit_ram,
         )
         return res

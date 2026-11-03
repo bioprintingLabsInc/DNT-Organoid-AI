@@ -214,3 +214,22 @@ APPROVED_PILOT_RUNS: tuple[PilotSampleRecord, ...] = (
 
 APPROVED_RUN_ACCESSIONS: tuple[str, ...] = tuple(r.run_accession for r in APPROVED_PILOT_RUNS)
 RUN_TO_SAMPLE_MAP: dict[str, PilotSampleRecord] = {r.run_accession: r for r in APPROVED_PILOT_RUNS}
+
+# Governed 2-sample technical pilot subset (PRJNA802072 Day 28: 0 uM vs 250 uM)
+APPROVED_2_SAMPLE_TECHNICAL_PILOT: tuple[PilotSampleRecord, ...] = (
+    RUN_TO_SAMPLE_MAP["SRR17834920"],  # VPA_0_1_1, 0 uM VPA, Day 28 (Vehicle Control)
+    RUN_TO_SAMPLE_MAP["SRR17834905"],  # VPA_250_1_1, 250 uM VPA, Day 28 (Treatment)
+)
+
+assert len(APPROVED_2_SAMPLE_TECHNICAL_PILOT) == 2, "Technical pilot must contain exactly 2 runs"
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[0].run_accession == "SRR17834920"
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[0].vpa_dose_um == 0.0
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[0].developmental_day == 28
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[1].run_accession == "SRR17834905"
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[1].vpa_dose_um == 250.0
+assert APPROVED_2_SAMPLE_TECHNICAL_PILOT[1].developmental_day == 28
+
+
+def get_approved_technical_pilot_runs() -> tuple[PilotSampleRecord, ...]:
+    """Return the immutable 2-sample technical pilot run records."""
+    return APPROVED_2_SAMPLE_TECHNICAL_PILOT

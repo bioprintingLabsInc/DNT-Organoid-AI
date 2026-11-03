@@ -30,6 +30,7 @@ profiles:
       storage_gb: 500.0
     star:
       genome_sa_sparse_d: 1
+      genome_sa_index_nbases: 14
       limit_genome_generate_ram: 34000000000
       bam_sort_mode: "SortedByCoordinate"
       limit_bam_sort_ram: 10000000000
@@ -52,6 +53,7 @@ profiles:
       storage_gb: 250.0
     star:
       genome_sa_sparse_d: 2
+      genome_sa_index_nbases: 14
       limit_genome_generate_ram: 24000000000
       bam_sort_mode: "SortedByCoordinate"
       limit_bam_sort_ram: 5000000000
@@ -67,13 +69,16 @@ profiles:
 
   workstation_evaluation:
     display_name: "Evaluation Workstation / Local Machine"
-    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4) + samtools streaming."
+    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4, nbases 13) + sequential samtools streaming."
     hardware_minimum:
       physical_ram_gb: 11.5
       cpu_cores: 4
       storage_gb: 100.0
+      memory_headroom_minimum_gb: 2.0
+      estimated_peak_ram_gb: 10.5
     star:
       genome_sa_sparse_d: 4
+      genome_sa_index_nbases: 13
       limit_genome_generate_ram: 18000000000
       bam_sort_mode: "Unsorted"
       limit_bam_sort_ram: 0
@@ -154,3 +159,40 @@ software_inventory:
     pinned_version: "3.1.1"
     command: "fasterq-dump --version"
     role: "SRA archive extraction with scratch disk governance"
+
+# Governed Technical Pilot Specification (PRJNA802072 Day 28: 0 uM vs 250 uM)
+technical_pilot_specification:
+  study_accession: "PRJNA802072"
+  sra_study: "SRP357550"
+  developmental_day: 28
+  compound: "Valproic acid (VPA)"
+  control:
+    run_accession: "SRR17834920"
+    sample_title: "VPA_0_1_1"
+    dose_um: 0.0
+    developmental_day: 28
+  treatment:
+    run_accession: "SRR17834905"
+    sample_title: "VPA_250_1_1"
+    dose_um: 250.0
+    developmental_day: 28
+  prohibited_concentrations:
+    - 1000.0  # 1 mM belongs to E-MTAB-15191 / Molecular Psychiatry, NEVER PRJNA802072
+    - 50000.0 # 50 mM
+  prohibited_accessions:
+    - "SRR17826941"  # Hallucinated accession rejected by consistency checks
+    - "SRR17826944"  # Hallucinated accession rejected by consistency checks
+
+# Component-by-Component Storage Capacity Requirements
+storage_requirements:
+  pilot_2_sample_peak_gb: 58.4
+  full_study_12_sample_peak_gb: 270.0
+  breakdown_pilot_gb:
+    reference_assets_compressed_and_uncompressed: 5.5
+    star_sparse_index_d4_nbases13: 10.4
+    raw_fastqs_2_runs: 9.4
+    trimmed_fastqs_2_runs: 8.5
+    star_alignment_peak_bams_and_sort_buffers: 25.0
+    qc_and_diagnostics_reports: 0.1
+    safety_margin_gb: 6.6
+    total_recommended_free_space_gb: 65.0
