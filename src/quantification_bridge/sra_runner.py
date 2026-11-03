@@ -75,10 +75,7 @@ def probe_sra_tools() -> dict[str, Any]:
             return {"available": False, "tool_name": name, "tool_version": "UNKNOWN", "path": binary}
 
     # Under Windows, probe via WSL
-    script = (
-        "source /home/chari/miniconda3/bin/activate dnt_bridge 2>/dev/null || true; "
-        "which fasterq-dump || which fastq-dump || true"
-    )
+    script = "which fasterq-dump || which fastq-dump || true"
     res = run_wsl(script)
     out = res.stdout.strip()
     if not out:

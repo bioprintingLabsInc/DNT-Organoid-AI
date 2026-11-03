@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -41,6 +42,13 @@ from .manifest import (
     TARGET_SRA_STUDY,
 )
 from .pairing import FastqPair
+from .profiles import (
+    ExecutionProfile,
+    PreflightCheckResult,
+    get_execution_profile,
+    resolve_pipeline_paths,
+    run_profile_preflight_checks,
+)
 from .rseqc_runner import run_infer_experiment
 from .star_runner import align_reads_star, build_star_index
 from .validator import validate_paired_fastqs
@@ -49,20 +57,26 @@ from .validator import validate_paired_fastqs
 class QuantificationBridgePipeline:
     """Orchestrates governed raw-read preprocessing and alignment for PRJNA802072."""
 
-    def __init__(self, repo_root: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        repo_root: str | Path | None = None,
+        profile_name: str | None = None,
+    ) -> None:
         if repo_root is not None:
             self.repo_root = Path(repo_root).resolve()
         else:
             self.repo_root = Path(__file__).resolve().parents[2]
 
-        self.data_dir = self.repo_root / "data"
-        self.raw_fastqs_dir = self.data_dir / "raw" / "prjna802072_fastqs"
-        self.trimmed_dir = self.data_dir / "interim" / "prjna802072_trimmed"
-        self.alignments_dir = self.data_dir / "interim" / "prjna802072_alignments"
-        self.qc_reports_dir = self.data_dir / "interim" / "prjna802072_qc_reports"
-        self.ref_dir = self.repo_root / "references" / "ensembl_112"
-        self.bridge_out_dir = self.data_dir / "interim" / "prjna802072_bridge"
-        self.config_dir = self.repo_root / "config" / "quantification_bridge"
+        self.profile: ExecutionProfile = get_execution_profile(profile_name)
+        paths = resolve_pipeline_paths(self.repo_root)
+        self.data_dir = paths["data_dir"]
+        self.raw_fastqs_dir = paths["raw_fastqs_dir"]
+        self.trimmed_dir = paths["trimmed_dir"]
+        self.alignments_dir = paths["alignments_dir"]
+        self.qc_reports_dir = paths["qc_reports_dir"]
+        self.ref_dir = paths["ref_dir"]
+        self.bridge_out_dir = paths["bridge_out_dir"]
+        self.config_dir = paths["config_dir"]
 
         # Ensure directories exist
         for d in (
@@ -77,10 +91,19 @@ class QuantificationBridgePipeline:
             d.mkdir(parents=True, exist_ok=True)
 
         self.ref_manifest_path = self.config_dir / "reference_manifest.json"
-        self.gtf_path = self.data_dir / "raw" / "references" / "Homo_sapiens.GRCh38.112.gtf.gz"
-        self.fasta_path = self.ref_dir / "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
-        self.bed12_path = self.ref_dir / "Homo_sapiens.GRCh38.112.bed"
-        self.star_index_dir = self.ref_dir / "star_index"
+        self.gtf_path = paths["gtf_path"]
+        self.fasta_path = paths["fasta_path"]
+        self.bed12_path = paths["bed12_path"]
+        self.star_index_dir = paths["star_index_dir"]
+
+    def run_profile_checks(self, enforce_physical_ram: bool = False) -> PreflightCheckResult:
+        """Execute resource and tool preflight checks against active execution profile."""
+        return run_profile_preflight_checks(
+            profile=self.profile,
+            data_dir=self.data_dir,
+            ref_dir=self.ref_dir,
+            enforce_physical_ram=enforce_physical_ram,
+        )
 
     def record_environment_metrics(self) -> dict[str, Any]:
         """Record node hardware, OS, Python runtime, and bioinformatics binary paths/versions."""
@@ -128,7 +151,6 @@ class QuantificationBridgePipeline:
         else:
             # Query via WSL from Windows in a single batched shell invocation
             batch_script = (
-                "source /home/chari/miniconda3/bin/activate dnt_bridge 2>/dev/null || true; "
                 "which fastp; which STAR; which featureCounts; which samtools; which infer_experiment.py; "
                 "echo '===DELIM==='; fastp --version 2>&1; "
                 "echo '===DELIM==='; STAR --version; "
@@ -424,9 +446,10 @@ class QuantificationBridgePipeline:
     def run_fastp_pairs(
         self,
         pairs: tuple[FastqPair, ...] | list[FastqPair],
-        threads: int = 16,
+        threads: int | None = None,
     ) -> dict[str, Any]:
         """Execute governed treatment-blind fastp preprocessing for given pairs."""
+        eff_threads = threads if threads is not None else self.profile.threads
         fastp_results = {}
         for pair in pairs:
             r1_out = self.trimmed_dir / f"{pair.sample_id}_trimmed_1.fastq.gz"
@@ -434,7 +457,7 @@ class QuantificationBridgePipeline:
             json_out = self.qc_reports_dir / f"{pair.sample_id}_fastp.json"
             html_out = self.qc_reports_dir / f"{pair.sample_id}_fastp.html"
 
-            print(f"Executing fastp for {pair.sample_id}...")
+            print(f"Executing fastp for {pair.sample_id} (threads={eff_threads})...")
             res = run_fastp_preprocessing(
                 raw_r1=pair.r1_path,
                 raw_r2=pair.r2_path,
@@ -443,47 +466,76 @@ class QuantificationBridgePipeline:
                 json_report=json_out,
                 html_report=html_out,
                 sample_id=pair.sample_id,
-                threads=threads,
+                threads=eff_threads,
             )
             fastp_results[pair.sample_id] = res
 
         return fastp_results
 
-    def run_fastp_all(self, threads: int = 16) -> dict[str, Any]:
+    def run_fastp_all(self, threads: int | None = None) -> dict[str, Any]:
         """Execute governed treatment-blind fastp preprocessing for all 12 libraries."""
         return self.run_fastp_pairs(self.pairs_from_approved_pilot_runs(), threads=threads)
 
-    def build_star_index(self, threads: int = 16) -> dict[str, Any]:
-        """Generate governed STAR genome index."""
-        print(f"Building STAR genome index at {self.star_index_dir} (threads={threads})...")
+    def build_star_index(
+        self,
+        threads: int | None = None,
+        sparse_d: int | None = None,
+        limit_ram: int | None = None,
+    ) -> dict[str, Any]:
+        """Generate governed STAR genome index using active execution profile parameters."""
+        eff_threads = threads if threads is not None else self.profile.threads
+        eff_sparse_d = sparse_d if sparse_d is not None else self.profile.genome_sa_sparse_d
+        eff_limit_ram = limit_ram if limit_ram is not None else self.profile.limit_genome_generate_ram
+
+        print(
+            f"Building STAR genome index at {self.star_index_dir} "
+            f"(threads={eff_threads}, sparse_d={eff_sparse_d}, limit_ram={eff_limit_ram})..."
+        )
         res = build_star_index(
             fasta_path=self.fasta_path,
             gtf_path=self.gtf_path,
             index_dir=self.star_index_dir,
             sjdb_overhang=149,
-            threads=threads,
+            threads=eff_threads,
+            sparse_d=eff_sparse_d,
+            limit_ram=eff_limit_ram,
         )
         return res
 
     def align_libraries_star_pairs(
         self,
         pairs: tuple[FastqPair, ...] | list[FastqPair],
-        threads: int = 16,
+        threads: int | None = None,
+        bam_sort_mode: str | None = None,
+        external_sort: bool | None = None,
+        samtools_sort_mem: str | None = None,
     ) -> dict[str, Any]:
         """Align given trimmed library pairs using STAR and generate BAM indexes."""
+        eff_threads = threads if threads is not None else self.profile.threads
+        eff_sort_mode = bam_sort_mode if bam_sort_mode is not None else self.profile.bam_sort_mode
+        eff_external_sort = external_sort if external_sort is not None else self.profile.external_sort_enabled
+        eff_sort_mem = samtools_sort_mem if samtools_sort_mem is not None else self.profile.samtools_sort_mem_per_thread
+
         alignment_results = {}
         for pair in pairs:
             r1_trim = self.trimmed_dir / f"{pair.sample_id}_trimmed_1.fastq.gz"
             r2_trim = self.trimmed_dir / f"{pair.sample_id}_trimmed_2.fastq.gz"
             out_prefix = self.alignments_dir / f"{pair.sample_id}_"
 
-            print(f"Aligning {pair.sample_id} with STAR...")
+            print(
+                f"Aligning {pair.sample_id} with STAR "
+                f"(threads={eff_threads}, sort_mode={eff_sort_mode}, external_sort={eff_external_sort})..."
+            )
             res = align_reads_star(
                 trimmed_r1=r1_trim,
                 trimmed_r2=r2_trim,
                 index_dir=self.star_index_dir,
                 output_prefix=out_prefix,
-                threads=threads,
+                threads=eff_threads,
+                bam_sort_mode=eff_sort_mode,
+                limit_bam_sort_ram=self.profile.limit_bam_sort_ram,
+                external_sort=eff_external_sort,
+                samtools_sort_mem=eff_sort_mem,
             )
 
             # Generate BAM index using samtools index
@@ -499,9 +551,21 @@ class QuantificationBridgePipeline:
 
         return alignment_results
 
-    def align_12_libraries_star(self, threads: int = 16) -> dict[str, Any]:
+    def align_12_libraries_star(
+        self,
+        threads: int | None = None,
+        bam_sort_mode: str | None = None,
+        external_sort: bool | None = None,
+        samtools_sort_mem: str | None = None,
+    ) -> dict[str, Any]:
         """Align all 12 trimmed libraries using STAR and generate BAM indexes."""
-        return self.align_libraries_star_pairs(self.pairs_from_approved_pilot_runs(), threads=threads)
+        return self.align_libraries_star_pairs(
+            self.pairs_from_approved_pilot_runs(),
+            threads=threads,
+            bam_sort_mode=bam_sort_mode,
+            external_sort=external_sort,
+            samtools_sort_mem=samtools_sort_mem,
+        )
 
     def run_rseqc_strandedness_pairs(
         self,
@@ -620,9 +684,10 @@ class QuantificationBridgePipeline:
         self,
         pairs: tuple[FastqPair, ...] | list[FastqPair],
         study_id: str = "generic_study",
-        threads: int = 16,
+        threads: int | None = None,
         stop_at_gate: bool = True,
     ) -> str:
+        eff_threads = threads if threads is not None else self.profile.threads
         """Generic raw-read route execution through the strandedness evidence gate."""
         print(f"=== GENERIC RAW-READ ROUTE EXECUTION: {study_id} ({len(pairs)} pairs) ===")
         print("=== STAGE 1: ENVIRONMENT AUDIT ===")
@@ -638,13 +703,13 @@ class QuantificationBridgePipeline:
         pairing_metrics = self.validate_paired_fastqs_pairs(pairs)
 
         print("=== STAGE 5: TREATMENT-BLIND FASTP PREPROCESSING ===")
-        fastp_metrics = self.run_fastp_pairs(pairs, threads=threads)
+        fastp_metrics = self.run_fastp_pairs(pairs, threads=eff_threads)
 
         print("=== STAGE 6: STAR GENOME INDEXING ===")
-        star_index_metrics = self.build_star_index(threads=threads)
+        star_index_metrics = self.build_star_index(threads=eff_threads)
 
         print("=== STAGE 7: STAR ALIGNMENT & BAM INDEXING ===")
-        alignment_metrics = self.align_libraries_star_pairs(pairs, threads=threads)
+        alignment_metrics = self.align_libraries_star_pairs(pairs, threads=eff_threads)
 
         print("=== STAGE 8: RSeQC STRANDEDNESS INFERENCE ===")
         strandedness_metrics = self.run_rseqc_strandedness_pairs(pairs)
@@ -674,7 +739,8 @@ class QuantificationBridgePipeline:
 
         return "STRANDEDNESS_EVIDENCE_PRODUCED"
 
-    def run_through_strandedness_gate(self, threads: int = 16) -> str:
+    def run_through_strandedness_gate(self, threads: int | None = None) -> str:
+        eff_threads = threads if threads is not None else self.profile.threads
         """Run entire upstream bridge through the strandedness evidence gate and STOP."""
         print("=== STAGE 1: ENVIRONMENT AUDIT ===")
         env_metrics = self.record_environment_metrics()
@@ -692,13 +758,13 @@ class QuantificationBridgePipeline:
         pairing_metrics = self.validate_paired_fastqs_all()
 
         print("=== STAGE 6: TREATMENT-BLIND FASTP PREPROCESSING ===")
-        fastp_metrics = self.run_fastp_all(threads=threads)
+        fastp_metrics = self.run_fastp_all(threads=eff_threads)
 
         print("=== STAGE 7: STAR GENOME INDEXING ===")
-        star_index_metrics = self.build_star_index(threads=threads)
+        star_index_metrics = self.build_star_index(threads=eff_threads)
 
         print("=== STAGE 8: STAR ALIGNMENT & BAM INDEXING ===")
-        alignment_metrics = self.align_12_libraries_star(threads=threads)
+        alignment_metrics = self.align_12_libraries_star(threads=eff_threads)
 
         print("=== STAGE 9: RSeQC STRANDEDNESS INFERENCE ===")
         strandedness_metrics = self.run_rseqc_strandedness_diagnostics()

@@ -1,11 +1,17 @@
-"""STAR 2.7.11b index generation and alignment wrapper."""
+"""STAR 2.7.11b index generation and alignment wrapper.
+
+Supports configurable execution profiles:
+- Canonical dense indexing (sparseD 1) for HPC and large servers.
+- Memory-bounded sparse indexing (sparseD 2 or sparseD 4) for workstations and evaluation laptops.
+- Native or external streaming coordinate sorting (samtools sort).
+"""
 
 import json
+import os
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 from typing import Any
-
 
 from .env_exec import run_wsl, to_wsl_path
 
@@ -16,6 +22,8 @@ def build_star_index(
     index_dir: str | Path,
     sjdb_overhang: int = 149,
     threads: int = 8,
+    sparse_d: int = 1,
+    limit_ram: int | None = None,
 ) -> dict[str, Any]:
     """Generate STAR genome index using Ensembl GRCh38 primary assembly FASTA and GTF."""
     f_p = Path(fasta_path).resolve()
@@ -31,7 +39,6 @@ def build_star_index(
     actual_fasta = wsl_fasta
     if wsl_fasta.endswith(".gz"):
         uncompressed = wsl_fasta[:-3]
-        # Check if uncompressed already exists
         check_res = run_wsl(f"test -f {uncompressed} && echo 'exists'")
         if "exists" not in check_res.stdout:
             print(f"Decompressing {wsl_fasta} to {uncompressed} for STAR...")
@@ -53,8 +60,11 @@ def build_star_index(
         f"--genomeFastaFiles {actual_fasta} "
         f"--sjdbGTFfile {actual_gtf} "
         f"--sjdbOverhang {sjdb_overhang} "
+        f"--genomeSAsparseD {sparse_d} "
         f"--runThreadN {threads}"
     )
+    if limit_ram is not None and limit_ram > 0:
+        cmd += f" --limitGenomeGenerateRAM {limit_ram}"
 
     print(f"Executing STAR genomeGenerate:\n{cmd}")
     res = run_wsl(cmd)
@@ -68,6 +78,8 @@ def build_star_index(
         "gtf_source": str(g_p),
         "sjdb_overhang": sjdb_overhang,
         "threads": threads,
+        "genome_sa_sparse_d": sparse_d,
+        "limit_genome_generate_ram": limit_ram,
     }
 
 
@@ -100,8 +112,12 @@ def align_reads_star(
     index_dir: str | Path,
     output_prefix: str | Path,
     threads: int = 8,
+    bam_sort_mode: str = "SortedByCoordinate",
+    limit_bam_sort_ram: int = 0,
+    external_sort: bool = False,
+    samtools_sort_mem: str = "1G",
 ) -> dict[str, Any]:
-    """Execute governed STAR paired-end alignment."""
+    """Execute governed STAR paired-end alignment with configurable sorting."""
     r1_p = Path(trimmed_r1).resolve()
     r2_p = Path(trimmed_r2).resolve()
     idx_p = Path(index_dir).resolve()
@@ -113,13 +129,16 @@ def align_reads_star(
     wsl_idx = to_wsl_path(idx_p)
     wsl_out = to_wsl_path(out_prefix_p)
 
+    # Determine internal STAR sort mode
+    star_sam_type = "BAM Unsorted" if external_sort else f"BAM {bam_sort_mode}"
+
     cmd = (
         f"STAR --runMode alignReads "
         f"--genomeDir {wsl_idx} "
         f"--readFilesIn {wsl_r1} {wsl_r2} "
         f"--readFilesCommand zcat "
         f"--outFileNamePrefix {wsl_out} "
-        f"--outSAMtype BAM SortedByCoordinate "
+        f"--outSAMtype {star_sam_type} "
         f"--outSAMunmapped Within "
         f"--outSAMattributes NH HI AS nM NM MD jM jI MC ch "
         f"--outFilterType BySJout "
@@ -133,23 +152,40 @@ def align_reads_star(
         f"--alignMatesGapMax 1000000 "
         f"--runThreadN {threads}"
     )
+    if limit_bam_sort_ram > 0 and not external_sort:
+        cmd += f" --limitBAMsortRAM {limit_bam_sort_ram}"
 
     print(f"Executing STAR alignReads:\n{cmd}")
     res = run_wsl(cmd)
     if res.returncode != 0:
         raise RuntimeError(f"STAR alignment failed (code {res.returncode}):\n{res.stderr}\n{res.stdout}")
 
-    bam_path = Path(f"{out_prefix_p}Aligned.sortedByCoord.out.bam")
+    final_bam_path = Path(f"{out_prefix_p}Aligned.sortedByCoord.out.bam")
     log_final = Path(f"{out_prefix_p}Log.final.out")
 
-    if not bam_path.exists():
-        raise FileNotFoundError(f"Expected STAR sorted BAM not found: {bam_path}")
+    if external_sort:
+        unsorted_bam = Path(f"{out_prefix_p}Aligned.out.bam")
+        if not unsorted_bam.exists():
+            raise FileNotFoundError(f"Expected STAR unsorted BAM not found: {unsorted_bam}")
+
+        wsl_unsorted = to_wsl_path(unsorted_bam)
+        wsl_sorted = to_wsl_path(final_bam_path)
+        sort_threads = min(threads, 4)
+        print(f"Running external samtools coordinate sort: {unsorted_bam} -> {final_bam_path}...")
+        sort_cmd = f"samtools sort -@ {sort_threads} -m {samtools_sort_mem} -o {wsl_sorted} {wsl_unsorted} && rm -f {wsl_unsorted}"
+        s_res = run_wsl(sort_cmd)
+        if s_res.returncode != 0:
+            raise RuntimeError(f"External samtools sort failed (code {s_res.returncode}):\n{s_res.stderr}")
+
+    if not final_bam_path.exists():
+        raise FileNotFoundError(f"Expected STAR sorted BAM not found: {final_bam_path}")
 
     metrics = parse_star_final_log(log_final) if log_final.exists() else {}
 
     return {
         "status": "ALIGNMENT_SUCCESS",
-        "bam_path": str(bam_path),
+        "bam_path": str(final_bam_path),
         "log_final_path": str(log_final),
         "metrics": metrics,
+        "external_sort_applied": external_sort,
     }

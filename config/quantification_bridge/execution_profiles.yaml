@@ -1,0 +1,156 @@
+# DNT Organoid AI - Quantification Bridge Execution Profiles
+# Portable computing environment specifications for institutional evaluation
+# Version: 1.0.0
+
+version: "1.0.0"
+
+# Authoritative reference workflow definition
+reference_workflow:
+  aligner: "STAR"
+  aligner_version: "2.7.11b"
+  preprocessor: "fastp"
+  preprocessor_version: "0.23.4"
+  quantifier: "featureCounts"
+  quantifier_version: "v2.0.6"
+  sorter: "samtools"
+  sorter_version: "1.19.2"
+  strandedness_checker: "infer_experiment.py"
+  strandedness_checker_version: "5.0.2"
+  reference_genome_assembly: "GRCh38.p14"
+  reference_annotation_release: "Ensembl 112"
+
+# Supported computing profiles
+profiles:
+  institutional_hpc:
+    display_name: "Institutional HPC / Server (Canonical Reference Standard)"
+    description: "High-performance institutional servers, SLURM/PBS compute clusters, or cloud VMs (AWS/GCP: 64+ GB RAM, 16+ cores). Canonical gold-standard dense STAR alignment."
+    hardware_minimum:
+      physical_ram_gb: 64.0
+      cpu_cores: 16
+      storage_gb: 500.0
+    star:
+      genome_sa_sparse_d: 1
+      limit_genome_generate_ram: 34000000000
+      bam_sort_mode: "SortedByCoordinate"
+      limit_bam_sort_ram: 10000000000
+      threads: 16
+    samtools:
+      external_sort_enabled: false
+      sort_mem_per_thread: "2G"
+    qc_policy:
+      enforce_strict_rejection: false
+    reproducibility:
+      tier: "canonical_reference"
+      deterministic_tie_breaking: true
+
+  workstation_standard:
+    display_name: "Laboratory Workstation (Standard Dedicated Node)"
+    description: "Dedicated laboratory workstations or mid-tier compute nodes (32-64 GB RAM, 8-16 cores). Moderate sparse index (sparseD 2) with bounded coordinate sorting."
+    hardware_minimum:
+      physical_ram_gb: 32.0
+      cpu_cores: 8
+      storage_gb: 250.0
+    star:
+      genome_sa_sparse_d: 2
+      limit_genome_generate_ram: 24000000000
+      bam_sort_mode: "SortedByCoordinate"
+      limit_bam_sort_ram: 5000000000
+      threads: 8
+    samtools:
+      external_sort_enabled: false
+      sort_mem_per_thread: "1G"
+    qc_policy:
+      enforce_strict_rejection: false
+    reproducibility:
+      tier: "high_concordance_workstation"
+      deterministic_tie_breaking: true
+
+  workstation_evaluation:
+    display_name: "Evaluation Workstation / Local Machine"
+    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4) + samtools streaming."
+    hardware_minimum:
+      physical_ram_gb: 11.5
+      cpu_cores: 4
+      storage_gb: 100.0
+    star:
+      genome_sa_sparse_d: 4
+      limit_genome_generate_ram: 18000000000
+      bam_sort_mode: "Unsorted"
+      limit_bam_sort_ram: 0
+      threads: 4
+    samtools:
+      external_sort_enabled: true
+      sort_mem_per_thread: "1G"
+    qc_policy:
+      enforce_strict_rejection: false
+    reproducibility:
+      tier: "benchmarked_sparse_evaluation"
+      deterministic_tie_breaking: true
+
+# Quality Control Thresholds and Diagnostic Policies
+# Clearly distinguishes fatal pipeline blockers from advisory biological warnings
+qc_thresholds:
+  fatal:
+    empty_fastq_bytes: 0
+    zero_mapped_reads: 0
+    corrupt_bam_integrity: true
+    missing_reference_annotation: true
+    mixed_strandedness_in_study: true
+  warnings:
+    fastp_min_q30_bases_fraction: 0.85
+    fastp_min_read_survival_fraction: 0.90
+    fastp_max_adapter_fraction: 0.001
+    star_min_unique_mapping_fraction: 0.75
+    star_max_multimapping_fraction: 0.15
+    star_max_unmapped_fraction: 0.10
+    star_max_mismatch_rate: 0.010
+    star_min_annotated_junction_fraction: 0.80
+    rseqc_min_strand_specificity_fraction: 0.85
+    featurecounts_min_assigned_fraction: 0.60
+    replicate_min_spearman_rho: 0.90
+
+# Empirical Benchmarking Requirements for Non-Dense STAR Profiles
+sparse_star_benchmarking_plan:
+  benchmark_cohort: "PRJNA802072_pilot_day28"
+  reference_profile: "institutional_hpc"
+  evaluation_profiles: ["workstation_standard", "workstation_evaluation"]
+  concordance_thresholds:
+    unique_mapping_r2: 0.99
+    gene_count_pearson_r: 0.99
+    gene_count_spearman_rho: 0.99
+    expression_strata_log2_difference_medians:
+      low_abundance_under_10_counts: 0.20
+      medium_abundance_10_to_500_counts: 0.10
+      high_abundance_above_500_counts: 0.05
+    differential_expression:
+      log2fc_pearson_r: 0.98
+      deg_jaccard_overlap_padj_05: 0.90
+      deg_jaccard_overlap_padj_01: 0.90
+
+# Reconciled Environment Software Inventory
+software_inventory:
+  fastp:
+    pinned_version: "0.23.4"
+    command: "fastp --version"
+    role: "adapter trimming and base quality filtering"
+  STAR:
+    pinned_version: "2.7.11b"
+    command: "STAR --version"
+    role: "splice-aware genomic alignment"
+  featureCounts:
+    pinned_version: "v2.0.6"
+    command: "featureCounts -v"
+    role: "exonic gene-level read summarization"
+  samtools:
+    pinned_version: "1.19.2"
+    command: "samtools --version"
+    role: "BAM coordinate sorting and index generation"
+  infer_experiment:
+    pinned_version: "5.0.2"
+    command: "infer_experiment.py --version"
+    note: "RSeQC v5.0.3 conda package contains script version 5.0.2"
+    role: "empirical strandedness diagnostics"
+  fasterq_dump:
+    pinned_version: "3.1.1"
+    command: "fasterq-dump --version"
+    role: "SRA archive extraction with scratch disk governance"
