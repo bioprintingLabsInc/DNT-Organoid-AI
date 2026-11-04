@@ -1,0 +1,1955 @@
+[
+  {
+    "geo_accession": "GSE175272",
+    "gsm_accessions": [
+      "GSM5331206",
+      "GSM5331204",
+      "GSM5331205"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "TF ChIP-seq from brain (ENCSR467EQP)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175272"
+    ],
+    "relevant_methods_or_supplementary": "CTCF ChIP-seq on brain female embryo (5 days)  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 3,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Other Non-Neural / Unspecified Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.013777+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175281",
+    "gsm_accessions": [
+      "GSM5331225",
+      "GSM5331226"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "total RNA-seq from excitatory neuron (ENCSR877FRY)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175281"
+    ],
+    "relevant_methods_or_supplementary": "pgp1_excitatory_cortical_neuron  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Other Non-Neural / Unspecified Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.014771+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175328",
+    "gsm_accessions": [
+      "GSM5331351",
+      "GSM5331348",
+      "GSM5331349",
+      "GSM5331350"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "TF ChIP-seq from brain (ENCSR930SOT)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175328"
+    ],
+    "relevant_methods_or_supplementary": "CTCF ChIP-seq on brain female embryo (5 days)  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Other Non-Neural / Unspecified Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.016779+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175555",
+    "gsm_accessions": [
+      "GSM5341646",
+      "GSM5341647"
+    ],
+    "sra_bioproject": "PRJNA732784",
+    "publication_title": "Integrative genome-wide analysis of dopaminergic neuron-specific PARIS expression dissects recognition of multiple PPAR-\u03b3 associated gene regulation (ChIP-Seq).",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175555"
+    ],
+    "relevant_methods_or_supplementary": "PURPOSE: The transcriptional repressor PARIS (ZNF746) was initially identified as a pathogenic co-substrate of PINK1 and parkin that leads to Parkinson\u2019s disease (PD) by disrupting mitochondrial biogenesis through PPAR\u03b3 coactivator -1\u03b1 (PGC-1\u03b1) suppression. Later, accumulation of PARIS in dopamine (DA) neurons that cause neurotoxicity has been studied widely and growing evidence has linked defecti",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.029720+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175679",
+    "gsm_accessions": [
+      "GSM5343759",
+      "GSM5343733",
+      "GSM5343736",
+      "GSM5343779",
+      "GSM5343782",
+      "GSM5343739",
+      "GSM5343776",
+      "GSM5343750",
+      "GSM5343756",
+      "GSM5343767",
+      "GSM5343773",
+      "GSM5343753",
+      "GSM5343770",
+      "GSM5343747",
+      "GSM5343771",
+      "GSM5343790",
+      "GSM5343731",
+      "GSM5343734",
+      "GSM5343791",
+      "GSM5343777",
+      "GSM5343774",
+      "GSM5343751",
+      "GSM5343768",
+      "GSM5343762",
+      "GSM5343754",
+      "GSM5343788",
+      "GSM5343742",
+      "GSM5343785",
+      "GSM5343765",
+      "GSM5343769",
+      "GSM5343749",
+      "GSM5343786",
+      "GSM5343789",
+      "GSM5343745",
+      "GSM5343746",
+      "GSM5343772",
+      "GSM5343792",
+      "GSM5343766",
+      "GSM5343748",
+      "GSM5343740",
+      "GSM5343743",
+      "GSM5343760",
+      "GSM5343763",
+      "GSM5343757",
+      "GSM5343787",
+      "GSM5343737",
+      "GSM5343741",
+      "GSM5343781",
+      "GSM5343780",
+      "GSM5343744",
+      "GSM5343784",
+      "GSM5343778",
+      "GSM5343758",
+      "GSM5343752",
+      "GSM5343783",
+      "GSM5343755",
+      "GSM5343775",
+      "GSM5343761",
+      "GSM5343764",
+      "GSM5343732",
+      "GSM5343735",
+      "GSM5343738"
+    ],
+    "sra_bioproject": "PRJNA733174",
+    "publication_title": "Distinct nuclear compartment-associated genome architecture in the developing mammalian brain",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175679"
+    ],
+    "relevant_methods_or_supplementary": "Nuclear compartments are thought to play a role in three-dimensional genome organization and gene expression. In mammalian brain, the architecture and dynamics of nuclear compartment-associated genome organization is not known. In this study, we developed Genome Organization using CUT and RUN Technology (GO-CaRT) to map genomic interactions with two nuclear compartments\u2014the nuclear lamina and nucl",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 62,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.038666+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing; Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175719",
+    "gsm_accessions": [
+      "GSM5345021",
+      "GSM5345018",
+      "GSM5345020",
+      "GSM5345022",
+      "GSM5345017",
+      "GSM5345019"
+    ],
+    "sra_bioproject": "PRJNA733340",
+    "publication_title": "Human cortical organoids with engineered microglia-like cells [scRNA-Seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175719"
+    ],
+    "relevant_methods_or_supplementary": "Microglia play vital roles in the emergence and preservation of a healthy brain microenvironment with their impaired functions highlighted in neurodevelopmental and neurodegenerative disorders. However, investigating the microglia function in health and disease states has been challenging due to the lack of easily accessible human models. Here, we develop a method to generate functional microglia ",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.046666+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175721",
+    "gsm_accessions": [
+      "GSM5345023",
+      "GSM5345024"
+    ],
+    "sra_bioproject": "PRJNA733341",
+    "publication_title": "Human cortical organoids with engineered microglia-like cells [CROP-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175721"
+    ],
+    "relevant_methods_or_supplementary": "Microglia play vital roles in the emergence and preservation of a healthy brain microenvironment with their impaired functions highlighted in neurodevelopmental and neurodegenerative disorders. However, investigating the microglia function in health and disease states has been challenging due to the lack of easily accessible human models. Here, we develop a method to generate functional microglia ",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.055873+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE175722",
+    "gsm_accessions": [
+      "GSM5345024",
+      "GSM5345019",
+      "GSM5345022",
+      "GSM5345020",
+      "GSM5345023",
+      "GSM5345021",
+      "GSM5345018",
+      "GSM5345017"
+    ],
+    "sra_bioproject": "PRJNA733337",
+    "publication_title": "Human cortical organoids with engineered microglia-like cells [scRNA-Seq]  Apr 05, 2024   pending   None",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE175722"
+    ],
+    "relevant_methods_or_supplementary": "This SuperSeries is composed of the SubSeries listed below.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 8,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.056891+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176160",
+    "gsm_accessions": [
+      "GSM5359135",
+      "GSM5359132",
+      "GSM5359136",
+      "GSM5359133",
+      "GSM5359134",
+      "GSM5359131"
+    ],
+    "sra_bioproject": "PRJNA735192",
+    "publication_title": "Primary cilia and SHH signaling impairments in human and mouse models of Parkinson\u2019s disease",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176160"
+    ],
+    "relevant_methods_or_supplementary": "Parkinson\u2019s disease (PD) as a progressive neurodegenerative disorder arises from multiple genetic and environmental factors. However, underlying pathological mechanisms remain poorly understood. Using multiplexed single-cell transcriptomics, we analyze human neural precursor cells (hNPCs) from sporadic PD (sPD) patients. Alterations in gene expression appear in pathways related to primary cilia (P",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.063886+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176627",
+    "gsm_accessions": [
+      "GSM5369696",
+      "GSM5369697",
+      "GSM5369694",
+      "GSM5369695",
+      "GSM5369692",
+      "GSM5369693"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Control Mint-ChIP-seq from brain (ENCSR106WDX)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176627"
+    ],
+    "relevant_methods_or_supplementary": "Control Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.064885+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176667",
+    "gsm_accessions": [
+      "GSM5369813",
+      "GSM5369810",
+      "GSM5369811",
+      "GSM5369808",
+      "GSM5369812",
+      "GSM5369809"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR019BOC)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176667"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.067530+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176706",
+    "gsm_accessions": [
+      "GSM5369912",
+      "GSM5369909",
+      "GSM5369907",
+      "GSM5369910",
+      "GSM5369911",
+      "GSM5369908"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR127HNP)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176706"
+    ],
+    "relevant_methods_or_supplementary": "H3K27me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.069621+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176723",
+    "gsm_accessions": [
+      "GSM5369944",
+      "GSM5369947",
+      "GSM5369942",
+      "GSM5369945",
+      "GSM5369943",
+      "GSM5369946"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR217AJC)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176723"
+    ],
+    "relevant_methods_or_supplementary": "H3K27ac Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.071623+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176760",
+    "gsm_accessions": [
+      "GSM5370031",
+      "GSM5370032",
+      "GSM5370029",
+      "GSM5370030",
+      "GSM5370027",
+      "GSM5370028"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR045KAM)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176760"
+    ],
+    "relevant_methods_or_supplementary": "H3K9me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.072517+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176764",
+    "gsm_accessions": [
+      "GSM5370039",
+      "GSM5370042",
+      "GSM5370040",
+      "GSM5370043",
+      "GSM5370041",
+      "GSM5370038"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Control Mint-ChIP-seq from brain (ENCSR141MUD)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176764"
+    ],
+    "relevant_methods_or_supplementary": "Control Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.074517+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176810",
+    "gsm_accessions": [
+      "GSM5370129",
+      "GSM5370132",
+      "GSM5370128",
+      "GSM5370131",
+      "GSM5370127",
+      "GSM5370130"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR236SCE)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176810"
+    ],
+    "relevant_methods_or_supplementary": "H3K36me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.076513+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176865",
+    "gsm_accessions": [
+      "GSM5370252",
+      "GSM5370247",
+      "GSM5370248",
+      "GSM5370250",
+      "GSM5370251",
+      "GSM5370249"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR246IBU)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176865"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.078517+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176908",
+    "gsm_accessions": [
+      "GSM5370339",
+      "GSM5370340",
+      "GSM5370336",
+      "GSM5370337",
+      "GSM5370338",
+      "GSM5370335"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR070JEZ)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176908"
+    ],
+    "relevant_methods_or_supplementary": "H3K27me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.079559+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176928",
+    "gsm_accessions": [
+      "GSM5370388",
+      "GSM5370386",
+      "GSM5370389",
+      "GSM5370387",
+      "GSM5370385",
+      "GSM5370384"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR073GDR)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176928"
+    ],
+    "relevant_methods_or_supplementary": "H3K36me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.081652+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE176933",
+    "gsm_accessions": [
+      "GSM5370403",
+      "GSM5370400",
+      "GSM5370401",
+      "GSM5370404",
+      "GSM5370399",
+      "GSM5370402"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR264ZTG)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176933"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.082564+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177009",
+    "gsm_accessions": [
+      "GSM5370552",
+      "GSM5370555",
+      "GSM5370550",
+      "GSM5370554",
+      "GSM5370553",
+      "GSM5370551"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR293ESL)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177009"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.084625+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177014",
+    "gsm_accessions": [
+      "GSM5370569",
+      "GSM5370564",
+      "GSM5370567",
+      "GSM5370568",
+      "GSM5370565",
+      "GSM5370566"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR098YKA)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177014"
+    ],
+    "relevant_methods_or_supplementary": "H3K9me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.086616+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177083",
+    "gsm_accessions": [
+      "GSM5373979",
+      "GSM5373982",
+      "GSM5373977",
+      "GSM5373980",
+      "GSM5373981",
+      "GSM5373978"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR300LXM)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177083"
+    ],
+    "relevant_methods_or_supplementary": "H3K36me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.087620+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177130",
+    "gsm_accessions": [
+      "GSM5374078",
+      "GSM5374076",
+      "GSM5374073",
+      "GSM5374077",
+      "GSM5374074",
+      "GSM5374075"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR408CSV)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177130"
+    ],
+    "relevant_methods_or_supplementary": "H3K27ac Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.089566+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177238",
+    "gsm_accessions": [
+      "GSM5374317",
+      "GSM5374320",
+      "GSM5374318",
+      "GSM5374321",
+      "GSM5374319",
+      "GSM5374316"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR534KYA)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177238"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me1 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.090576+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177260",
+    "gsm_accessions": [
+      "GSM5374375",
+      "GSM5374374",
+      "GSM5374373",
+      "GSM5374370",
+      "GSM5374371",
+      "GSM5374372"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR354QJC)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177260"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me1 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.092613+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177337",
+    "gsm_accessions": [
+      "GSM5374543",
+      "GSM5374544",
+      "GSM5374545",
+      "GSM5374542"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR370MOC)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177337"
+    ],
+    "relevant_methods_or_supplementary": "H3K36me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.094615+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177362",
+    "gsm_accessions": [
+      "GSM5374601",
+      "GSM5374599",
+      "GSM5374596",
+      "GSM5374600",
+      "GSM5374597",
+      "GSM5374598"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR564DHY)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177362"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.096227+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177389",
+    "gsm_accessions": [
+      "GSM5374654",
+      "GSM5374651",
+      "GSM5374652",
+      "GSM5374655",
+      "GSM5374653",
+      "GSM5374650"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR380GYY)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177389"
+    ],
+    "relevant_methods_or_supplementary": "H3K9me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.097106+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177393",
+    "gsm_accessions": [
+      "GSM5374667",
+      "GSM5374665",
+      "GSM5374668",
+      "GSM5374663",
+      "GSM5374666",
+      "GSM5374664"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Control Mint-ChIP-seq from brain (ENCSR577JQZ)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177393"
+    ],
+    "relevant_methods_or_supplementary": "Control Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.099215+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177411",
+    "gsm_accessions": [
+      "GSM5374706",
+      "GSM5374703",
+      "GSM5374707",
+      "GSM5374704",
+      "GSM5374705",
+      "GSM5374708"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR580KNF)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177411"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me1 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.101205+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177439",
+    "gsm_accessions": [
+      "GSM5374766",
+      "GSM5374763",
+      "GSM5374761",
+      "GSM5374764",
+      "GSM5374765",
+      "GSM5374762"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Control Mint-ChIP-seq from brain (ENCSR389BJR)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177439"
+    ],
+    "relevant_methods_or_supplementary": "Control Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.103109+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177521",
+    "gsm_accessions": [
+      "GSM5375188",
+      "GSM5375189",
+      "GSM5375187",
+      "GSM5375190"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR604UGI)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177521"
+    ],
+    "relevant_methods_or_supplementary": "H3K9me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.104111+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177700",
+    "gsm_accessions": [
+      "GSM5378713",
+      "GSM5378716",
+      "GSM5378714",
+      "GSM5378717",
+      "GSM5378715",
+      "GSM5378718"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR776FPA)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177700"
+    ],
+    "relevant_methods_or_supplementary": "H3K27ac Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.106214+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177702",
+    "gsm_accessions": [
+      "GSM5378724",
+      "GSM5378721",
+      "GSM5378722",
+      "GSM5378725",
+      "GSM5378726",
+      "GSM5378723"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR660QRP)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177702"
+    ],
+    "relevant_methods_or_supplementary": "H3K9me3 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.108211+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177793",
+    "gsm_accessions": [
+      "GSM5378923",
+      "GSM5378924"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR804EYS) [superseded by GSE333108]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177793"
+    ],
+    "relevant_methods_or_supplementary": "H3K27me3 Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.110207+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177854",
+    "gsm_accessions": [
+      "GSM5379053",
+      "GSM5379054",
+      "GSM5379050",
+      "GSM5379051",
+      "GSM5379055",
+      "GSM5379052"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Control Mint-ChIP-seq from brain (ENCSR824UQL)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177854"
+    ],
+    "relevant_methods_or_supplementary": "Control Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.111911+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE177925",
+    "gsm_accessions": [
+      "GSM5379270",
+      "GSM5379273",
+      "GSM5379271",
+      "GSM5379268",
+      "GSM5379272",
+      "GSM5379269"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR844OQI)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE177925"
+    ],
+    "relevant_methods_or_supplementary": "H3K4me1 Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.114031+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE178012",
+    "gsm_accessions": [
+      "GSM5379455",
+      "GSM5379458",
+      "GSM5379456",
+      "GSM5379454",
+      "GSM5379457",
+      "GSM5379453"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR978LBY)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178012"
+    ],
+    "relevant_methods_or_supplementary": "H3K27ac Mint-ChIP-seq on human PGP1 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.115924+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE178047",
+    "gsm_accessions": [
+      "GSM5379535",
+      "GSM5379532",
+      "GSM5379536",
+      "GSM5379533",
+      "GSM5379537",
+      "GSM5379534"
+    ],
+    "sra_bioproject": "PRJNA63443",
+    "publication_title": "Mint-ChIP-seq from brain (ENCSR988RUI)",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178047"
+    ],
+    "relevant_methods_or_supplementary": "H3K27ac Mint-ChIP-seq on human H9 derived brain organoid  For data usage terms and conditions, please refer to http://www.genome.gov/27528022 and http://www.genome.gov/Pages/Research/ENCODE/ENCODE_Data_Use_Policy_for_External_Users_03-07-14.pdf",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.117021+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE178646",
+    "gsm_accessions": [
+      "GSM5395222",
+      "GSM5395225",
+      "GSM5395219",
+      "GSM5395216",
+      "GSM5395217",
+      "GSM5395220",
+      "GSM5395224",
+      "GSM5395227",
+      "GSM5395223",
+      "GSM5395226",
+      "GSM5395221",
+      "GSM5395218"
+    ],
+    "sra_bioproject": "PRJNA739884",
+    "publication_title": "CRISPR gene editing and inducible pluripotent stem cell neuronal disease modelling for rare disease diagnosis: EMHM1 genetic variant analysis in Kleefstra Syndrome",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178646"
+    ],
+    "relevant_methods_or_supplementary": "Over 400 million people worldwide are living with a rare disease, with genetic variants determining 80% of cases. Next Generation Sequencing identifies potential disease causative genetic variants, however many of these are classified as variants of uncertain significance (VUS). Each VUS requires functional validation as pathogenic or benign in disease pathology in specialist laboratories creating",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 12,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.124923+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE178687",
+    "gsm_accessions": [
+      "GSM5396116",
+      "GSM5396113",
+      "GSM5396110",
+      "GSM5396107",
+      "GSM5396105",
+      "GSM5396111",
+      "GSM5396108",
+      "GSM5396119",
+      "GSM5396106",
+      "GSM5396114",
+      "GSM5396120",
+      "GSM5396117",
+      "GSM5396115",
+      "GSM5396118",
+      "GSM5396112",
+      "GSM5396109"
+    ],
+    "sra_bioproject": "PRJNA740014",
+    "publication_title": "RNAseq analysis of DPSC-derived neurons from Neurotypical control subjects and PWS subjects",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178687"
+    ],
+    "relevant_methods_or_supplementary": "A major challenge to the study and treatment of neurogenetic syndromes is the difficulty in gaining access to live neurons from individuals with these disorders. Although other sources of stem cells are currently available for differentiation into neurons, these can involve invasive procedures and be difficult or expensive to generate limiting their use on a broad scale, especially for rare syndro",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 16,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.131569+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE180122",
+    "gsm_accessions": [
+      "GSM5456197",
+      "GSM5456188",
+      "GSM5456191",
+      "GSM5456194",
+      "GSM5456189",
+      "GSM5456192",
+      "GSM5456195",
+      "GSM5456190",
+      "GSM5456196",
+      "GSM5456193"
+    ],
+    "sra_bioproject": "PRJNA747250",
+    "publication_title": "Single cell RNA-sequencing of long-term human control and C9ORF72 ALS/FTD patient-specific iPSC-derived cortical organoid slice cultures",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE180122"
+    ],
+    "relevant_methods_or_supplementary": "Single cell RNA sequencing data was collected from 150 day old human cortical organoid slice cultures grown at the air-liquid interface (ALI-COs) from control and ALS/FTD patient-specific induced pluripotent stem cell (iPSC) lines harbouring the C9ORF72 hexanucleotide repeat expansion mutation. Data collection included ALI-COs derived from the following iPSC lines: WTSli042-B (WTS42b) and A18945 (",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 10,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.135567+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE180452",
+    "gsm_accessions": [
+      "GSM5462978",
+      "GSM5462981",
+      "GSM5462979",
+      "GSM5462982",
+      "GSM5462977",
+      "GSM5462983",
+      "GSM5462980"
+    ],
+    "sra_bioproject": "PRJNA748358",
+    "publication_title": "Effect of epigenotoxic chemicals on transcriptomic profiles of human induced pluripotent stem cells [RNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE180452"
+    ],
+    "relevant_methods_or_supplementary": "We studied the effects of chemical exposure on global DNA methylation by using mCherry-methyl-CpG-binding domain (MBD)-nls human induced pluripotent stem cells (iPSCs). According to the fluorescent MBD parameters, we divided the effects of 135 chemical on global DNA methylation into 3 categories; reduction (hypomethylation), increase (hypermethylation) and little/no effect. We performed RNA-seq an",
+    "original_reported_values": {
+      "compounds": [
+        "Bisphenols (BPA/BPS)"
+      ],
+      "sample_count": 7,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.140561+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "INCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181015",
+    "gsm_accessions": [
+      "GSM3426570",
+      "GSM5900599",
+      "GSM3426567",
+      "GSM3426550",
+      "GSM5482051",
+      "GSM5482054",
+      "GSM3426547",
+      "GSM3426564",
+      "GSM5482048",
+      "GSM3426561",
+      "GSM3426558",
+      "GSM5482049",
+      "GSM3426559",
+      "GSM3426565",
+      "GSM3426562",
+      "GSM5482057",
+      "GSM3426556",
+      "GSM5900602",
+      "GSM3426553",
+      "GSM3426574",
+      "GSM3426554",
+      "GSM3426551",
+      "GSM3426573",
+      "GSM5900597",
+      "GSM3426560",
+      "GSM3426571",
+      "GSM5900600",
+      "GSM3426568",
+      "GSM3426548",
+      "GSM5482056",
+      "GSM3426557",
+      "GSM3426569",
+      "GSM3426552",
+      "GSM3426549",
+      "GSM5482055",
+      "GSM5482058",
+      "GSM3426572",
+      "GSM3426555",
+      "GSM5482047",
+      "GSM5482052",
+      "GSM5482050",
+      "GSM3426546",
+      "GSM5900598",
+      "GSM5482053",
+      "GSM5900601",
+      "GSM3426566",
+      "GSM3426563"
+    ],
+    "sra_bioproject": "PRJNA750414",
+    "publication_title": "ERK signalling orchestrates neural differentiation by promoting the polycomb repressive complex.",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181015"
+    ],
+    "relevant_methods_or_supplementary": "This SuperSeries is composed of the SubSeries listed below.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 47,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Differentiation Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.141574+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181144",
+    "gsm_accessions": [
+      "GSM5491564",
+      "GSM5491544",
+      "GSM5491541",
+      "GSM5491561",
+      "GSM5491555",
+      "GSM5491538",
+      "GSM5491552",
+      "GSM5491558",
+      "GSM5491559",
+      "GSM5491556",
+      "GSM5491553",
+      "GSM5491539",
+      "GSM5491550",
+      "GSM5491547",
+      "GSM5491554",
+      "GSM5491551",
+      "GSM5491562",
+      "GSM5491548",
+      "GSM5491565",
+      "GSM5491546",
+      "GSM5491545",
+      "GSM5491549",
+      "GSM5491542",
+      "GSM5491537",
+      "GSM5491563",
+      "GSM5491543",
+      "GSM5491560",
+      "GSM5491540",
+      "GSM5491557"
+    ],
+    "sra_bioproject": "PRJNA750790",
+    "publication_title": "MEOX2 homeobox gene promotes growth of malignant gliomas [RNA-Seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181144"
+    ],
+    "relevant_methods_or_supplementary": "Glioblastoma (GBM) is an aggressive tumor that frequently exhibits gain of chromosome 7, loss of chromosome 10 and aberrantly activated RTK signaling pathways. Here, we identify mesenchymal homeobox 2 (MEOX2) as a salient oncogenic transcription factor candidate with increased expression in GBMs. Our results suggest that MEOX2 can enhance ERK signaling through a feed-forward mechanism. We show tha",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 29,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Non-Neural Tissue / Cancer Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.144937+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181145",
+    "gsm_accessions": [
+      "GSM5491568",
+      "GSM5491571",
+      "GSM5491579",
+      "GSM5491582",
+      "GSM5491583",
+      "GSM5491580",
+      "GSM5491566",
+      "GSM5491577",
+      "GSM5491574",
+      "GSM5491578",
+      "GSM5491575",
+      "GSM5491581",
+      "GSM5491570",
+      "GSM5491576",
+      "GSM5491573",
+      "GSM5491569",
+      "GSM5491567",
+      "GSM5491572"
+    ],
+    "sra_bioproject": "PRJNA750789",
+    "publication_title": "MEOX2 homeobox gene promotes growth of malignant gliomas [ACT-Seq & CUT&TAG]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181145"
+    ],
+    "relevant_methods_or_supplementary": "Glioblastoma (GBM) is an aggressive tumor that frequently exhibits gain of chromosome 7, loss of chromosome 10 and aberrantly activated RTK signaling pathways. Here, we identify mesenchymal homeobox 2 (MEOX2) as a salient oncogenic transcription factor candidate with increased expression in GBMs. Our results suggest that MEOX2 can enhance ERK signaling through a feed-forward mechanism. We show tha",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 18,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Non-Neural Tissue / Cancer Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.148107+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Genome binding/occupancy profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181405",
+    "gsm_accessions": [
+      "GSM5501794",
+      "GSM5501780",
+      "GSM5501797",
+      "GSM5501791",
+      "GSM5501788",
+      "GSM5501789",
+      "GSM5501795",
+      "GSM5501786",
+      "GSM5501792",
+      "GSM5501783",
+      "GSM5501787",
+      "GSM5501784",
+      "GSM5501790",
+      "GSM5501781",
+      "GSM5501799",
+      "GSM5501796",
+      "GSM5501798",
+      "GSM5501793",
+      "GSM5501785",
+      "GSM5501782",
+      "GSM5501779"
+    ],
+    "sra_bioproject": "PRJNA751896",
+    "publication_title": "These data describe bulk RNAsequencing in wild-type cerbreal organoids sampled across a time series",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181405"
+    ],
+    "relevant_methods_or_supplementary": "Organoid transcriptomes were mapped onto brain development trajectories using bulk RNA sequencing (RNAseq) at seven successive developmental times from day-17 (2 weeks) today-158 (11 weeks)",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 21,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.150104+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181422",
+    "gsm_accessions": [
+      "GSM5502224",
+      "GSM5502221",
+      "GSM5502222",
+      "GSM5502225",
+      "GSM5502223",
+      "GSM5502220"
+    ],
+    "sra_bioproject": "PRJNA751930",
+    "publication_title": "SARS-CoV-2 Neurotropism and Single Cell Responses in Brain Organoids Containing Innately Developing Microglia",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181422"
+    ],
+    "relevant_methods_or_supplementary": "Here, we derive human brain organoids with innately developing microglia to investigate the cellular responses to SARS-CoV-2 infection on a single cell level. We find evidence of limited tropism to SARS-CoV-2 for all major cell types and observe extensive neuronal cell death that also include non-infected cells. Single cell transcriptome profiling reveals distinct responses in microglia and astroc",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.153112+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE181518",
+    "gsm_accessions": [
+      "GSM5504183",
+      "GSM5504180",
+      "GSM5504177",
+      "GSM5504181",
+      "GSM5504184",
+      "GSM7834764",
+      "GSM5504178",
+      "GSM5504179",
+      "GSM5504176",
+      "GSM5504175",
+      "GSM5504182",
+      "GSM7834765"
+    ],
+    "sra_bioproject": "PRJNA752347",
+    "publication_title": "Self-organizing Single-Rosette Brain Organoids (SOSRS) from Human Pluripotent Stem Cells",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181518"
+    ],
+    "relevant_methods_or_supplementary": "We report single-cell RNA-sequencing data characterizing the cell types and variability in self-organizing single rosette forebrain organoids differentiated for 1mo, 3mo, and 5mo with 4, 6, and 3 SOSRS used, respectively. The data shows increasing cellular diversity over differentiation time with a high degree of similarity in the cell diversity between SOSRS differentiated to the same timepoint.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 12,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Forebrain)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:49:14.155223+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  }
+]
