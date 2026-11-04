@@ -1,0 +1,2478 @@
+[
+  {
+    "geo_accession": "GSE231454",
+    "gsm_accessions": [
+      "GSM7286219",
+      "GSM7286222",
+      "GSM7286216",
+      "GSM7286208",
+      "GSM7286225",
+      "GSM8229343",
+      "GSM8229346",
+      "GSM7286217",
+      "GSM7286211",
+      "GSM7286214",
+      "GSM7286220",
+      "GSM7286223",
+      "GSM7286209",
+      "GSM8229347",
+      "GSM7286212",
+      "GSM7286206",
+      "GSM7286218",
+      "GSM7286215",
+      "GSM8229344",
+      "GSM7286221",
+      "GSM8229342",
+      "GSM7286207",
+      "GSM7286224",
+      "GSM8229345",
+      "GSM7286210",
+      "GSM7286213"
+    ],
+    "sra_bioproject": "PRJNA966086",
+    "publication_title": "Effect of TAC on human and mouse cells [RNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231454"
+    ],
+    "relevant_methods_or_supplementary": "Genome-wide transcriptomics were used to discover the MoA of the small-molecule TERT activator compound. We then performed gene expression profiling analysis using data obtained from RNA-seq.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 26,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.495476+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231546",
+    "gsm_accessions": [
+      "GSM7290638",
+      "GSM7290655",
+      "GSM7290635",
+      "GSM7290641",
+      "GSM7290647",
+      "GSM7290644",
+      "GSM7290650",
+      "GSM7290633",
+      "GSM7290653",
+      "GSM7290656",
+      "GSM7290642",
+      "GSM7290639",
+      "GSM7290648",
+      "GSM7290645",
+      "GSM7290651",
+      "GSM7290636",
+      "GSM7290634",
+      "GSM7290637",
+      "GSM7290657",
+      "GSM7290654",
+      "GSM7290643",
+      "GSM7290640",
+      "GSM7290646",
+      "GSM7290652",
+      "GSM7290649"
+    ],
+    "sra_bioproject": "PRJNA966891",
+    "publication_title": "ARID1B controls transcriptional programs of axon projection in an organoid model of the human corpus callosum",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231546"
+    ],
+    "relevant_methods_or_supplementary": "Human telencephalic organoids derived from iPSC lines: control and harboring heterozygous ARID1B mutations.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 25,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.497476+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231638",
+    "gsm_accessions": [
+      "GSM7295083",
+      "GSM7295080",
+      "GSM7295089",
+      "GSM7295086",
+      "GSM7295078",
+      "GSM7295081",
+      "GSM7295084",
+      "GSM7295087",
+      "GSM7295082",
+      "GSM7295079",
+      "GSM7295088",
+      "GSM7295085"
+    ],
+    "sra_bioproject": "PRJNA967217",
+    "publication_title": "Xenografted human iPSC-derived neurons with the familial Alzheimer\u2019s disease APPV717I mutation reveal dysregulated transcriptome signatures linked to synaptic function and implicate LINGO2 as a disease signaling mediator",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231638"
+    ],
+    "relevant_methods_or_supplementary": "Alzheimer\u2019s disease (AD) is the most common cause of dementia, and disease mechanisms are still not fully understood. Here, we explored pathological changes in human induced pluripotent stem cell (iPSC)-derived neurons carrying the familial AD APPV717I mutation after cell injection into the mouse forebrain. APPV717I mutant iPSCs and isogenic controls were differentiated into neurons revealing enha",
+    "original_reported_values": {
+      "compounds": [
+        "Neurodegenerative Protein Aggregates"
+      ],
+      "sample_count": 12,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.510446+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231639",
+    "gsm_accessions": [
+      "GSM7295098",
+      "GSM7295104",
+      "GSM7295107",
+      "GSM7295101",
+      "GSM7295090",
+      "GSM7295096",
+      "GSM7295093",
+      "GSM7295099",
+      "GSM7295105",
+      "GSM7295102",
+      "GSM7295091",
+      "GSM7295097",
+      "GSM7295094",
+      "GSM7295100",
+      "GSM7295106",
+      "GSM7295103",
+      "GSM7295092",
+      "GSM7295095"
+    ],
+    "sra_bioproject": "PRJNA967216",
+    "publication_title": "Xenografted human iPSC-derived neurons with the familial Alzheimer\u2019s disease APPV717I mutation reveal dysregulated transcriptome signatures linked to synaptic function and implicate LINGO2 as a disease signaling mediator",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231639"
+    ],
+    "relevant_methods_or_supplementary": "Alzheimer\u2019s disease (AD) is the most common cause of dementia, and disease mechanisms are still not fully understood. Here, we explored pathological changes in human induced pluripotent stem cell (iPSC)-derived neurons carrying the familial AD APPV717I mutation after cell injection into the mouse forebrain. APPV717I mutant iPSCs and isogenic controls were differentiated into neurons revealing enha",
+    "original_reported_values": {
+      "compounds": [
+        "Neurodegenerative Protein Aggregates"
+      ],
+      "sample_count": 18,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.520190+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231640",
+    "gsm_accessions": [
+      "GSM7295082",
+      "GSM7295085",
+      "GSM7295102",
+      "GSM7295105",
+      "GSM7295088",
+      "GSM7295091",
+      "GSM7295094",
+      "GSM7295100",
+      "GSM7295097",
+      "GSM7295083",
+      "GSM7295103",
+      "GSM7295080",
+      "GSM7295086",
+      "GSM7295089",
+      "GSM7295092",
+      "GSM7295106",
+      "GSM7295078",
+      "GSM7295095",
+      "GSM7295098",
+      "GSM7295101",
+      "GSM7295081",
+      "GSM7295084",
+      "GSM7295104",
+      "GSM7295107",
+      "GSM7295087",
+      "GSM7295099",
+      "GSM7295079",
+      "GSM7295093",
+      "GSM7295090",
+      "GSM7295096"
+    ],
+    "sra_bioproject": "PRJNA967214",
+    "publication_title": "Xenografted human iPSC-derived neurons with the familial Alzheimer\u2019s disease APPV717I mutation reveal dysregulated transcriptome signatures linked to synaptic function and implicate LINGO2 as a disease signaling mediator",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231640"
+    ],
+    "relevant_methods_or_supplementary": "This SuperSeries is composed of the SubSeries listed below.  Alzheimer\u2019s disease (AD) is the most common cause of dementia, and disease mechanisms are still not fully understood. Here, we explored pathological changes in human induced pluripotent stem cell (iPSC)-derived neurons carrying the familial AD APPV717I mutation after cell injection into the mouse forebrain. APPV717I mutant iPSCs and isog",
+    "original_reported_values": {
+      "compounds": [
+        "Neurodegenerative Protein Aggregates"
+      ],
+      "sample_count": 30,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.531689+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231847",
+    "gsm_accessions": [
+      "GSM7304987",
+      "GSM7304988",
+      "GSM7304986",
+      "GSM7304989"
+    ],
+    "sra_bioproject": "PRJNA968021",
+    "publication_title": "CTCF mutation at R567 causes developmental disorders by 3D genome rearrangement, premature exhaustion of stem cells and abnormal neurodevelopment [scRNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231847"
+    ],
+    "relevant_methods_or_supplementary": "In this study, we performed single RNA sequencing in 1-month and 2-month cortical organoids derived from wild-type and Ctcf heterozygous hESCs.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.533699+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE231982",
+    "gsm_accessions": [
+      "GSM7306999",
+      "GSM7307002",
+      "GSM7306996",
+      "GSM7306997",
+      "GSM7307000",
+      "GSM7307003",
+      "GSM7306995",
+      "GSM7306998",
+      "GSM7307001"
+    ],
+    "sra_bioproject": "PRJNA970350",
+    "publication_title": "Human-biased TMEM25 expression promotes expansion of neural progenitor cells to alter cortical structure in the developing brain",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE231982"
+    ],
+    "relevant_methods_or_supplementary": "TMEM25 can receive extracellular signals to expand bRGs, a process which occurs specifically in human cortical development To reveal the molecular mechanism by which TMEM25 regulates neurogenesis, we performed RNA-seq to examine the transcriptome changes after TMEM25 knockdown in human NPCs.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 9,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.535693+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232075",
+    "gsm_accessions": [
+      "GSM7311479",
+      "GSM7311476",
+      "GSM7311482",
+      "GSM7311474",
+      "GSM7311480",
+      "GSM7311477",
+      "GSM7311483",
+      "GSM7311475",
+      "GSM7311478",
+      "GSM7311484",
+      "GSM7311481"
+    ],
+    "sra_bioproject": "PRJNA970743",
+    "publication_title": "Analysis of circRNA expression in human neuronal differentiation.",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232075"
+    ],
+    "relevant_methods_or_supplementary": "Expression of circular RNA (circRNA) was profiled during neuronal differentiation of human neuroepithelial stem (NES) cells. From the same data, analysis of linear RNA expression was also performed.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 11,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human iPSC-derived Neurons",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.536691+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing; Non-coding RNA profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232079",
+    "gsm_accessions": [
+      "GSM7311578",
+      "GSM7311604",
+      "GSM7311584",
+      "GSM7311581",
+      "GSM7311601",
+      "GSM7311587",
+      "GSM7311593",
+      "GSM7311590",
+      "GSM7311596",
+      "GSM7311579",
+      "GSM7311599",
+      "GSM7311588",
+      "GSM7311602",
+      "GSM7311585",
+      "GSM7311594",
+      "GSM7311582",
+      "GSM7311591",
+      "GSM7311597",
+      "GSM7311577",
+      "GSM7311603",
+      "GSM7311600",
+      "GSM7311580",
+      "GSM7311586",
+      "GSM7311583",
+      "GSM7311589",
+      "GSM7311598",
+      "GSM7311595",
+      "GSM7311592"
+    ],
+    "sra_bioproject": "PRJNA970758",
+    "publication_title": "Targeting the Epigenome Reduces Keloid Fibroblast Cell Proliferation, Migration and Invasion",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232079"
+    ],
+    "relevant_methods_or_supplementary": "Keloids are pathological fibroproliferative scars resulting from abnormal collagen deposition within and beyond the margins of the initial cutaneous insult. Keloids negatively impact quality of life cosmetically and functionally and have unsatisfactory treatment modalities with adverse side effects and high reoccurrence rates. Recent studies indicate that epigenetic dysregulation is involved in th",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 28,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Differentiation Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.543700+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232218",
+    "gsm_accessions": [
+      "GSM7321026",
+      "GSM7321029",
+      "GSM7321032",
+      "GSM7321038",
+      "GSM7321035",
+      "GSM7321027",
+      "GSM7321024",
+      "GSM7321030",
+      "GSM7321036",
+      "GSM7321033",
+      "GSM7321028",
+      "GSM7321025",
+      "GSM7321031",
+      "GSM7321037",
+      "GSM7321034"
+    ],
+    "sra_bioproject": "PRJNA971229",
+    "publication_title": "A Shared Pathogenic Mechanism for Valproic Acid and SHROOM3 Knockout in a Brain Organoid Model of Neural Tube Defects",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232218"
+    ],
+    "relevant_methods_or_supplementary": "Neural tube defects (NTDs) including anencephaly and spina bifida are common major malformations of fetal development resulting from incomplete closure of the neural tube. These conditions lead to either universal death (anencephaly) or life-long severe complications (spina bifida). Despite hundreds of genetic mouse models having neural tube defect phenotypes, the genetics of human NTDs are poorly",
+    "original_reported_values": {
+      "compounds": [
+        "Valproic acid"
+      ],
+      "sample_count": 15,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.543700+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "INCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232462",
+    "gsm_accessions": [
+      "GSM7336787",
+      "GSM7336788"
+    ],
+    "sra_bioproject": "PRJNA972126",
+    "publication_title": "Rubella virus tropism and single cell responses in human primary tissue and microglia-containing organoids",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232462"
+    ],
+    "relevant_methods_or_supplementary": "scRNA-seq of rubella virus infected cortical organoids",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.543700+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232464",
+    "gsm_accessions": [
+      "GSM7336831",
+      "GSM7336832",
+      "GSM7336833",
+      "GSM7336830"
+    ],
+    "sra_bioproject": "PRJNA972263",
+    "publication_title": "Bioengineering of a human innervated cardiac muscle model",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232464"
+    ],
+    "relevant_methods_or_supplementary": "Cardiac autonomic neurons control cardiac contractility. Dysregulation of the autonomic nervous system can lead to sympathetic overdrive resulting in heart failure and an increased incidence of fatal arrhythmias. Here, we introduce innervated engineered human myocardium (iEHM), a novel model of neuro-cardiac junctions, constructed by fusion of a bioengineered neural organoid (BENO) patterned to au",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.559668+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232646",
+    "gsm_accessions": [
+      "GSM7360789",
+      "GSM7360792",
+      "GSM7360790",
+      "GSM7360787",
+      "GSM7360788",
+      "GSM7360791"
+    ],
+    "sra_bioproject": "PRJNA973093",
+    "publication_title": "Transcriptomic Characterization Reveals Disrupted Medium Spiny Neuron Trajectories in Huntington's Disease and Possible Therapeutic Avenues [bulk RNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232646"
+    ],
+    "relevant_methods_or_supplementary": "Huntington's Disease (HD) is a neurodegenerative disorder caused by an expansion of CAG repeats in exon 1 of the HTT gene, ultimately resulting in the generation of a mutant HTT (mHTT) protein. Although mHTT is expressed in various tissues, it significantly affects medium spiny neurons (MSNs) in the striatum, resulting in their loss and the subsequent motor function impairment found in HD. While H",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.559668+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232647",
+    "gsm_accessions": [
+      "GSM7360793",
+      "GSM7360796",
+      "GSM7360794",
+      "GSM7360797",
+      "GSM7360795",
+      "GSM7360798"
+    ],
+    "sra_bioproject": "PRJNA973092",
+    "publication_title": "Transcriptomic Characterization Reveals Disrupted Medium Spiny Neuron Trajectories in Huntington's Disease and Possible Therapeutic Avenues [Bulk RNA-seq treated with Cerulenin]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232647"
+    ],
+    "relevant_methods_or_supplementary": "Huntington's Disease (HD) is a neurodegenerative disorder caused by an expansion of CAG repeats in exon 1 of the HTT gene, ultimately resulting in the generation of a mutant HTT (mHTT) protein. Although mHTT is expressed in various tissues, it significantly affects medium spiny neurons (MSNs) in the striatum, resulting in their loss and the subsequent motor function impairment found in HD. While H",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.575742+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232648",
+    "gsm_accessions": [
+      "GSM7360800",
+      "GSM7360801",
+      "GSM7360799",
+      "GSM7360802"
+    ],
+    "sra_bioproject": "PRJNA973091",
+    "publication_title": "Transcriptomic Characterization Reveals Disrupted Medium Spiny Neuron Trajectories in Huntington's Disease and Possible Therapeutic Avenues [scRNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232648"
+    ],
+    "relevant_methods_or_supplementary": "Huntington's Disease (HD) is a neurodegenerative disorder caused by an expansion of CAG repeats in exon 1 of the HTT gene, ultimately resulting in the generation of a mutant HTT (mHTT) protein. Although mHTT is expressed in various tissues, it significantly affects medium spiny neurons (MSNs) in the striatum, resulting in their loss and the subsequent motor function impairment found in HD. While H",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.575742+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE232669",
+    "gsm_accessions": [
+      "GSM7371591",
+      "GSM7371588",
+      "GSM7371594",
+      "GSM7371600",
+      "GSM7371586",
+      "GSM7371597",
+      "GSM7371595",
+      "GSM7371592",
+      "GSM7371589",
+      "GSM7371601",
+      "GSM7371598",
+      "GSM7371590",
+      "GSM7371596",
+      "GSM7371593",
+      "GSM7371587",
+      "GSM7371585",
+      "GSM7371602",
+      "GSM7371599"
+    ],
+    "sra_bioproject": "PRJNA973551",
+    "publication_title": "Anti-asthma drug Montelukast induces autistic behaviors via disrupting neuronal retinoic acid signaling [RNA-seq and Ribo-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232669"
+    ],
+    "relevant_methods_or_supplementary": "Globally, autism spectrum disorder (ASD) affects approximately 1.0-2.5% of human newborns, with non-genetic risk factors estimated to contribute to over 50% ASD cases through yet elusive mechanisms. Montelukast (MTK), a leukotriene receptor antagonist and FDA-approved anti-asthma drug, was found to potently disrupt retinoic acid (RA) signaling, and substantially increase the risk of ASD in humans ",
+    "original_reported_values": {
+      "compounds": [
+        "Retinoic acid"
+      ],
+      "sample_count": 18,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.591948+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing; Other) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233228",
+    "gsm_accessions": [
+      "GSM7413258",
+      "GSM7413261",
+      "GSM7413278",
+      "GSM7413264",
+      "GSM7413267",
+      "GSM7413270",
+      "GSM7413276",
+      "GSM7413273",
+      "GSM7413259",
+      "GSM7413279",
+      "GSM7413262",
+      "GSM7413265",
+      "GSM7413257",
+      "GSM7413277",
+      "GSM7413280",
+      "GSM7413268",
+      "GSM7413260",
+      "GSM7413266",
+      "GSM7413271",
+      "GSM7413274",
+      "GSM7413263",
+      "GSM7413275",
+      "GSM7413269",
+      "GSM7413272"
+    ],
+    "sra_bioproject": "PRJNA975503",
+    "publication_title": "Gene expression profilings of neural progenitor cell derived from hiPSC with ROR2 knockdown",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233228"
+    ],
+    "relevant_methods_or_supplementary": "Human induced pluripotent stem cells (hiPSCs) have the ability to differentiate into a variety of cells and to self-renew in vitro. Because of these two characteristics, hiPSCs have been expected to provide new applications for regenerative medicine/cell therapy. Although various in vitro differentiation protocols have been developed for the efficient derivation of specific cell types, hiPSC lines",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 24,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Progenitor Cells (NPC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.591948+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by array) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233258",
+    "gsm_accessions": [
+      "GSM7416861",
+      "GSM7416858",
+      "GSM7416859",
+      "GSM7416856",
+      "GSM7416857",
+      "GSM7416860"
+    ],
+    "sra_bioproject": "PRJNA975577",
+    "publication_title": "Synapse related gene expression is downregulated in SPG7 patient induced pluripotent stem cell derived cortical neurons",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233258"
+    ],
+    "relevant_methods_or_supplementary": "To understand the disease mechanism of SPG7 hereditary spastic paraplegia, we generated and evaluated patient and control induced pluripotent stem cell derived cortical neurons. We then performed gene expression profiling analysis using data obtained from RNA-seq.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human iPSC-derived Neurons",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.591948+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233262",
+    "gsm_accessions": [
+      "GSM7417939",
+      "GSM7417922",
+      "GSM7417942",
+      "GSM7417979",
+      "GSM7417962",
+      "GSM7417965",
+      "GSM7417968",
+      "GSM7417931",
+      "GSM7417951",
+      "GSM7417905",
+      "GSM7417925",
+      "GSM7417928",
+      "GSM7417894",
+      "GSM7417948",
+      "GSM7417977",
+      "GSM7417897",
+      "GSM7417960",
+      "GSM7417980",
+      "GSM7417891",
+      "GSM7417954",
+      "GSM7417914",
+      "GSM7417957",
+      "GSM7417903",
+      "GSM7417917",
+      "GSM7417926",
+      "GSM7417911",
+      "GSM7417900",
+      "GSM7417940",
+      "GSM7417966",
+      "GSM7417920",
+      "GSM7417932",
+      "GSM7417943",
+      "GSM7417952",
+      "GSM7417906",
+      "GSM7417889",
+      "GSM7417909",
+      "GSM7417929",
+      "GSM7417946",
+      "GSM7417958",
+      "GSM7417921",
+      "GSM7417969",
+      "GSM7417961",
+      "GSM7417915",
+      "GSM7417955",
+      "GSM7417935",
+      "GSM7417918",
+      "GSM7417972",
+      "GSM7417938",
+      "GSM7417975",
+      "GSM7417907",
+      "GSM7417970",
+      "GSM7417944",
+      "GSM7417895",
+      "GSM7417964",
+      "GSM7417947",
+      "GSM7417898",
+      "GSM7417893",
+      "GSM7417976",
+      "GSM7417913",
+      "GSM7417950",
+      "GSM7417936",
+      "GSM7417890",
+      "GSM7417973",
+      "GSM7417910",
+      "GSM7417904",
+      "GSM7417924",
+      "GSM7417901",
+      "GSM7417933"
+    ],
+    "sra_bioproject": "PRJNA975583",
+    "publication_title": "Moderate intrinsic phenotypic alterations in C9orf72 ALS/FTD iPSC-microglia despite the presence of C9orf72 pathological features",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233262"
+    ],
+    "relevant_methods_or_supplementary": "To differentiate, characterize and examine intrinsic phenotypes of C9orf72 ALS/FTD patient-derived induced pluripotent stem cells into microglia (iPSC-MG). Moderate molecular and functional differences were observed in C9orf72 iPSC-MG mono-cultures despite the presence of C9orf72 pathological features.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 68,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Glial and Neuronal Co-culture",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.591948+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233332",
+    "gsm_accessions": [
+      "GSM7425735",
+      "GSM7425689",
+      "GSM7425715",
+      "GSM7425669",
+      "GSM7425732",
+      "GSM7425695",
+      "GSM7425712",
+      "GSM7425672",
+      "GSM7425709",
+      "GSM7425692",
+      "GSM7425744",
+      "GSM7425661",
+      "GSM7425678",
+      "GSM7425698",
+      "GSM7425675",
+      "GSM7425741",
+      "GSM7425658",
+      "GSM7425681",
+      "GSM7425738",
+      "GSM7425655",
+      "GSM7425707",
+      "GSM7425718",
+      "GSM7425721",
+      "GSM7425701",
+      "GSM7425704",
+      "GSM7425687",
+      "GSM7425667",
+      "GSM7425710",
+      "GSM7425684",
+      "GSM7425664",
+      "GSM7425747",
+      "GSM7425724",
+      "GSM7425690",
+      "GSM7425716",
+      "GSM7425670",
+      "GSM7425733",
+      "GSM7425730",
+      "GSM7425696",
+      "GSM7425713",
+      "GSM7425739",
+      "GSM7425693",
+      "GSM7425727",
+      "GSM7425673",
+      "GSM7425736",
+      "GSM7425725",
+      "GSM7425676",
+      "GSM7425659",
+      "GSM7425742",
+      "GSM7425705",
+      "GSM7425722",
+      "GSM7425656",
+      "GSM7425702",
+      "GSM7425719",
+      "GSM7425662",
+      "GSM7425653",
+      "GSM7425745",
+      "GSM7425699",
+      "GSM7425688",
+      "GSM7425679",
+      "GSM7425734",
+      "GSM7425668",
+      "GSM7425665",
+      "GSM7425731",
+      "GSM7425691",
+      "GSM7425748",
+      "GSM7425728",
+      "GSM7425671",
+      "GSM7425697",
+      "GSM7425682",
+      "GSM7425694",
+      "GSM7425677",
+      "GSM7425720",
+      "GSM7425657",
+      "GSM7425674",
+      "GSM7425717",
+      "GSM7425700",
+      "GSM7425654",
+      "GSM7425685",
+      "GSM7425726",
+      "GSM7425706",
+      "GSM7425711",
+      "GSM7425723",
+      "GSM7425686",
+      "GSM7425703",
+      "GSM7425749",
+      "GSM7425729",
+      "GSM7425708",
+      "GSM7425683",
+      "GSM7425714",
+      "GSM7425680",
+      "GSM7425740",
+      "GSM7425737",
+      "GSM7425660",
+      "GSM7425743",
+      "GSM7425666",
+      "GSM7425746",
+      "GSM7425663"
+    ],
+    "sra_bioproject": "PRJNA975950",
+    "publication_title": "Risk assessment of parabens in a transcriptomics-based in vitro system",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233332"
+    ],
+    "relevant_methods_or_supplementary": "Parabens have been used for decades as preservatives in food, drugs and cosmetics. The majority however, were banned in 2009 and 2014 leaving only methyl-, ethyl-, propyl-, and butyl-derivates available for subsequent use. Methyl- and propylparaben have been extensively tested in vivo, with no resulting evidence for developmental and reproductive toxicity (DART). In contrast, ethylparaben has not ",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 97,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.608690+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by array) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE23340",
+    "gsm_accessions": [
+      "GSM572779",
+      "GSM572782",
+      "GSM572785",
+      "GSM572771",
+      "GSM572768",
+      "GSM572770",
+      "GSM572784",
+      "GSM572767",
+      "GSM572773",
+      "GSM572776",
+      "GSM572775",
+      "GSM572778",
+      "GSM572769",
+      "GSM572781",
+      "GSM572772",
+      "GSM572780",
+      "GSM572774",
+      "GSM572777",
+      "GSM572783",
+      "GSM572766"
+    ],
+    "sra_bioproject": "PRJNA131477",
+    "publication_title": "Whole gene expression profiling: A study for analysing the gene expression of the retinal stem cells and the differentiated cells",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE23340"
+    ],
+    "relevant_methods_or_supplementary": "Comparitive analysis of the retinal stem/progentior cells derived from the ciliary and iris pigment epithelial cells and the subsequent differentiated cells derived from the stem/progenitor cells. Gene expression profiling has shown great promise in analysing the reprogramming pattern of the cells under various culture conditions, in this context we analysed the various differential gene expressio",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 20,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Spheroid / Assembloid)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.611701+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by array) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233460",
+    "gsm_accessions": [
+      "GSM7428935",
+      "GSM7428952",
+      "GSM7428929",
+      "GSM7428944",
+      "GSM7428932",
+      "GSM7428938",
+      "GSM7428941",
+      "GSM7428947",
+      "GSM7428930",
+      "GSM7428950",
+      "GSM7428933",
+      "GSM7428936",
+      "GSM7428942",
+      "GSM7428945",
+      "GSM7428939",
+      "GSM7428931",
+      "GSM7428934",
+      "GSM7428937",
+      "GSM7428940",
+      "GSM7428948",
+      "GSM7428943",
+      "GSM7428946",
+      "GSM7428951",
+      "GSM7428949"
+    ],
+    "sra_bioproject": "PRJNA976302",
+    "publication_title": "Neurodevelopmental Defects in Human Cortical Organoids with N-acetylneuraminic Acid Synthase Mutation",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233460"
+    ],
+    "relevant_methods_or_supplementary": "Biallelic genetic variants in N-acetylneuraminic acid synthase (NANS), a critical enzyme in endogenous sialic acid biosynthesis, are clinically associated with neurodevelopmental disorders. However, the mechanism underlying the neuropathological consequences has remained elusive. Here, we discovered that NANS mutation resulted in absence of both sialic acid and protein polysialylation in the corti",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 24,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.621214+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233567",
+    "gsm_accessions": [
+      "GSM7430627"
+    ],
+    "sra_bioproject": "PRJNA976668",
+    "publication_title": "Spatially and temporally distinct patterns of expression for VPS10P domain receptors in human cerebral organoids.",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233567"
+    ],
+    "relevant_methods_or_supplementary": "Vacuolar protein sorting 10 protein (VPS10P) domain receptors are a unique class of intracellular sorting receptors that emerge as major risk factors associated with psychiatric and neurodegenerative diseases, including bipolar disorders, autism, schizophrenia, as well as Alzheimer\u2019 disease and frontotemporal dementia. Yet, the lack of suitable experimental models to study receptor functions in th",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 1,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.632422+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233574",
+    "gsm_accessions": [
+      "GSM7430724",
+      "GSM7430704",
+      "GSM7430741",
+      "GSM7430721",
+      "GSM7430747",
+      "GSM7430701",
+      "GSM7430744",
+      "GSM7430727",
+      "GSM7430733",
+      "GSM7430713",
+      "GSM7430730",
+      "GSM7430710",
+      "GSM7430707",
+      "GSM8539229",
+      "GSM7430742",
+      "GSM8539226",
+      "GSM7430739",
+      "GSM7430699",
+      "GSM7430736",
+      "GSM7430705",
+      "GSM7430719",
+      "GSM7430702",
+      "GSM7430728",
+      "GSM7430716",
+      "GSM7430708",
+      "GSM7430745",
+      "GSM8539227",
+      "GSM7430722",
+      "GSM7430714",
+      "GSM7430731",
+      "GSM7430748",
+      "GSM7430711",
+      "GSM7430737",
+      "GSM7430734",
+      "GSM7430725",
+      "GSM7430723",
+      "GSM7430740",
+      "GSM7430720",
+      "GSM7430700",
+      "GSM7430717",
+      "GSM7430743",
+      "GSM7430697",
+      "GSM8539225",
+      "GSM7430729",
+      "GSM8539228",
+      "GSM7430746",
+      "GSM7430703",
+      "GSM7430726",
+      "GSM7430712",
+      "GSM7430718",
+      "GSM7430698",
+      "GSM7430732",
+      "GSM7430715",
+      "GSM7430709",
+      "GSM7430706",
+      "GSM7430738",
+      "GSM7430735"
+    ],
+    "sra_bioproject": "PRJNA976679",
+    "publication_title": "Generating human neural diversity with a multiplexed morphogen screen in organoids",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233574"
+    ],
+    "relevant_methods_or_supplementary": "Morphogens choreograph the generation of remarkable cellular diversity in the developing nervous system. Differen-tiation of stem cells toward particular neural cell fates in vitro often relies upon combinatorial modulation of these signaling pathways. However, the lack of a systematic approach to understand morphogen-directed differentiation has precluded the generation of many neural cell popula",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 57,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Other Non-Neural / Unspecified Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.639436+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233609",
+    "gsm_accessions": [
+      "GSM7431333",
+      "GSM7431330",
+      "GSM7431322",
+      "GSM7431342",
+      "GSM7431336",
+      "GSM7431339",
+      "GSM7431325",
+      "GSM7431328",
+      "GSM7431331",
+      "GSM7431323",
+      "GSM7431334",
+      "GSM7431343",
+      "GSM7431337",
+      "GSM7431332",
+      "GSM7431340",
+      "GSM7431326",
+      "GSM7431329",
+      "GSM7431335",
+      "GSM7431338",
+      "GSM7431341",
+      "GSM7431344",
+      "GSM7431327",
+      "GSM7431324",
+      "GSM7431321"
+    ],
+    "sra_bioproject": "PRJNA976747",
+    "publication_title": "Group 3 medulloblastomatranscriptional networks collapse under domain-specific EP300/CBP inhibition.",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233609"
+    ],
+    "relevant_methods_or_supplementary": "EP300 and CBP are paralogous, multidomain histone acetyltransferases (HATs) that regulate gene expression by binding to and acetylating diverse proteins. With widespread effects on gene regulation, these enzymes are attractive targets for therapeutic development. Discovery efforts for chemical inhibitors typically target protein domains that are amenable to probe binding. In some cases, probes hav",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 24,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Non-Neural Tissue / Cancer Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.649639+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE233651",
+    "gsm_accessions": [
+      "GSM7431945",
+      "GSM7431948",
+      "GSM7431949",
+      "GSM7431946",
+      "GSM7431950",
+      "GSM7431947"
+    ],
+    "sra_bioproject": "PRJNA977229",
+    "publication_title": "Amyloid precursor protein (APP) regulates gliogenesis and 2 neurogenesis of human neural stem cells by several signaling 3 pathways",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233651"
+    ],
+    "relevant_methods_or_supplementary": "we have evaluated the effects of APP overexpression in hNSCs at a global 16 level by a transcriptomic analysis using the massive RNA sequencing (RNA-seq) technology. Spe-17 cifically, we have focused on differentially expressed genes that are related to neuronal and glial 18 differentiation processes, as well as on groups of differentially expressed genes associated with dif-19 ferent signaling pa",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.652640+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234417",
+    "gsm_accessions": [
+      "GSM7467169",
+      "GSM7467166",
+      "GSM7467163",
+      "GSM7467172",
+      "GSM7467161",
+      "GSM7467158",
+      "GSM7467164",
+      "GSM7467170",
+      "GSM7467167",
+      "GSM7467159",
+      "GSM7467165",
+      "GSM7467162",
+      "GSM7467171",
+      "GSM7467173",
+      "GSM7467168",
+      "GSM7467160"
+    ],
+    "sra_bioproject": "PRJNA981207",
+    "publication_title": "cGAS/STING drives ageing-related inflammation and neurodegeneration I",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234417"
+    ],
+    "relevant_methods_or_supplementary": "Low-grade inflammation is a hallmark of old age and a central driver of ageing-associated impairment and disease. Multiple factors can contribute to ageing-associated inflammation, however the molecular pathways transducing aberrant inflammatory signalling and their impact in natural ageing remain poorly understood. Here we show that the cGAS-STING signalling pathway, mediating immune sensing of D",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 16,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.658691+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234659",
+    "gsm_accessions": [
+      "GSM7472928",
+      "GSM7472926",
+      "GSM7472927"
+    ],
+    "sra_bioproject": "PRJNA982711",
+    "publication_title": "Single cell transcriptomic expression profiling by single cell RNA sequencing for human induced pluripotent stem cells (iPSCs) derived cortical organoids",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234659"
+    ],
+    "relevant_methods_or_supplementary": "The pupose of this study is to explore the single cell transcriptome profiling changes of cortical organoids differentiated from POLG patient iPSCs compoared to control organoids.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 3,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.660688+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234689",
+    "gsm_accessions": [
+      "GSM7471590",
+      "GSM7473316",
+      "GSM7471596",
+      "GSM7473342",
+      "GSM7473302",
+      "GSM7473322",
+      "GSM7473339",
+      "GSM7471593",
+      "GSM7473299",
+      "GSM7473325",
+      "GSM7473319",
+      "GSM7471599",
+      "GSM7473331",
+      "GSM7473328",
+      "GSM7473305",
+      "GSM7473345",
+      "GSM7473334",
+      "GSM7471591",
+      "GSM7473308",
+      "GSM7471588",
+      "GSM7471602",
+      "GSM7471585",
+      "GSM7473317",
+      "GSM7473314",
+      "GSM7473326",
+      "GSM7471597",
+      "GSM7473323",
+      "GSM7473311",
+      "GSM7473337",
+      "GSM7471594",
+      "GSM7473303",
+      "GSM7473320",
+      "GSM7473300",
+      "GSM7473343",
+      "GSM7471600",
+      "GSM7473306",
+      "GSM7473340",
+      "GSM7473332",
+      "GSM7473312",
+      "GSM7471603",
+      "GSM7471586",
+      "GSM7473329",
+      "GSM7473309",
+      "GSM7471583",
+      "GSM7473315",
+      "GSM7473335",
+      "GSM7473341",
+      "GSM7473338",
+      "GSM7473318",
+      "GSM7473344",
+      "GSM7473307",
+      "GSM7471598",
+      "GSM7473298",
+      "GSM7471589",
+      "GSM7473304",
+      "GSM7473301",
+      "GSM7471601",
+      "GSM7473321",
+      "GSM7471587",
+      "GSM7471592",
+      "GSM7473313",
+      "GSM7473333",
+      "GSM7473310",
+      "GSM7473324",
+      "GSM7471584",
+      "GSM7473336",
+      "GSM7471595",
+      "GSM7473327",
+      "GSM7473330"
+    ],
+    "sra_bioproject": "PRJNA982754",
+    "publication_title": "A snoRNA\u2013tRNA modification network governs codon-biased cellular states",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234689"
+    ],
+    "relevant_methods_or_supplementary": "The dynamic balance between tRNA supply and codon usage demand is a fundamental principle in the cellular translation economy. However, the regulation and functional consequences of this balance remain unclear. Here, we use PARIS2 interactome capture, structure modeling, conservation analysis, RNA\u2013protein interaction analysis, and modification mapping to reveal the targets of hundreds of snoRNAs, ",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 69,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.660688+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Other; Expression profiling by high throughput sequencing; Non-coding RNA profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234766",
+    "gsm_accessions": [
+      "GSM7474348",
+      "GSM7474345",
+      "GSM7474351",
+      "GSM7474354",
+      "GSM7474357",
+      "GSM7474360",
+      "GSM7474343",
+      "GSM7474346",
+      "GSM7474349",
+      "GSM7474352",
+      "GSM7474358",
+      "GSM7474344",
+      "GSM7474355",
+      "GSM7474347",
+      "GSM7474350",
+      "GSM7474353",
+      "GSM7474359",
+      "GSM7474356"
+    ],
+    "sra_bioproject": "PRJNA982872",
+    "publication_title": "Reactive Oxygen Species Mediate Transcriptional Responses to Dopamine and Cocaine in Human Cerebral Organoids [Rudibaugh2022]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234766"
+    ],
+    "relevant_methods_or_supplementary": "Dopamine signaling in the adult ventral forebrain regulates behavior, stress response, and memory formation and in neurodevelopment regulates neural differentiation and cell migration. Excessive dopamine levels including due to cocaine use both in utero and in adults could lead to long-term adverse consequences. The mechanisms underlying both homeostatic and pathological changes remain unclear, pa",
+    "original_reported_values": {
+      "compounds": [
+        "Cocaine"
+      ],
+      "sample_count": 18,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Forebrain)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.660688+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "INCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234767",
+    "gsm_accessions": [
+      "GSM7474412",
+      "GSM7474415",
+      "GSM7474401",
+      "GSM7474404",
+      "GSM7474410",
+      "GSM7474398",
+      "GSM7474407",
+      "GSM7474413",
+      "GSM7474399",
+      "GSM7474402",
+      "GSM7474405",
+      "GSM7474400",
+      "GSM7474411",
+      "GSM7474414",
+      "GSM7474403",
+      "GSM7474408",
+      "GSM7474406",
+      "GSM7474409"
+    ],
+    "sra_bioproject": "PRJNA982876",
+    "publication_title": "Reactive Oxygen Species Mediate Transcriptional Responses to Dopamine and Cocaine in Human Cerebral Organoids [Rudibaugh2023]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234767"
+    ],
+    "relevant_methods_or_supplementary": "Dopamine signaling in the adult ventral forebrain regulates behavior, stress response, and memory formation and in neurodevelopment regulates neural differentiation and cell migration. Excessive dopamine levels including due to cocaine use both in utero and in adults could lead to long-term adverse consequences. The mechanisms underlying both homeostatic and pathological changes remain unclear, pa",
+    "original_reported_values": {
+      "compounds": [
+        "Cocaine"
+      ],
+      "sample_count": 18,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Forebrain)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.676682+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "INCLUDE",
+      "phase2_decision": "INCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE234795",
+    "gsm_accessions": [
+      "GSM7474881",
+      "GSM7474878",
+      "GSM7474884",
+      "GSM7474876",
+      "GSM7474887",
+      "GSM7474873",
+      "GSM7474885",
+      "GSM7474882",
+      "GSM7474879",
+      "GSM7474877",
+      "GSM7474874",
+      "GSM7474880",
+      "GSM7474886",
+      "GSM7474883",
+      "GSM7474872",
+      "GSM7474875"
+    ],
+    "sra_bioproject": "PRJNA983243",
+    "publication_title": "REST and Impaired Neural Stress Resistance in Bipolar Disorder",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234795"
+    ],
+    "relevant_methods_or_supplementary": "Neurodevelopmental changes and impaired stress resistance have been implicated in the pathogenesis of bipolar disorder (BD), but the underlying regulatory mechanisms are unresolved.  Here we describe a cerebral organoid model of BD that exhibits altered early neural development, elevated neural network activity, and a major shift in the transcriptome. These phenotypic changes were reproduced in ce",
+    "original_reported_values": {
+      "compounds": [
+        "Lithium"
+      ],
+      "sample_count": 16,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.676682+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE235040",
+    "gsm_accessions": [
+      "GSM7493582",
+      "GSM7493602",
+      "GSM7493599",
+      "GSM7493576",
+      "GSM7493579",
+      "GSM7493585",
+      "GSM7493605",
+      "GSM7493588",
+      "GSM7493591",
+      "GSM7493594",
+      "GSM7493577",
+      "GSM7493583",
+      "GSM7493597",
+      "GSM7493580",
+      "GSM7493600",
+      "GSM7493592",
+      "GSM7493603",
+      "GSM7493586",
+      "GSM7493589",
+      "GSM7493601",
+      "GSM7493578",
+      "GSM7493595",
+      "GSM7493598",
+      "GSM7493604",
+      "GSM7493593",
+      "GSM7493596",
+      "GSM7493581",
+      "GSM7493584",
+      "GSM7493587",
+      "GSM7493590"
+    ],
+    "sra_bioproject": "PRJNA984236",
+    "publication_title": "The effects of miR-22-3p on differentiation of human dental pulp stem cells into neural progenitor-like cells",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235040"
+    ],
+    "relevant_methods_or_supplementary": "To investigate the role of miR22-3p mimic and inhibitor on the differentiation of HDPSC into NPCs, we transfected the cells with the treatment and induced the neural differentiation within 24 hours. We then performed gene expression profiling analysis using data obtained from RNA-seq of 3 different treatments (mimic, inhibitor and control) at three time points (Days 1, 3, and 7).",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 30,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Progenitor Cells (NPC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.676682+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE235892",
+    "gsm_accessions": [
+      "GSM7511575",
+      "GSM7511569",
+      "GSM7511572",
+      "GSM7511558",
+      "GSM7511561",
+      "GSM7511564",
+      "GSM7511567",
+      "GSM7511573",
+      "GSM7511576",
+      "GSM7511570",
+      "GSM7511559",
+      "GSM7511562",
+      "GSM7511565",
+      "GSM7511568",
+      "GSM7511574",
+      "GSM7511571",
+      "GSM7511577",
+      "GSM7511566",
+      "GSM7511557",
+      "GSM7511560",
+      "GSM7511563"
+    ],
+    "sra_bioproject": "PRJNA987994",
+    "publication_title": "Global gene expression profiling of organoids with various morphologies generated in cerebral organoid differentiation",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235892"
+    ],
+    "relevant_methods_or_supplementary": "To characterize organoids with each type of morphology, we performed DNA microarray analysis to identify genes expressed predominantly in each type of organoids on day35 of cortical organoid differentiation protocol (SFBEq).",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 21,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.676682+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by array) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE235914",
+    "gsm_accessions": [
+      "GSM7511856",
+      "GSM7511857",
+      "GSM7511854",
+      "GSM7511851",
+      "GSM7511852",
+      "GSM7511855",
+      "GSM7511853",
+      "GSM7511850"
+    ],
+    "sra_bioproject": "PRJNA988028",
+    "publication_title": "Single nucleus RNA sequencing data of Lewy Body Dementia (LBD) brains",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE235914"
+    ],
+    "relevant_methods_or_supplementary": "Aggregated \u03b1-synuclein (\u03b1-SYN) proteins, encoded by the SNCA gene, are hallmarks of Lewy body disease (LBD), affecting multiple brain regions. However, the specific mechanisms underlying \u03b1-SYN pathology in cortical neurons, crucial for LBD-associated dementia, remain unclear. Here, we generated human cortical LBD models by differentiating induced pluripotent stem cells (iPSCs) from SNCA triplicati",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 8,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.692696+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE236002",
+    "gsm_accessions": [
+      "GSM7516668",
+      "GSM7516671",
+      "GSM7516660",
+      "GSM7516677",
+      "GSM7516674",
+      "GSM7516680",
+      "GSM7516666",
+      "GSM7516663",
+      "GSM7516669",
+      "GSM7516675",
+      "GSM7516672",
+      "GSM7516678",
+      "GSM7516658",
+      "GSM7516681",
+      "GSM7516661",
+      "GSM7516676",
+      "GSM7516673",
+      "GSM7516667",
+      "GSM7516659",
+      "GSM7516664",
+      "GSM7516670",
+      "GSM7516665",
+      "GSM7516662",
+      "GSM7516679"
+    ],
+    "sra_bioproject": "PRJNA988175",
+    "publication_title": "Single cell RNA sequencing data of SNCA triplication cortical organoids",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE236002"
+    ],
+    "relevant_methods_or_supplementary": "Aggregated \u03b1-synuclein (\u03b1-SYN) proteins, encoded by the SNCA gene, are hallmarks of Lewy body disease (LBD), affecting multiple brain regions. However, the specific mechanisms underlying \u03b1-SYN pathology in cortical neurons, crucial for LBD-associated dementia, remain unclear. Here, we generated human cortical LBD models by differentiating induced pluripotent stem cells (iPSCs) from SNCA triplicati",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 24,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Cerebral / Cortical)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.692696+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE236375",
+    "gsm_accessions": [
+      "GSM7528868",
+      "GSM7528863",
+      "GSM7528866",
+      "GSM7528869",
+      "GSM7528867",
+      "GSM7528870",
+      "GSM7528864",
+      "GSM7528865"
+    ],
+    "sra_bioproject": "PRJNA990721",
+    "publication_title": "Production of highly uniform midbrain organoids from human pluripotent stem cells",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE236375"
+    ],
+    "relevant_methods_or_supplementary": "Brain organoids have been considered as an advanced platform for in vitro disease modeling and drug screening, but numerous roadblocks exist, such as lack of large-scale production technology and lengthy protocols with multiple manipulation steps, impeding the industrial translation of brain organoid technology. Here we describe the high-speed and large-scale production of midbrain organoids using",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 8,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Midbrain)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.692696+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE236458",
+    "gsm_accessions": [
+      "GSM7548181",
+      "GSM7548178",
+      "GSM7548184",
+      "GSM7548176",
+      "GSM7548179",
+      "GSM7548182",
+      "GSM7548185",
+      "GSM7548180",
+      "GSM7548177",
+      "GSM7548186",
+      "GSM7548183",
+      "GSM7548175"
+    ],
+    "sra_bioproject": "PRJNA991423",
+    "publication_title": "Modeling early phenotypes of Parkinson\u2019s disease by age-induced midbrain-striatum assembloids [RNA-Seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE236458"
+    ],
+    "relevant_methods_or_supplementary": "Parkinson\u2019s disease, an aging-associated neurodegenerative disorder, is characterised by nigrostriatal pathway dysfunction caused by the gradual loss of dopaminergic neurons in the substantia nigra pars compacta of the midbrain. Human in vitro models are enabling the study of the dopaminergic neurons\u2019 loss, but not the dysregulation within the dopaminergic network in the nigrostriatal pathway. Add",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 12,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Spheroid / Assembloid)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.692696+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "INCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "REFERENCE_BASELINE_ATLAS"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE236595",
+    "gsm_accessions": [
+      "GSM7559501",
+      "GSM7559502",
+      "GSM7559499",
+      "GSM7559497",
+      "GSM7559500",
+      "GSM7559498"
+    ],
+    "sra_bioproject": "PRJNA991614",
+    "publication_title": "An antisense oligonucleotide-based strategy to ameliorate cognitive dysfunction in the 22q11.2 Deletion Syndrome [RNA-seq]",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE236595"
+    ],
+    "relevant_methods_or_supplementary": "Adults and children with the 22q11.2 Deletion Syndrome demonstrate cognitive, social and emotional impairments and high risk for schizophrenia. Work in mouse model of the 22q11.2 deletion provided compelling evidence for abnormal expression and processing of microRNAs. A major transcriptional effect of the microRNA dysregulation is up-regulation of Emc10, a component of the ER membrane complex, wh",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.711803+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE236646",
+    "gsm_accessions": [
+      "GSM7566939",
+      "GSM7566922",
+      "GSM7566919",
+      "GSM7566965",
+      "GSM7566962",
+      "GSM7566925",
+      "GSM7566945",
+      "GSM7566948",
+      "GSM7566931",
+      "GSM7566942",
+      "GSM7566968",
+      "GSM7566954",
+      "GSM7566928",
+      "GSM7566951",
+      "GSM7566957",
+      "GSM7566920",
+      "GSM7566940",
+      "GSM7566937",
+      "GSM7566934",
+      "GSM7566960",
+      "GSM7566949",
+      "GSM7566946",
+      "GSM7566966",
+      "GSM7566943",
+      "GSM7566963",
+      "GSM7566969",
+      "GSM7566935",
+      "GSM7566926",
+      "GSM7566932",
+      "GSM7566923",
+      "GSM7566921",
+      "GSM7566964",
+      "GSM7566938",
+      "GSM7566918",
+      "GSM7566955",
+      "GSM7566929",
+      "GSM7566941",
+      "GSM7566967",
+      "GSM7566930",
+      "GSM7566952",
+      "GSM7566927",
+      "GSM7566947",
+      "GSM7566944",
+      "GSM7566958",
+      "GSM7566950",
+      "GSM7566970",
+      "GSM7566924",
+      "GSM7566959",
+      "GSM7566953",
+      "GSM7566961",
+      "GSM7566956",
+      "GSM7566933",
+      "GSM7566936"
+    ],
+    "sra_bioproject": "PRJNA991956",
+    "publication_title": "RNA-Seq Time-Course Analysis of NPCs Transcriptome in Response to HSV-1 Infection",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE236646"
+    ],
+    "relevant_methods_or_supplementary": "The neurogenic niches within the central nervous system serve as essential reservoirs for neural precursor cells (NPCs), playing a crucial role in neurogenesis. However, these NPCs are particularly vulnerable to infection by the herpes simplex virus type 1 (HSV-1). In the present study, we investigated the changes in the transcriptome of NPCs in response to Herpes simplex virus 1 (HSV-1) infection",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 53,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.711803+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237013",
+    "gsm_accessions": [
+      "GSM7593015",
+      "GSM7593012",
+      "GSM7593009",
+      "GSM7592998",
+      "GSM7593024",
+      "GSM7593021",
+      "GSM7593001",
+      "GSM7593018",
+      "GSM7593027",
+      "GSM7593004",
+      "GSM7593007",
+      "GSM7592996",
+      "GSM7593010",
+      "GSM7593019",
+      "GSM7592999",
+      "GSM7593016",
+      "GSM7593025",
+      "GSM7593005",
+      "GSM7593013",
+      "GSM7593022",
+      "GSM7593002",
+      "GSM7593008",
+      "GSM7593011",
+      "GSM7593017",
+      "GSM7593014",
+      "GSM7593020",
+      "GSM7593006",
+      "GSM7593003",
+      "GSM7592997",
+      "GSM7593000",
+      "GSM7593026",
+      "GSM7593023"
+    ],
+    "sra_bioproject": "PRJNA993402",
+    "publication_title": "Mitochondria dysregulation contributes to secondary neurodegeneration progression post-contusion injury in human 3D in vitro triculture brain tissue model.",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237013"
+    ],
+    "relevant_methods_or_supplementary": "Traumatic Brain injury-induced disturbances in mitochondrial fission-and-fusion dynamics have been linked to the onset and propagation of neuroinflammation and neurodegeneration. However, cell-type-specific contributions and crosstalk between neurons, microglia, and astrocytes in mitochondria-driven neurodegeneration after brain injury remain undefined. We developed a human three-dimensional in vi",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 32,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Glial and Neuronal Co-culture",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.711803+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237133",
+    "gsm_accessions": [
+      "GSM7595894",
+      "GSM7595892",
+      "GSM7595893"
+    ],
+    "sra_bioproject": "PRJNA994028",
+    "publication_title": "Single cell profile of human iPSC-derived midbrain organoids from healthy individual, Parkinson disease patient harboring a Miro1R272Q mutation and its respective isogenic control",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237133"
+    ],
+    "relevant_methods_or_supplementary": "Midbrain organoids are 3D in vitro models, which represent the human midbrain and can be used as Parkinson's disease (PD) models. In the current study, we used  single cell RNA sequencing (scRNA-seq) to investigate the effect of a novel mutation in the RhoT1 gene (Miro1 R272Q) in the PD pathology, and how it affect the dopaminergic neuron population present in the model.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 3,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Brain Organoid (Midbrain)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.711803+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237165",
+    "gsm_accessions": [
+      "GSM7596344",
+      "GSM7596347",
+      "GSM7596350",
+      "GSM7596342",
+      "GSM7596345",
+      "GSM7596348",
+      "GSM7596343",
+      "GSM7596346",
+      "GSM7596349"
+    ],
+    "sra_bioproject": "PRJNA994099",
+    "publication_title": "Genomic and transcriptomic profiles underlying the effect of SETD1A disruption on human neurodevelopmental trajectories",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237165"
+    ],
+    "relevant_methods_or_supplementary": "To examine the transcriptomic alteration by SETD1A deficiency, combining CRISPR/CAS9 genome editing and 3-Dimentional Cell Culture technology, we generated organoid models of the developing human cerebral cortex derived from isogenic human induced pluripotent stem cells (hiPSCs) modified to carry a SETD1A LoF schizophrenia risk mutation. We then performed gene expression profiling analysis using d",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 9,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.711803+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237274",
+    "gsm_accessions": [
+      "GSM7598127",
+      "GSM7598126"
+    ],
+    "sra_bioproject": "PRJNA994509",
+    "publication_title": "Novel human pluripotent stem cell-derived hypothalamus organoids demonstrate cellular diversity",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237274"
+    ],
+    "relevant_methods_or_supplementary": "The hypothalamus is a region of the brain that plays an important role in regulating body functions and behaviors. There is a growing interest in human pluripotent stem cells (hPSCs) for modeling diseases that affect the hypothalamus. Here, we established an hPSC-derived hypothalamus organoid differentiation protocol to model the cellular diversity of this brain region. Using an hPSC line with a t",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 2,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human iPSC-derived Neurons",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.728009+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237396",
+    "gsm_accessions": [
+      "GSM7610843",
+      "GSM7610846",
+      "GSM7610847",
+      "GSM7610844",
+      "GSM7610842",
+      "GSM7610845"
+    ],
+    "sra_bioproject": "PRJNA994879",
+    "publication_title": "Neuronal differentiation requires BRAT1 complex to remove REST from chromatin",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237396"
+    ],
+    "relevant_methods_or_supplementary": "Repressor element-1 silencing transcription factor (REST) is required for the formation of mature neurons. REST dysregulation underlies a key mechanism of neurodegeneration associated with neurological disorders. However, the mechanisms leading to alterations of REST-mediated silencing of key neurogenesis genes are not known. Here, we show that BRCA1 Associated ATM Activator 1 (BRAT1), a gene link",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 6,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.731911+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE237855",
+    "gsm_accessions": [
+      "GSM7655367",
+      "GSM7655370",
+      "GSM7655373",
+      "GSM7655376",
+      "GSM7655374",
+      "GSM7655377",
+      "GSM7655371",
+      "GSM7655372",
+      "GSM7655369",
+      "GSM7655368",
+      "GSM7655375"
+    ],
+    "sra_bioproject": "PRJNA996942",
+    "publication_title": "Generation of advanced cerebellar organoids for neurogenesis and neuronal network development",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE237855"
+    ],
+    "relevant_methods_or_supplementary": "Neurons within the cerebellum form temporal-spatial connections through the cerebellum, and the entire brain. Organoid models provide an opportunity to model the early differentiation of the developing human cerebellum, which is difficult to study in vivo, and affords the opportunity to study neurodegenerative and neurodevelopmental diseases of the cerebellum. Previous cerebellar organoid models f",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 11,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Differentiation Model",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.731911+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE238005",
+    "gsm_accessions": [
+      "GSM7658024",
+      "GSM7658044",
+      "GSM7658041",
+      "GSM7658021",
+      "GSM7658038",
+      "GSM7658035",
+      "GSM7658036",
+      "GSM7658032",
+      "GSM7658039",
+      "GSM7658033",
+      "GSM7658019",
+      "GSM7658027",
+      "GSM7658047",
+      "GSM7658030",
+      "GSM7658034",
+      "GSM7658031",
+      "GSM7658025",
+      "GSM7658028",
+      "GSM7658022",
+      "GSM7658042",
+      "GSM7658046",
+      "GSM7658045",
+      "GSM7658023",
+      "GSM7658048",
+      "GSM7658043",
+      "GSM7658037",
+      "GSM7658040",
+      "GSM7658020",
+      "GSM7658026",
+      "GSM7658029"
+    ],
+    "sra_bioproject": "PRJNA997823",
+    "publication_title": "The C9ORF72 Repeat Epansion Impairs Neurodevelopment",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE238005"
+    ],
+    "relevant_methods_or_supplementary": "RNA sequencing analysis of human iPSC-derived neural stem cells generated from Control, C9ORF72 FTD/ALS, an isogenic control, and a C9ORF72 knockout line. The goal of this study is to determine the effects of the C9ORF72 repeat expansion on neural stem cell proliferation and differentiation.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 30,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.731911+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE238129",
+    "gsm_accessions": [
+      "GSM7659032",
+      "GSM7659029",
+      "GSM7659023",
+      "GSM7659026",
+      "GSM7659027",
+      "GSM7659030",
+      "GSM7659033",
+      "GSM7659028",
+      "GSM7659024",
+      "GSM7659025",
+      "GSM7659031",
+      "GSM7659034"
+    ],
+    "sra_bioproject": "PRJNA998006",
+    "publication_title": "Unveiling the effect of the Parkinson's disease related Miro1R272Q mutation in the transcriptome of human iPSC-derived dopaminergic neurons",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE238129"
+    ],
+    "relevant_methods_or_supplementary": "Over the past decade evidences have been pointing in a role of RhoT1 gene (Miro1) in Parkinson's disease (PD). Miro 1 is an important part of the motor/adaptor complex and an essencial regulator of mitochondrial transport and homeostasis in neurons. In fact, our group have identify a few PD patiens carrying heterozygous mutations in the RhoT1 gene. One specific mutation, Miro1 R272Q , seems to pla",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 12,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.731911+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE238140",
+    "gsm_accessions": [
+      "GSM7659280",
+      "GSM7659281",
+      "GSM7659279",
+      "GSM7659282"
+    ],
+    "sra_bioproject": "PRJNA998025",
+    "publication_title": "Single cell transcriptional profile of Zika-infected human primary fetal brain cells",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE238140"
+    ],
+    "relevant_methods_or_supplementary": "We used single cell RNA sequencing to evaluate the transcriptional response to Zika infection in human primary fetal brain tissue. Two separate isolates of Asian-lineage Zika virus were used to infect cells, and exogenous treatment with interferon-beta was used as a control.",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.748053+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "NEEDS_REVIEW",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  },
+  {
+    "geo_accession": "GSE238206",
+    "gsm_accessions": [
+      "GSM7660324",
+      "GSM7660325",
+      "GSM7660323",
+      "GSM7660326"
+    ],
+    "sra_bioproject": "PRJNA998373",
+    "publication_title": "Human iPSC-derived neural stem cells display a radial glia-like signature in vitro and favorable long-term safety in transplanted mice",
+    "doi_pmid": "NOT_REPORTED",
+    "source_urls": [
+      "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE238206"
+    ],
+    "relevant_methods_or_supplementary": "Human induced pluripotent stem cell-derived neural stem/progenitor cells (hiPSC-NSCs) are a promising source of cell therapy approaches to treat neurodegenerative and demyelinating disorders. Despite ongoing efforts to characterize hiPSC-derived cells in vitro and in vivo, we lack comprehensive genome- and transcriptome-wide studies addressing hiPSC-NSC identity and safety, which are critical for ",
+    "original_reported_values": {
+      "compounds": [],
+      "sample_count": 4,
+      "controls": 0,
+      "treatments": 0,
+      "model": "Human Neural Stem Cells (NSC)",
+      "modality": "Non-RNA / Other"
+    },
+    "verification_date": "2026-11-04T20:50:05.757554+00:00",
+    "review_status": "PHASE3_DEEP_VERIFIED",
+    "missing_or_conflicting_info": "NONE",
+    "previous_decisions": {
+      "phase1_decision": "EXCLUDE",
+      "phase2_decision": "EXCLUDE",
+      "phase2_category": "STANDARD_EXCLUSION"
+    },
+    "final_classification": "EXCLUDE",
+    "scientific_justification": "Excluded: Assay modality (Expression profiling by high throughput sequencing) is not high-throughput RNA sequencing (array or non-transcriptomic assay)."
+  }
+]
