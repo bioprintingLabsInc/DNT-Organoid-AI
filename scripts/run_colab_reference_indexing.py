@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any
 
@@ -36,7 +37,7 @@ from src.quantification_bridge.star_runner import build_star_index
 
 
 def verify_index_artifacts(index_dir: Path) -> dict[str, Any]:
-    """Verify presence and non-zero size of all required STAR index files."""
+    """Verify presence, non-zero size, and structural parameters of all required STAR index files."""
     required_files = [
         "Genome",
         "SA",
@@ -70,47 +71,94 @@ def verify_index_artifacts(index_dir: Path) -> dict[str, Any]:
                 "size_mb": round(sz / (1024**2), 2),
             }
 
+    # Parse parameters from genomeParameters.txt
+    params = {}
+    param_file = index_dir / "genomeParameters.txt"
+    if param_file.is_file():
+        for line in param_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+            parts = line.strip().split(maxsplit=1)
+            if len(parts) == 2:
+                params[parts[0]] = parts[1]
+
+    # Validate chromosome count
+    chr_names = []
+    chr_file = index_dir / "chrName.txt"
+    if chr_file.is_file():
+        chr_names = [l.strip() for l in chr_file.read_text(encoding="utf-8", errors="ignore").splitlines() if l.strip()]
+
+    is_valid = len(missing) == 0 and len(chr_names) > 0 and len(params) > 0
+
     return {
-        "is_complete": len(missing) == 0,
+        "is_complete": is_valid,
         "missing_files": missing,
         "total_index_bytes": total_bytes,
         "total_index_gb": round(total_bytes / (1024**3), 2),
         "file_details": file_details,
+        "chromosome_count": len(chr_names),
+        "genome_parameters": params,
+        "validation_type": "INDEX_STRUCTURAL_VALIDATION",
     }
 
 
 def lightweight_index_load_test(index_dir: Path, star_bin: str = "STAR") -> dict[str, Any]:
-    """Perform a dry-run in-memory load test of the generated STAR index without processing reads."""
-    # Run STAR with --genomeLoad LoadAndExit to verify suffix array and genome load into memory cleanly
-    cmd = [
-        star_bin,
-        "--runMode", "alignReads",
-        "--genomeDir", str(index_dir),
-        "--genomeLoad", "LoadAndExit",
-    ]
+    """Perform a process-level dry-run load test of the STAR index without using SysV shared memory.
 
-    print(f"\nExecuting lightweight in-memory index load test:\n{' '.join(cmd)}")
-    t0 = time.time()
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        load_time = time.time() - t0
-        success = res.returncode == 0 and "finished successfully" in (res.stdout + res.stderr).lower()
-        # Clean up shared memory if loaded
-        subprocess.run([star_bin, "--genomeDir", str(index_dir), "--genomeLoad", "Remove"], capture_output=True)
-
-        return {
-            "load_test_passed": success,
-            "exit_code": res.returncode,
-            "load_time_seconds": round(load_time, 2),
-            "stdout_tail": res.stdout[-500:] if res.stdout else "",
-            "stderr_tail": res.stderr[-500:] if res.stderr else "",
-        }
-    except Exception as e:
+    Uses --genomeLoad NoSharedMemory to avoid false rejections in containerized environments
+    (such as Google Colab or Docker) where kernel shared memory (/dev/shm, shmmax) is restricted.
+    Explicitly tests process address-space memory mapping of the genome and suffix arrays,
+    distinguishing index loading from full biological sequencing alignment.
+    """
+    star_resolved = shutil.which(star_bin)
+    if not star_resolved:
         return {
             "load_test_passed": False,
-            "error": str(e),
-            "load_time_seconds": round(time.time() - t0, 2),
+            "skipped": True,
+            "reason": f"STAR executable '{star_bin}' not found on PATH.",
+            "validation_type": "INDEX_LOAD_VALIDATION",
         }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        probe_fastq = tmp_path / "dnt_load_probe.fastq"
+        probe_fastq.write_text("@dnt_probe\nACGTACGT\n+\nIIIIIIII\n", encoding="utf-8")
+        out_prefix = str(tmp_path / "star_load_test_")
+
+        cmd = [
+            star_resolved,
+            "--runMode", "alignReads",
+            "--genomeDir", str(index_dir),
+            "--genomeLoad", "NoSharedMemory",  # immune to /dev/shm container restrictions
+            "--readFilesIn", str(probe_fastq),
+            "--outFileNamePrefix", out_prefix,
+            "--outSAMtype", "None",  # minimal disk I/O, purely verifies index loading into process memory
+            "--runThreadN", "2",
+        ]
+
+        print(f"\nExecuting process-level index load validation (NoSharedMemory):\n{' '.join(cmd)}")
+        t0 = time.time()
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            load_time = time.time() - t0
+            out_text = (res.stdout + res.stderr).lower()
+            success = res.returncode == 0 and ("finished successfully" in out_text or "all done" in out_text)
+
+            return {
+                "load_test_passed": success,
+                "exit_code": res.returncode,
+                "load_time_seconds": round(load_time, 2),
+                "index_load_mode": "NoSharedMemory",
+                "shared_memory_dependent": False,
+                "validation_type": "INDEX_LOAD_VALIDATION",
+                "stdout_tail": res.stdout[-400:] if res.stdout else "",
+                "stderr_tail": res.stderr[-400:] if res.stderr else "",
+            }
+        except Exception as e:
+            return {
+                "load_test_passed": False,
+                "error": str(e),
+                "load_time_seconds": round(time.time() - t0, 2),
+                "validation_type": "INDEX_LOAD_VALIDATION",
+            }
 
 
 def main():
@@ -152,6 +200,12 @@ def main():
         type=float,
         default=5000.0,
         help="Total Google Drive account capacity in GB (default: 5000.0 GB = 5 TB)",
+    )
+    parser.add_argument(
+        "--user-verified-account-free-gb",
+        type=float,
+        default=None,
+        help="User-verified Google Drive available account headroom in GB (confirmed via https://drive.google.com/drive/quota)",
     )
     parser.add_argument(
         "--use-archive",
@@ -200,25 +254,38 @@ def main():
     # 4. Check for Existing Verified Index in Persistent Storage (Archive or Directory)
     persistent_ref_dir = (args.persistent_dir / "references") if args.persistent_dir else None
     persistent_archive = (persistent_ref_dir / "star_index_GRCh38_112_dense.tar") if persistent_ref_dir else None
+    persistent_manifest = (persistent_ref_dir / "star_index_GRCh38_112_dense.tar.manifest.json") if persistent_ref_dir else None
     persistent_index_dir = (persistent_ref_dir / "star_index") if persistent_ref_dir else None
 
     if args.skip_if_already_verified and persistent_archive and persistent_archive.is_file():
-        print(f"\n[FOUND] Verified index archive detected on persistent store: {persistent_archive.name}")
-        print("Restoring and verifying index into local high-speed SSD (/content)...")
-        rest_res = restore_and_verify_archive(
-            archive_path=persistent_archive,
-            target_extract_dir=paths["star_index_dir"],
-        )
-        print(f"[RESTORED] Extracted and verified {rest_res['verified_files_count']} files in {rest_res['extract_seconds']}s.")
-        checkpoint_mgr.record_stage_completed(
-            "STAR_INDEX_RESTORED_FROM_PERSISTENT",
-            artifacts=[{"archive": str(persistent_archive), "extracted_to": str(paths["star_index_dir"])}],
-        )
-        print("\n" + "=" * 80)
-        print("REFERENCE INDEX READY (RESTORED FROM PERSISTENT STORE).")
-        print("MANDATORY SCIENTIFIC REVIEW GATE: Execution paused before FASTQ acquisition.")
-        print("=" * 80)
-        sys.exit(0)
+        if not persistent_manifest or not persistent_manifest.is_file():
+            print(f"\n[WARNING] Archive {persistent_archive.name} was found, but required companion manifest is MISSING!")
+            print("[SECURITY / INTEGRITY] Cannot treat unverified archive as valid. Will build fresh dense reference index.")
+        else:
+            print(f"\n[FOUND] Verified index archive and companion manifest detected on persistent store: {persistent_archive.name}")
+            print("Restoring and cryptographically verifying all constituent files against manifest...")
+            try:
+                rest_res = restore_and_verify_archive(
+                    archive_path=persistent_archive,
+                    target_extract_dir=paths["star_index_dir"],
+                    require_manifest=True,
+                )
+                print(f"[RESTORED] Extracted and verified {rest_res['verified_files_count']} files in {rest_res['extract_seconds']}s.")
+                checkpoint_mgr.record_stage_completed(
+                    "STAR_INDEX_RESTORED_FROM_PERSISTENT",
+                    artifacts=[{
+                        "archive": str(persistent_archive),
+                        "extracted_to": str(paths["star_index_dir"]),
+                        "files_verified": rest_res["verified_files_count"],
+                    }],
+                )
+                print("\n" + "=" * 80)
+                print("REFERENCE INDEX READY (RESTORED & VERIFIED FROM PERSISTENT STORE).")
+                print("MANDATORY SCIENTIFIC REVIEW GATE: Execution paused before FASTQ acquisition.")
+                print("=" * 80)
+                sys.exit(0)
+            except Exception as e:
+                print(f"[INTEGRITY ALERT] Restoration verification failed: {e}. Will build fresh dense index.")
     elif args.skip_if_already_verified and persistent_index_dir and persistent_index_dir.is_dir():
         print(f"\nChecking existing index directory in persistent store: {persistent_index_dir}...")
         p_eval = verify_index_artifacts(persistent_index_dir)
@@ -302,6 +369,7 @@ def main():
                 dst_dir=persistent_ref_dir,
                 archive_name="star_index_GRCh38_112_dense.tar",
                 safety_margin_gb=args.safety_margin_gb,
+                user_verified_account_free_gb=args.user_verified_account_free_gb,
                 account_quota_gb=args.account_quota_gb,
                 delete_source_after=False,  # Retain local copy on fast SSD for active alignment!
             )

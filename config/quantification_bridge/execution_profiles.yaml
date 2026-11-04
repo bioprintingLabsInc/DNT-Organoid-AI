@@ -92,13 +92,21 @@ profiles:
 
   workstation_evaluation:
     display_name: "Evaluation Workstation / Local Machine"
-    description: "Resource-constrained development laptops, institutional evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores). Decoupled sparse STAR (sparseD 4, nbases 12, 2 threads) + sequential samtools streaming."
+    description: >-
+      Resource-constrained development laptops, evaluation nodes, and WSL instances (12-16 GB RAM, 4-8 cores).
+      NOTE ON EMPIRICAL INDEXING BENCHMARK: Monitored testing on an 11.68 GB workstation (PID 625) proved that
+      human genome STAR index generation reaches 10.80 GB peak process RSS during suffix array packing, reducing
+      available physical RAM to 359.3 MB and triggering safety aborts. Therefore, reference genome indexing
+      is not feasible on 12-16 GB machines and requires an institutional server, cloud instance (e.g. colab_highmem),
+      or a dedicated workstation with >= 32 GB physical RAM. On 12-16 GB evaluation nodes, users can import a
+      pre-indexed verified archive from persistent storage. Read alignment on sufficiently equipped workstations
+      (>= 32 GB standard, or >= 16 GB with imported sparse index) remains supported.
     hardware_minimum:
       physical_ram_gb: 11.5
       cpu_cores: 2
       storage_gb: 70.0
       memory_headroom_minimum_gb: 0.5
-      estimated_peak_process_rss_gb: 10.47
+      estimated_peak_process_rss_gb: 10.80
     star:
       genome_sa_sparse_d: 4
       genome_sa_index_nbases: 12

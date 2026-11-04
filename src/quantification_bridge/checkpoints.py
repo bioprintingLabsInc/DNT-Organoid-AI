@@ -29,6 +29,16 @@ class InsufficientStorageCapacityError(StorageError):
     pass
 
 
+class UnverifiedStorageQuotaError(StorageError):
+    """Raised when destination is a Google Drive path and account-level quota cannot be verified."""
+    pass
+
+
+class ManifestVerificationError(StorageError):
+    """Raised when a companion archive manifest is missing, malformed, or incomplete."""
+    pass
+
+
 class ChecksumVerificationError(StorageError):
     """Raised when transferred file checksum does not match source checksum."""
     pass
@@ -43,13 +53,31 @@ def sha256_file(path: str | Path, chunk_size: int = 1024 * 1024) -> str:
     return hasher.hexdigest()
 
 
+def is_google_drive_path(p: Path) -> bool:
+    """Detect if path is a Google Drive mount point or subfolder."""
+    posix_str = p.as_posix().lower()
+    return "/content/drive" in posix_str or "drive/mydrive" in posix_str or "/gdrive" in posix_str
+
+
 def check_storage_capacity(
     target_path: str | Path,
     required_bytes: int,
     safety_margin_gb: float = 5.0,
+    user_verified_account_free_gb: float | None = None,
     account_quota_gb: float | None = None,
+    google_drive_service: Any = None,
 ) -> dict[str, Any]:
-    """Verify target storage filesystem has sufficient capacity before beginning a transfer."""
+    """Verify target storage filesystem has sufficient capacity before beginning a transfer.
+
+    For Google Drive FUSE destinations:
+    FUSE filesystem statistics (statvfs) report virtual disk metrics that do not establish
+    true account-level quota. Therefore, an account-level quota MUST be verified either:
+    1. Via authorized Google Drive API client (google_drive_service) querying about().get(fields='storageQuota').
+    2. Via explicit user confirmation of account headroom (user_verified_account_free_gb) verified at
+       https://drive.google.com/drive/quota.
+
+    Folder-based file scanning is strictly prohibited from being reported as verified account headroom.
+    """
     p = Path(target_path).resolve()
     # Find existing parent if path does not exist yet
     probe_path = p
@@ -64,25 +92,74 @@ def check_storage_capacity(
     total_needed_bytes = required_bytes + safety_margin_bytes
 
     effective_free = free
+    quota_source = "POSIX_FILESYSTEM_STATVFS"
     account_quota_info = None
-    if account_quota_gb is not None and account_quota_gb > 0:
-        account_quota_bytes = int(account_quota_gb * (1024**3))
+
+    is_gdrive = is_google_drive_path(p) or is_google_drive_path(probe_path) or is_google_drive_path(Path(target_path))
+
+    if google_drive_service is not None:
+        # 1. Query authorized Google Drive API metadata
         try:
-            folder_used_bytes = sum(f.stat().st_size for f in probe_path.rglob("*") if f.is_file())
-        except Exception:
-            folder_used_bytes = 0
-        quota_remaining_bytes = max(0, account_quota_bytes - folder_used_bytes)
+            about = google_drive_service.about().get(fields="storageQuota").execute()
+            sq = about.get("storageQuota", {})
+            limit_bytes = int(sq.get("limit", 0))
+            usage_bytes = int(sq.get("usage", 0))
+            if limit_bytes > 0:
+                drive_free_bytes = max(0, limit_bytes - usage_bytes)
+                effective_free = min(free, drive_free_bytes)
+                quota_source = "AUTHORIZED_GOOGLE_DRIVE_API"
+                account_quota_info = {
+                    "source": quota_source,
+                    "limit_gb": round(limit_bytes / (1024**3), 2),
+                    "usage_gb": round(usage_bytes / (1024**3), 2),
+                    "account_free_gb": round(drive_free_bytes / (1024**3), 2),
+                    "verified": True,
+                }
+        except Exception as e:
+            raise StorageError(f"Failed to query authorized Google Drive API storageQuota: {e}")
+    elif user_verified_account_free_gb is not None:
+        # 2. Explicit manual user verification
+        account_free_bytes = int(user_verified_account_free_gb * (1024**3))
+        effective_free = min(free, account_free_bytes)
+        quota_source = "USER_VERIFIED_ACCOUNT_QUOTA"
         account_quota_info = {
-            "account_quota_gb": account_quota_gb,
-            "folder_used_gb": round(folder_used_bytes / (1024**3), 2),
-            "quota_remaining_gb": round(quota_remaining_bytes / (1024**3), 2),
+            "source": quota_source,
+            "user_verified_account_free_gb": user_verified_account_free_gb,
+            "effective_free_gb": round(effective_free / (1024**3), 2),
+            "verified": True,
         }
-        if total < account_quota_bytes:
-            effective_free = min(free, quota_remaining_bytes)
+    elif is_gdrive:
+        # 3. Google Drive path without authorized API or manual verification
+        raise UnverifiedStorageQuotaError(
+            f"Target path '{target_path}' is on Google Drive FUSE storage. "
+            "Virtual filesystem statistics cannot establish total Google Drive account usage. "
+            "You must either provide an authorized google_drive_service client or supply "
+            "user_verified_account_free_gb (manually confirmed via https://drive.google.com/drive/quota). "
+            "Estimating account quota from scanned folder contents is prohibited."
+        )
+    elif account_quota_gb is not None and account_quota_gb > 0:
+        # Local non-Drive path with specified quota limit
+        account_quota_bytes = int(account_quota_gb * (1024**3))
+        effective_free = min(free, account_quota_bytes)
+        quota_source = "LOCAL_QUOTA_OVERRIDE"
+        account_quota_info = {
+            "source": quota_source,
+            "account_quota_gb": account_quota_gb,
+            "effective_free_gb": round(effective_free / (1024**3), 2),
+            "verified": True,
+        }
+    else:
+        account_quota_info = {
+            "source": quota_source,
+            "total_gb": round(total / (1024**3), 2),
+            "free_gb": round(free / (1024**3), 2),
+            "verified": True,
+        }
 
     metrics = {
         "target_path": str(p),
         "probe_path": str(probe_path),
+        "quota_source": quota_source,
         "total_gb": round(total / (1024**3), 2),
         "used_gb": round(used / (1024**3), 2),
         "free_gb": round(effective_free / (1024**3), 2),
@@ -210,7 +287,9 @@ def archive_and_sync_directory(
     dst_dir: str | Path,
     archive_name: str = "star_index_GRCh38_112_dense.tar",
     safety_margin_gb: float = 10.0,
+    user_verified_account_free_gb: float | None = None,
     account_quota_gb: float | None = None,
+    google_drive_service: Any = None,
     delete_source_after: bool = False,
 ) -> dict[str, Any]:
     """Archive a directory into a single verified tarball and sync to persistent storage with manifest."""
@@ -263,7 +342,9 @@ def archive_and_sync_directory(
         d_d,
         required_bytes=archive_size_bytes + local_manifest.stat().st_size,
         safety_margin_gb=safety_margin_gb,
+        user_verified_account_free_gb=user_verified_account_free_gb,
         account_quota_gb=account_quota_gb,
+        google_drive_service=google_drive_service,
     )
 
     # 5. Sync archive and manifest to destination with SHA-256 validation
@@ -295,33 +376,47 @@ def restore_and_verify_archive(
     archive_path: str | Path,
     target_extract_dir: str | Path,
     expected_sha256: str | None = None,
+    require_manifest: bool = True,
 ) -> dict[str, Any]:
-    """Extract a verified tar archive into target directory and verify constituent files."""
+    """Extract a verified tar archive into target directory and verify constituent files against companion manifest."""
     arc_p = Path(archive_path).resolve()
     tgt_p = Path(target_extract_dir).resolve()
 
     if not arc_p.is_file():
         raise FileNotFoundError(f"Archive not found: {arc_p}")
 
-    # Check companion manifest if present
+    # 1. Require and validate companion manifest
     manifest_p = arc_p.parent / f"{arc_p.name}.manifest.json"
-    manifest = None
-    if manifest_p.is_file():
+    if not manifest_p.is_file():
+        if require_manifest:
+            raise ManifestVerificationError(
+                f"Required companion manifest missing: {manifest_p}. "
+                "An archive cannot be classified as verified without its companion cryptographic manifest."
+            )
+        manifest = None
+    else:
         try:
             manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
-            if expected_sha256 is None:
-                expected_sha256 = manifest.get("archive_sha256")
-        except Exception:
-            pass
+        except Exception as e:
+            raise ManifestVerificationError(f"Companion manifest is malformed or invalid JSON ({manifest_p}): {e}")
 
-    # Verify archive checksum
+        if not isinstance(manifest, dict) or "files" not in manifest or not manifest.get("files"):
+            raise ManifestVerificationError(f"Companion manifest ({manifest_p}) is incomplete: missing 'files' inventory.")
+
+        if expected_sha256 is None:
+            expected_sha256 = manifest.get("archive_sha256")
+
+    if require_manifest and not manifest:
+        raise ManifestVerificationError(f"Valid companion manifest is required for archive verification: {manifest_p}")
+
+    # 2. Verify archive checksum
     actual_sha = sha256_file(arc_p)
     if expected_sha256 and actual_sha.lower() != expected_sha256.lower():
         raise ChecksumVerificationError(
             f"Archive checksum mismatch for {arc_p.name}! Expected {expected_sha256}, got {actual_sha}"
         )
 
-    # Extract to target directory
+    # 3. Extract to target directory safely
     tgt_p.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     with tarfile.open(arc_p, "r") as tar:
@@ -331,17 +426,24 @@ def restore_and_verify_archive(
             tar.extractall(tgt_p)
     extract_time = time.time() - t0
 
-    # If manifest is present, verify extracted files
+    # 4. Strictly verify constituent files
     verified_files = 0
     if manifest and "files" in manifest:
         for rel_name, f_info in manifest["files"].items():
             extracted_f = tgt_p / rel_name
             if not extracted_f.is_file() or extracted_f.stat().st_size != f_info["size_bytes"]:
-                raise ChecksumVerificationError(f"Extracted file missing or size mismatch: {rel_name}")
+                raise ChecksumVerificationError(
+                    f"Extracted file missing or size mismatch: {rel_name} (expected {f_info['size_bytes']} bytes)"
+                )
             actual_f_sha = sha256_file(extracted_f)
             if actual_f_sha != f_info["sha256"]:
-                raise ChecksumVerificationError(f"Extracted file checksum mismatch: {rel_name}")
+                raise ChecksumVerificationError(
+                    f"Extracted file checksum mismatch for {rel_name}! Expected {f_info['sha256']}, got {actual_f_sha}"
+                )
             verified_files += 1
+
+    if require_manifest and verified_files == 0:
+        raise ManifestVerificationError("Zero constituent files verified from companion manifest!")
 
     return {
         "status": "ARCHIVE_EXTRACTED_AND_VERIFIED",

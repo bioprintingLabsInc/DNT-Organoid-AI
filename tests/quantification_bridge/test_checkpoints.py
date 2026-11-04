@@ -9,7 +9,11 @@ from src.quantification_bridge.checkpoints import (
     CheckpointManager,
     ChecksumVerificationError,
     InsufficientStorageCapacityError,
+    ManifestVerificationError,
+    UnverifiedStorageQuotaError,
+    archive_and_sync_directory,
     check_storage_capacity,
+    restore_and_verify_archive,
     sha256_file,
     sync_and_verify_directory,
     sync_and_verify_file,
@@ -190,4 +194,57 @@ def test_archive_and_sync_and_restore():
         assert (restore_dir / "chrName.txt").read_text(encoding="utf-8") == "chr1\nchr2\n"
         assert (restore_dir / "Genome").read_bytes() == (src_dir / "Genome").read_bytes()
         assert (restore_dir / "SA").read_bytes() == (src_dir / "SA").read_bytes()
+
+
+def test_check_storage_capacity_gdrive_unverified_raises():
+    """Verify that a Google Drive path without authorized API or manual verification raises UnverifiedStorageQuotaError."""
+    fake_gdrive = Path("/content/drive/MyDrive/Test")
+    with pytest.raises(UnverifiedStorageQuotaError, match="Virtual filesystem statistics cannot establish"):
+        check_storage_capacity(fake_gdrive, required_bytes=1000)
+
+
+def test_check_storage_capacity_gdrive_user_verified_passes():
+    """Verify that a Google Drive path with user_verified_account_free_gb passes correctly."""
+    fake_gdrive = Path("/content/drive/MyDrive/Test")
+    # Provide explicit user confirmation (e.g. 100 GB free)
+    res = check_storage_capacity(
+        fake_gdrive,
+        required_bytes=1024 * 1024,
+        safety_margin_gb=1.0,
+        user_verified_account_free_gb=100.0,
+    )
+    assert res["is_sufficient"] is True
+    assert res["quota_source"] == "USER_VERIFIED_ACCOUNT_QUOTA"
+    assert res["account_quota_info"]["user_verified_account_free_gb"] == 100.0
+
+
+def test_restore_and_verify_archive_missing_manifest_raises():
+    """Verify that restore_and_verify_archive rejects an archive lacking a companion manifest."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_p = Path(tmpdir)
+        arc = tmp_p / "orphan_index.tar"
+        import tarfile
+        with tarfile.open(arc, "w") as tar:
+            pass  # empty tar without manifest
+
+        target = tmp_p / "extracted"
+        with pytest.raises(ManifestVerificationError, match="Required companion manifest missing"):
+            restore_and_verify_archive(arc, target, require_manifest=True)
+
+
+def test_restore_and_verify_archive_malformed_manifest_raises():
+    """Verify that restore_and_verify_archive rejects an archive with invalid or incomplete JSON manifest."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_p = Path(tmpdir)
+        arc = tmp_p / "corrupt_manifest.tar"
+        import tarfile
+        with tarfile.open(arc, "w") as tar:
+            pass
+
+        manifest_p = tmp_p / "corrupt_manifest.tar.manifest.json"
+        manifest_p.write_text("{invalid json", encoding="utf-8")
+
+        target = tmp_p / "extracted"
+        with pytest.raises(ManifestVerificationError, match="malformed or invalid JSON"):
+            restore_and_verify_archive(arc, target, require_manifest=True)
 
