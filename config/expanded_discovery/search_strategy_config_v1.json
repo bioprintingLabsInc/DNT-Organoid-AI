@@ -1,0 +1,152 @@
+{
+  "protocol_id": "EXPANDED-ORGANOID-DISCOVERY-v1.0",
+  "version": "1.0.0",
+  "created_at": "2026-11-04T15:40:00Z",
+  "scope": "Expanded discovery of publicly available human brain-organoid and neural-cell chemical-exposure RNA-seq datasets.",
+  "collection_tiers": {
+    "PRIMARY_BRAIN_ORGANOID": {
+      "description": "Human 3D brain organoid, spheroid, assembloid, and BrainSphere systems.",
+      "priority": 1,
+      "models": [
+        "Human Brain Organoids (Cerebral / Cortical)",
+        "Human Brain Organoids (Forebrain)",
+        "Human Brain Organoids (Midbrain)",
+        "Human Brain Organoids (Hindbrain / Cerebellar)",
+        "Human Brain Organoids (Hippocampal)",
+        "Human Brain Organoids (Spheroid / Assembloid)",
+        "Human BrainSphere / 3D Neural Models"
+      ]
+    },
+    "SECONDARY_NEURAL_MODEL": {
+      "description": "Human 2D neural progenitor cells, neural stem cells, iPSC-derived neurons, and co-cultures.",
+      "priority": 2,
+      "models": [
+        "Human Neural Progenitor Cells (NPC)",
+        "Human Neural Stem Cells (NSC)",
+        "Human iPSC-derived Neurons",
+        "Human Neural Differentiation Model (LUHMES)",
+        "Human Glial / Neuronal Co-culture"
+      ]
+    }
+  },
+  "search_methods": {
+    "METHOD_A_BIOLOGICAL_MODEL": {
+      "description": "Biological-model searches across all organoid and neural terminology variants.",
+      "organoid_primary_terms": [
+        "\"brain organoid\" OR \"brain organoids\"",
+        "\"cerebral organoid\" OR \"cerebral organoids\"",
+        "\"cortical organoid\" OR \"cortical organoids\"",
+        "\"forebrain organoid\" OR \"forebrain organoids\"",
+        "\"midbrain organoid\" OR \"midbrain organoids\"",
+        "\"hindbrain organoid\" OR \"hindbrain organoids\"",
+        "\"hippocampal organoid\" OR \"hippocampal organoids\"",
+        "\"cerebellar organoid\" OR \"cerebellar organoids\"",
+        "\"neural organoid\" OR \"neural organoids\"",
+        "\"brain spheroid\" OR \"brain spheroids\"",
+        "\"neural spheroid\" OR \"neural spheroids\"",
+        "\"cortical spheroid\" OR \"cortical spheroids\"",
+        "\"neural assembloid\" OR \"neural assembloids\"",
+        "\"brain assembloid\" OR \"brain assembloids\"",
+        "\"BrainSphere\" OR \"BrainSpheres\"",
+        "\"3D brain model\" OR \"3D brain culture\"",
+        "\"3D neural model\" OR \"3D neural culture\"",
+        "\"brain-on-a-chip\" OR \"brain-on-chip\"",
+        "\"neurosphere\" OR \"neurospheres\""
+      ],
+      "neural_secondary_terms": [
+        "\"neural progenitor cells\" OR \"NPCs\" OR \"hNPCs\"",
+        "\"neural stem cells\" OR \"NSCs\" OR \"hNSCs\"",
+        "\"iPSC-derived neurons\" OR \"iPSC-derived neural\"",
+        "\"LUHMES\" OR \"Lund human mesencephalic\"",
+        "\"dopaminergic neurons\" AND \"human\"",
+        "\"cortical neurons\" AND \"human iPSC\"",
+        "\"glial-neuronal co-culture\" OR \"astrocyte-neuron co-culture\""
+      ]
+    },
+    "METHOD_B_CHEMICAL_SEARCH": {
+      "description": "Individual chemical, compound class, and toxicant synonym searches.",
+      "chemical_classes": {
+        "heavy_metals": [
+          "lead acetate OR \"lead toxicity\" OR \"lead exposure\" OR Pb",
+          "methylmercury OR \"methyl mercury\" OR MeHg OR \"mercuric chloride\"",
+          "\"sodium arsenite\" OR \"arsenic trioxide\" OR arsenite OR arsenic",
+          "\"cadmium chloride\" OR cadmium",
+          "\"manganese chloride\" OR manganese",
+          "\"copper sulfate\" OR copper",
+          "\"aluminum chloride\" OR aluminum"
+        ],
+        "pesticides_herbicides": [
+          "chlorpyrifos OR CPF OR \"chlorpyrifos-oxon\"",
+          "rotenone",
+          "paraquat OR \"methyl viologen\"",
+          "dieldrin",
+          "glyphosate",
+          "permethrin",
+          "malathion",
+          "maneb",
+          "ziram OR thiram"
+        ],
+        "pharmaceuticals_developmental_modulators": [
+          "\"valproic acid\" OR valproate OR VPA OR \"sodium valproate\"",
+          "paclitaxel OR taxol",
+          "cisplatin",
+          "vincristine",
+          "cytarabine OR \"ara-c\"",
+          "doxorubicin",
+          "methotrexate",
+          "dolutegravir",
+          "dexamethasone",
+          "propofol",
+          "haloperidol OR clozapine",
+          "fluoxetine OR paroxetine OR sertraline",
+          "diazepam OR midazolam",
+          "ketamine",
+          "phenytoin OR carbamazepine OR lamotrigine",
+          "lithium OR \"lithium chloride\"",
+          "thalidomide",
+          "\"retinoic acid\" OR ATRA"
+        ],
+        "endocrine_disruptors_industrial_pfas": [
+          "\"bisphenol A\" OR BPA OR \"bisphenol S\" OR BPS OR \"bisphenol F\" OR BPF",
+          "phthalate OR phthalates OR DEHP OR DBP OR DEP OR DPP",
+          "polychlorinated biphenyl OR PCB OR Aroclor",
+          "PFOA OR PFOS OR PFAS OR \"perfluorooctanoic acid\"",
+          "acrylamide",
+          "\"benzo[a]pyrene\" OR BaP",
+          "toluene OR benzene OR xylene",
+          "trichloroethylene OR TCE OR tetrachloroethylene OR PCE",
+          "ethanol OR \"prenatal alcohol\"",
+          "nicotine OR e-cigarette OR vape",
+          "cannabidiol OR CBD OR tetrahydrocannabinol OR THC"
+        ],
+        "flame_retardants_microplastics": [
+          "PBDE OR BDE-47 OR BDE-99 OR TBBPA",
+          "\"organophosphate flame retardants\" OR TCEP OR TDCPP",
+          "microplastics OR nanoplastics OR \"polystyrene nanoplastics\""
+        ],
+        "mixtures_environmental": [
+          "\"particulate matter\" OR PM2.5 OR \"diesel exhaust\"",
+          "\"chemical mixture\" OR \"toxicant mixture\""
+        ]
+      }
+    },
+    "METHOD_C_PUBLICATION_SEARCH": {
+      "description": "Publication-based searches in PubMed, Europe PMC, and PMC BioC full text examining Data Availability and Supplementary Tables.",
+      "query_templates": [
+        "((\"brain organoid\" OR \"cerebral organoid\" OR \"cortical organoid\" OR \"neural organoid\" OR \"BrainSphere\") AND (\"RNA-seq\" OR \"RNA sequencing\" OR \"transcriptome\" OR \"transcriptomics\") AND (\"chemical\" OR \"exposure\" OR \"toxicity\" OR \"toxicant\" OR \"drug\" OR \"compound\"))",
+        "((\"neural progenitor\" OR \"iPSC-derived neurons\" OR \"LUHMES\") AND (\"developmental neurotoxicity\" OR \"neurotoxicity\" OR \"toxicology\") AND (\"RNA-seq\" OR \"transcriptomics\"))"
+      ]
+    },
+    "METHOD_D_LINKED_ACCESSION_SEARCH": {
+      "description": "Cross-repository accession linking across GEO, SRA, BioProject, ENA, and ArrayExpress/BioStudies.",
+      "databases": [
+        {"name": "NCBI GEO", "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds"},
+        {"name": "NCBI SRA", "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra"},
+        {"name": "NCBI BioProject", "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=bioproject"},
+        {"name": "Europe PMC", "endpoint": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"},
+        {"name": "EMBL-EBI BioStudies", "endpoint": "https://www.ebi.ac.uk/biostudies/api/v1/search"},
+        {"name": "European Nucleotide Archive (ENA)", "endpoint": "https://www.ebi.ac.uk/ena/portal/api/search"}
+      ]
+    }
+  }
+}

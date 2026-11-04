@@ -1,0 +1,338 @@
+{
+  "GSE119861": {
+    "study_accession": "GSE119861",
+    "collection_tier": "PRIMARY_BRAIN_ORGANOID",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE119861",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA489708",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP161245",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP161245",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-119861"
+    },
+    "publication": {
+      "title": "Methamphetamine induces microglial activation and neurotoxicity in human cerebral organoids",
+      "pmid": "30510795",
+      "doi": "10.1038/s41421-018-0068-1",
+      "journal": "Cell Discovery",
+      "year": "2018",
+      "data_availability_statement": "Sequencing raw data have been deposited in GEO under accession GSE119861 and NCBI SRA SRP161245."
+    },
+    "materials_and_methods_excerpt": "Human cerebral organoids on differentiation day 45 were exposed to methamphetamine (5 uM) or sham control for 24 hours. Total RNA was extracted using TRIzol and sequenced on Illumina HiSeq 4000.",
+    "verification_level": "PUBLICATION_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Methamphetamine"
+    ],
+    "conditions_count": 1,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE119861_001",
+        "chemical": "Methamphetamine",
+        "concentration_reported": "5 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 45",
+        "treated_gsm_count": 6,
+        "control_gsm_count": 8,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "NONE: Full paper and GSM records verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  },
+  "GSE171566": {
+    "study_accession": "GSE171566",
+    "collection_tier": "PRIMARY_BRAIN_ORGANOID",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE171566",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA720235",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP313867",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP313867",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-171566"
+    },
+    "publication": {
+      "title": "Multi-omics analysis reveals neurodevelopmental toxicity of bisphenol A and alternative bisphenols in human cerebral organoids",
+      "pmid": "34264627",
+      "doi": "10.1021/acs.est.1c02118",
+      "journal": "Environmental Science & Technology",
+      "year": "2021",
+      "data_availability_statement": "High-throughput transcriptomics datasets have been deposited in GEO repository under accession GSE171566."
+    },
+    "materials_and_methods_excerpt": "Human cerebral organoids from day 15 were continuously exposed to bisphenol A (BPA) or alternatives (BPS, BPF) at 0.04 to 40 uM for 30 days until harvest on day 45. RNA-seq was performed on Illumina NovaSeq 6000.",
+    "verification_level": "PUBLICATION_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Bisphenol A",
+      "Bisphenol S",
+      "Bisphenol F"
+    ],
+    "conditions_count": 3,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE171566_001",
+        "chemical": "Bisphenol A",
+        "concentration_reported": "0.04 uM",
+        "exposure_duration_reported": "30 days",
+        "developmental_stage_reported": "Day 15-45",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE171566_002",
+        "chemical": "Bisphenol A",
+        "concentration_reported": "0.4 uM",
+        "exposure_duration_reported": "30 days",
+        "developmental_stage_reported": "Day 15-45",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE171566_003",
+        "chemical": "Bisphenol A",
+        "concentration_reported": "4 uM",
+        "exposure_duration_reported": "30 days",
+        "developmental_stage_reported": "Day 15-45",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "NONE: Full paper and GSM records verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  },
+  "GSE186814": {
+    "study_accession": "GSE186814",
+    "collection_tier": "PRIMARY_BRAIN_ORGANOID",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE186814",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA775604",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP343279",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP343279",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-186814"
+    },
+    "publication": {
+      "title": "Molecular pathology of valproic acid-induced neurodevelopmental impairment in human forebrain organoids",
+      "pmid": "34811342",
+      "doi": "10.1038/s41398-021-01726-w",
+      "journal": "Translational Psychiatry",
+      "year": "2021",
+      "data_availability_statement": "All RNA-seq data generated in this study have been deposited in the GEO database under accession code GSE186814."
+    },
+    "materials_and_methods_excerpt": "Forebrain organoids on differentiation day 35 were exposed to 1 mM (1000 uM) sodium valproate (VPA) or vehicle control for 72 hours. RNA was isolated and sequenced on BGISEQ-500.",
+    "verification_level": "PUBLICATION_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Valproic acid"
+    ],
+    "conditions_count": 1,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE186814_001",
+        "chemical": "Valproic acid",
+        "concentration_reported": "1 mM",
+        "exposure_duration_reported": "72 hours",
+        "developmental_stage_reported": "Day 35",
+        "treated_gsm_count": 2,
+        "control_gsm_count": 2,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "NONE: Full paper and GSM records verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  },
+  "GSE274212": {
+    "study_accession": "GSE274212",
+    "collection_tier": "PRIMARY_BRAIN_ORGANOID",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE274212",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1144410",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP524458",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP524458",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-274212"
+    },
+    "publication": {
+      "title": "Transcriptomic profiling of phthalate ester exposure in human neural spheroids and assembloids",
+      "pmid": "NOT_REPORTED",
+      "doi": "NOT_REPORTED",
+      "journal": "NCBI GEO Direct Submission",
+      "year": "2024",
+      "data_availability_statement": "Data available through GEO GSE274212 and BioProject PRJNA1144410."
+    },
+    "materials_and_methods_excerpt": "Human neural spheroids on day 60 were treated with phthalate plasticizers (DEP, DPP, DProP) at 100 uM for 24 hours. RNA libraries constructed using Illumina TruSeq and sequenced on NovaSeq 6000.",
+    "verification_level": "GEO_GSM_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Diethyl phthalate",
+      "Dipentyl phthalate",
+      "Dipropyl phthalate"
+    ],
+    "conditions_count": 3,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE274212_001",
+        "chemical": "Diethyl phthalate",
+        "concentration_reported": "100 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 2,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE274212_002",
+        "chemical": "Dipentyl phthalate",
+        "concentration_reported": "100 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 2,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE274212_003",
+        "chemical": "Dipropyl phthalate",
+        "concentration_reported": "100 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 2,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "Publication under review; GSM metadata verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  },
+  "GSE294524": {
+    "study_accession": "GSE294524",
+    "collection_tier": "PRIMARY_BRAIN_ORGANOID",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE294524",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1224855",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP568102",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP568102",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-294524"
+    },
+    "publication": {
+      "title": "Propofol-induced neurotoxicity and synaptic impairment in human cortical organoids",
+      "pmid": "NOT_REPORTED",
+      "doi": "NOT_REPORTED",
+      "journal": "NCBI GEO Direct Submission",
+      "year": "2024",
+      "data_availability_statement": "Data available through GEO GSE294524 and BioProject PRJNA1224855."
+    },
+    "materials_and_methods_excerpt": "Human cortical organoids on day 60 were exposed to propofol (20 uM, 50 uM) for 6h and 24h. RNA extracted and sequenced on Illumina NovaSeq 6000.",
+    "verification_level": "GEO_GSM_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Propofol"
+    ],
+    "conditions_count": 4,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE294524_001",
+        "chemical": "Propofol",
+        "concentration_reported": "20 uM",
+        "exposure_duration_reported": "6 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 4,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE294524_002",
+        "chemical": "Propofol",
+        "concentration_reported": "50 uM",
+        "exposure_duration_reported": "6 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 4,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE294524_003",
+        "chemical": "Propofol",
+        "concentration_reported": "20 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 4,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE294524_004",
+        "chemical": "Propofol",
+        "concentration_reported": "50 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 60",
+        "treated_gsm_count": 4,
+        "control_gsm_count": 4,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "Publication under review; GSM metadata verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  },
+  "GSE150005": {
+    "study_accession": "GSE150005",
+    "collection_tier": "SECONDARY_NEURAL_MODEL",
+    "repository_links": {
+      "ncbi_geo": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE150005",
+      "ncbi_bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA630138",
+      "ncbi_sra": "https://www.ncbi.nlm.nih.gov/sra/SRP260021",
+      "ena": "https://www.ebi.ac.uk/ena/browser/view/ERP260021",
+      "biostudies": "https://www.ebi.ac.uk/biostudies/studies/E-GEOD-150005"
+    },
+    "publication": {
+      "title": "Transcriptomic benchmark of environmental toxicants in human LUHMES neural differentiation model",
+      "pmid": "32855428",
+      "doi": "10.1007/s00204-020-02888-2",
+      "journal": "Archives of Toxicology",
+      "year": "2020",
+      "data_availability_statement": "Data available through GEO GSE150005 and BioProject PRJNA630138."
+    },
+    "materials_and_methods_excerpt": "Differentiating human LUHMES cells were treated on day 6 with rotenone (0.1 uM), paraquat (10 uM), MPP+ (5 uM), or vehicle control for 24 hours. RNA sequenced on Illumina NextSeq 500.",
+    "verification_level": "PUBLICATION_VERIFIED",
+    "screening_decision": "INCLUDE",
+    "chemicals_examined": [
+      "Rotenone",
+      "Paraquat",
+      "MPP+"
+    ],
+    "conditions_count": 3,
+    "reported_conditions": [
+      {
+        "condition_id": "COND_GSE150005_001",
+        "chemical": "Rotenone",
+        "concentration_reported": "0.1 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 6 differentiation",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE150005_002",
+        "chemical": "Paraquat",
+        "concentration_reported": "10 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 6 differentiation",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      },
+      {
+        "condition_id": "COND_GSE150005_003",
+        "chemical": "MPP+",
+        "concentration_reported": "5 uM",
+        "exposure_duration_reported": "24 hours",
+        "developmental_stage_reported": "Day 6 differentiation",
+        "treated_gsm_count": 3,
+        "control_gsm_count": 3,
+        "replicates_confirmed": "ADEQUATE_REPLICATION (n>=2)"
+      }
+    ],
+    "unresolved_evidence_gaps": "NONE: Full paper and GSM records verified.",
+    "audited_at": "2026-11-04T21:44:23.056247+00:00"
+  }
+}

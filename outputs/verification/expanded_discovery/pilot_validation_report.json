@@ -1,0 +1,21 @@
+{
+  "pilot_execution_timestamp": "2026-11-04T21:44:23.078319+00:00",
+  "total_studies_piloted": 6,
+  "primary_brain_organoid_studies": 5,
+  "secondary_neural_model_studies": 1,
+  "publication_verified_studies": 4,
+  "geo_gsm_verified_studies": 2,
+  "unique_standardized_chemicals": 12,
+  "chemical_partition_groups": 12,
+  "total_distinct_conditions": 15,
+  "adequately_replicated_conditions": 15,
+  "single_replicate_conditions": 0,
+  "matched_vehicle_control_rate_pct": 100.0,
+  "total_rna_seq_samples": 72,
+  "treatment_samples": 48,
+  "control_samples": 24,
+  "sample_columns_count": 22,
+  "canonical_columns_conformance": true,
+  "zero_fabrication_pubchem_cid_check": true,
+  "non_presumptive_outcome_labeling_check": true
+}

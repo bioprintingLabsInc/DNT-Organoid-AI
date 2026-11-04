@@ -1,0 +1,13 @@
+Standardized Chemical Name,Chemical Partition Group,PubChem CID,CAS Registry Number,Chemical Class,Mixture Flag,Chemical Synonyms,Associated Studies Count,Associated Studies List,Associated Conditions Count,Primary Organoid Studies Count,Secondary Neural Studies Count
+Methamphetamine,CHEM_METHAMPHETAMINE,10836,537-46-2,Psychostimulant / Amphetamine Derivative,SINGLE_COMPOUND,Desoxyephedrine; N-Methylamphetamine; Speed,1,GSE119861,1,1,0
+Bisphenol A,CHEM_BISPHENOL_A,6623,80-05-7,Endocrine Disruptor / Industrial Plasticizer,SINGLE_COMPOUND,"BPA; 4,4'-(propane-2,2-diyl)diphenol",1,GSE171566,3,1,0
+Bisphenol S,CHEM_BISPHENOL_S,6626,80-09-1,Endocrine Disruptor / Bisphenol Alternative,SINGLE_COMPOUND,"BPS; 4,4'-sulfonyldiphenol",1,GSE171566,0,1,0
+Bisphenol F,CHEM_BISPHENOL_F,2455,620-92-8,Endocrine Disruptor / Bisphenol Alternative,SINGLE_COMPOUND,"BPF; 4,4'-dihydroxydiphenylmethane",1,GSE171566,0,1,0
+Valproic acid,CHEM_VALPROIC_ACID,3121,99-66-1,Antiepileptic / Histone Deacetylase Inhibitor / Known Teratogen,SINGLE_COMPOUND,VPA; 2-propylpentanoic acid; Sodium valproate,1,GSE186814,1,1,0
+Diethyl phthalate,CHEM_DIETHYL_PHTHALATE,6778,84-66-2,Phthalate Plasticizer / Endocrine Disruptor,SINGLE_COMPOUND,DEP; Ethyl phthalate,1,GSE274212,1,1,0
+Dipentyl phthalate,CHEM_DIPENTYL_PHTHALATE,8554,131-18-0,Phthalate Plasticizer / Toxicant,SINGLE_COMPOUND,DPP; Diamyl phthalate,1,GSE274212,1,1,0
+Dipropyl phthalate,CHEM_DIPROPYL_PHTHALATE,11002,131-16-8,Phthalate Plasticizer / Toxicant,SINGLE_COMPOUND,DProP; Propyl phthalate,1,GSE274212,1,1,0
+Propofol,CHEM_PROPOFOL,4133,2078-54-8,General Anesthetic / GABAA Receptor Modulator,SINGLE_COMPOUND,"Diprivan; 2,6-diisopropylphenol",1,GSE294524,4,1,0
+Rotenone,CHEM_ROTENONE,6758,83-79-4,Pesticide / Mitochondrial Complex I Inhibitor,SINGLE_COMPOUND,Tubatoxin; Paraderil,1,GSE150005,1,0,1
+Paraquat,CHEM_PARAQUAT,15938,4685-14-7,Herbicide / Redox Cycler / Neurotoxicant,SINGLE_COMPOUND,Methyl viologen; Gramoxone,1,GSE150005,1,0,1
+MPP+,CHEM_MPP,3994,36913-39-0,Neurotoxin / Dopaminergic Toxicant,SINGLE_COMPOUND,1-Methyl-4-phenylpyridinium,1,GSE150005,1,0,1
