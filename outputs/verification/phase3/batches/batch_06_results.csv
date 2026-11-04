@@ -1,0 +1,51 @@
+gse,decision,biological_model,compounds,n_samples,controls_count,treatments_count,rna_subtype,rationale
+GSE151039,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,26,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151067,EXCLUDE,Human Brain Organoid (Cerebral / Cortical),NONE,88,0,0,Microarray / Array,"Excluded: Assay modality (Methylation profiling by genome tiling array) is microarray/array, not high-throughput RNA sequencing."
+GSE151190,REFERENCE_DATASET,Human Brain Organoid (Midbrain),NONE,8,0,0,Bulk RNA-seq,"Reference Dataset: High-quality unperturbed human neural/organoid developmental transcriptomic atlas (Human Brain Organoid (Midbrain), Bulk RNA-seq)."
+GSE151381,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,2,0,0,scRNA-seq / snRNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151384,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,45,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151818,REFERENCE_DATASET,Human Brain Organoid (Forebrain),NONE,48,0,0,Bulk RNA-seq,"Reference Dataset: High-quality unperturbed human neural/organoid developmental transcriptomic atlas (Human Brain Organoid (Forebrain), Bulk RNA-seq)."
+GSE151921,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,77,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151995,EXCLUDE,Human Brain Organoid (Spheroid / Assembloid),NONE,6,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151996,INCLUDE,Human iPSC-derived Neurons,styrene oxide 100Î¼M 24h,4,2,2,Bulk RNA-seq,"Included (Phase 3 Verified): Verified human neural model (Human iPSC-derived Neurons) exposed to styrene oxide 100Î¼M 24h with confirmed vehicle controls (n=2), chemical treatments (n=2), biological replicates (n=4), and accessible RNA-seq (Bulk RNA-seq)."
+GSE151997,EXCLUDE,Human iPSC-derived Neurons,NONE,4,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE152331,EXCLUDE,Human Neural Stem Cells (NSC),NONE,2,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE152448,EXCLUDE,Human Neural Differentiation Model,NONE,17,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE152915,REFERENCE_DATASET,Human Brain Organoid (Cerebral / Cortical),NONE,12,0,0,scRNA-seq / snRNA-seq,"Reference Dataset: High-quality unperturbed human neural/organoid developmental transcriptomic atlas (Human Brain Organoid (Cerebral / Cortical), scRNA-seq / snRNA-seq)."
+GSE152988,EXCLUDE,Human iPSC-derived Neurons,NONE,8,0,0,scRNA-seq / snRNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE153005,EXCLUDE,Human iPSC-derived Neurons,NONE,13,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE153076,EXCLUDE,Human Brain Organoid (Forebrain),NONE,42,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE153437,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,25,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE154267,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,78,0,0,Bulk RNA-seq,"Excluded: Biological model (Non-Neural Tissue / Cancer Model) is non-neural, malignant cancer, or non-human organism."
+GSE154479,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,3,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE154482,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,9,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE154799,EXCLUDE,Human iPSC-derived Neurons,NONE,8,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE154825,EXCLUDE,Human iPSC-derived Neurons,NONE,16,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE154872,EXCLUDE,Human Neural Differentiation Model,NONE,12,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE154934,EXCLUDE,Human Brain Organoid (Cerebral / Cortical),NONE,8,0,0,Microarray / Array,"Excluded: Assay modality (Non-coding RNA profiling by array; Expression profiling by array) is microarray/array, not high-throughput RNA sequencing."
+GSE154958,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,64,0,0,Bulk RNA-seq,"Excluded: Biological model (Non-Neural Tissue / Cancer Model) is non-neural, malignant cancer, or non-human organism."
+GSE155212,EXCLUDE,Human iPSC-derived Neurons,NONE,12,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE155382,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,30,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE155384,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,32,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE155432,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,23,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE155564,EXCLUDE,Human Glial / Neuronal Co-culture,NONE,27,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE155604,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,115,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE155661,EXCLUDE,Non-Human Organism,NONE,4,0,0,scRNA-seq / snRNA-seq,"Excluded: Biological model (Non-Human Organism) is non-neural, malignant cancer, or non-human organism."
+GSE155889,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,42,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE156407,EXCLUDE,Human Neural Stem Cells (NSC),NONE,18,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE156619,NEEDS_REVIEW,Other Non-Neural / Unspecified Model,NONE,69,0,0,Bulk RNA-seq,"Needs Review (Phase 3): Candidate neural model (Other Non-Neural / Unspecified Model) with chemical exposure (NONE), but sample group structure or biological replicate independence requires manual bench protocol confirmation."
+GSE156923,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,12,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157012,EXCLUDE,Human Neural Differentiation Model,NONE,30,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157019,EXCLUDE,Human Brain Organoid (Cerebral / Cortical),NONE,2,0,0,scRNA-seq / snRNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157080,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,6,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157081,EXCLUDE,Other Non-Neural / Unspecified Model,NONE,12,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157158,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,19,0,0,Bulk RNA-seq,"Excluded: Biological model (Non-Neural Tissue / Cancer Model) is non-neural, malignant cancer, or non-human organism."
+GSE157185,EXCLUDE,Human iPSC-derived Neurons,NONE,10,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157253,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,3,0,0,scRNA-seq / snRNA-seq,"Excluded: Biological model (Non-Neural Tissue / Cancer Model) is non-neural, malignant cancer, or non-human organism."
+GSE157354,EXCLUDE,Human Neural Differentiation Model,NONE,1067,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157506,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,12,0,0,Bulk RNA-seq,"Excluded: Biological model (Non-Neural Tissue / Cancer Model) is non-neural, malignant cancer, or non-human organism."
+GSE157525,EXCLUDE,Human Neural Differentiation Model,NONE,6,0,0,scRNA-seq / snRNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157573,EXCLUDE,Human iPSC-derived Neurons,NONE,60,0,0,Bulk RNA-seq,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157676,NEEDS_REVIEW,Human Brain Organoid (Cerebral / Cortical),Valproic acid,9,0,0,Bulk RNA-seq,"Needs Review (Phase 3): Candidate neural model (Human Brain Organoid (Cerebral / Cortical)) with chemical exposure (Valproic acid), but sample group structure or biological replicate independence requires manual bench protocol confirmation."
+GSE157684,REFERENCE_DATASET,Non-Human Organism,NONE,6,0,0,Bulk RNA-seq,"Reference Dataset: High-quality unperturbed human neural/organoid developmental transcriptomic atlas (Non-Human Organism, Bulk RNA-seq)."
+GSE157768,EXCLUDE,Human Neural Progenitor Cells (NPC),NONE,16,0,0,Bulk RNA-seq,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
