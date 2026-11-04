@@ -68,5 +68,15 @@
     "remote_commit_sha": "69e9aba9db647effaeef5ae04e7008df5e9d997d",
     "timestamp_utc": "2026-11-04T21:17:29.193338+00:00",
     "status": "COMPLETED_AND_VERIFIED"
+  },
+  {
+    "batch_number": 8,
+    "total_batches": 34,
+    "records_range": "351-400",
+    "records_count": 50,
+    "remaining_datasets": 1266,
+    "remote_commit_sha": "82a700f2720f108ee8ec64d4af654a600e77b1e5",
+    "timestamp_utc": "2026-11-04T21:17:37.934129+00:00",
+    "status": "COMPLETED_AND_VERIFIED"
   }
 ]
