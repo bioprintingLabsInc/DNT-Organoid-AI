@@ -3,8 +3,9 @@
 Supports Google Colab local disk execution with persistent Google Drive (or external POSIX) backup:
 1. Mount and capacity preflight check (ensures target storage has sufficient free space + safety margin).
 2. End-to-end cryptographic checksum verification (SHA-256) after transfer before any local cleanup.
-3. Resilient checkpoint state machine permitting disconnect recovery.
-4. Fully optional and decoupled: works seamlessly with or without Google Drive.
+3. Single-archive verified transfer (tar) to minimize Google Drive API calls and FUSE overhead.
+4. Resilient checkpoint state machine permitting disconnect recovery.
+5. Fully optional and decoupled: works seamlessly with or without Google Drive.
 """
 
 from dataclasses import asdict, dataclass
@@ -13,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import tarfile
 import time
 from typing import Any
 
@@ -45,6 +47,7 @@ def check_storage_capacity(
     target_path: str | Path,
     required_bytes: int,
     safety_margin_gb: float = 5.0,
+    account_quota_gb: float | None = None,
 ) -> dict[str, Any]:
     """Verify target storage filesystem has sufficient capacity before beginning a transfer."""
     p = Path(target_path).resolve()
@@ -60,20 +63,38 @@ def check_storage_capacity(
     safety_margin_bytes = int(safety_margin_gb * (1024**3))
     total_needed_bytes = required_bytes + safety_margin_bytes
 
+    effective_free = free
+    account_quota_info = None
+    if account_quota_gb is not None and account_quota_gb > 0:
+        account_quota_bytes = int(account_quota_gb * (1024**3))
+        try:
+            folder_used_bytes = sum(f.stat().st_size for f in probe_path.rglob("*") if f.is_file())
+        except Exception:
+            folder_used_bytes = 0
+        quota_remaining_bytes = max(0, account_quota_bytes - folder_used_bytes)
+        account_quota_info = {
+            "account_quota_gb": account_quota_gb,
+            "folder_used_gb": round(folder_used_bytes / (1024**3), 2),
+            "quota_remaining_gb": round(quota_remaining_bytes / (1024**3), 2),
+        }
+        if total < account_quota_bytes:
+            effective_free = min(free, quota_remaining_bytes)
+
     metrics = {
         "target_path": str(p),
         "probe_path": str(probe_path),
         "total_gb": round(total / (1024**3), 2),
         "used_gb": round(used / (1024**3), 2),
-        "free_gb": round(free / (1024**3), 2),
+        "free_gb": round(effective_free / (1024**3), 2),
         "required_gb": round(required_bytes / (1024**3), 2),
         "safety_margin_gb": safety_margin_gb,
         "total_needed_gb": round(total_needed_bytes / (1024**3), 2),
-        "is_sufficient": free >= total_needed_bytes,
+        "is_sufficient": effective_free >= total_needed_bytes,
+        "account_quota_info": account_quota_info,
     }
 
     if not metrics["is_sufficient"]:
-        shortfall_gb = round((total_needed_bytes - free) / (1024**3), 2)
+        shortfall_gb = round((total_needed_bytes - effective_free) / (1024**3), 2)
         raise InsufficientStorageCapacityError(
             f"Insufficient storage capacity on {probe_path}! "
             f"Available: {metrics['free_gb']} GB, Needed (including {safety_margin_gb} GB safety margin): "
@@ -118,7 +139,6 @@ def sync_and_verify_file(
     # 3. Destination SHA-256
     dst_sha = sha256_file(d, chunk_size=chunk_size)
     if dst_sha != src_sha:
-        # Transfer corruption: remove corrupted destination file
         d.unlink(missing_ok=True)
         raise ChecksumVerificationError(
             f"Transfer corruption detected for {s.name}! Source SHA-256: {src_sha}, Destination SHA-256: {dst_sha}"
@@ -153,11 +173,9 @@ def sync_and_verify_directory(
     if not s_d.is_dir():
         raise NotADirectoryError(f"Source directory not found: {s_d}")
 
-    # Calculate total size of source directory
     file_list: list[Path] = [p for p in s_d.rglob("*") if p.is_file()]
     total_bytes = sum(f.stat().st_size for f in file_list)
 
-    # Check capacity before copying
     check_storage_capacity(d_d, required_bytes=total_bytes, safety_margin_gb=safety_margin_gb)
 
     d_d.mkdir(parents=True, exist_ok=True)
@@ -184,6 +202,153 @@ def sync_and_verify_directory(
         "total_seconds": round(total_time, 2),
         "files": verified_files,
         "source_deleted": delete_source_after,
+    }
+
+
+def archive_and_sync_directory(
+    src_dir: str | Path,
+    dst_dir: str | Path,
+    archive_name: str = "star_index_GRCh38_112_dense.tar",
+    safety_margin_gb: float = 10.0,
+    account_quota_gb: float | None = None,
+    delete_source_after: bool = False,
+) -> dict[str, Any]:
+    """Archive a directory into a single verified tarball and sync to persistent storage with manifest."""
+    s_d = Path(src_dir).resolve()
+    d_d = Path(dst_dir).resolve()
+
+    if not s_d.is_dir():
+        raise NotADirectoryError(f"Source directory not found: {s_d}")
+
+    # 1. Build file-level inventory and checksums
+    file_list = sorted([p for p in s_d.rglob("*") if p.is_file()])
+    manifest_files = {}
+    total_uncompressed_bytes = 0
+    for f in file_list:
+        rel = f.relative_to(s_d).as_posix()
+        sz = f.stat().st_size
+        total_uncompressed_bytes += sz
+        manifest_files[rel] = {
+            "size_bytes": sz,
+            "sha256": sha256_file(f),
+        }
+
+    # 2. Create archive locally
+    local_archive = s_d.parent / archive_name
+    print(f"Creating local archive: {local_archive.name} ({len(file_list)} files)...")
+    t0 = time.time()
+    with tarfile.open(local_archive, "w") as tar:
+        for f in file_list:
+            arcname = f.relative_to(s_d).as_posix()
+            tar.add(f, arcname=arcname)
+    archive_size_bytes = local_archive.stat().st_size
+    archive_sha256 = sha256_file(local_archive)
+
+    # 3. Create manifest json
+    manifest_data = {
+        "archive_name": archive_name,
+        "archive_size_bytes": archive_size_bytes,
+        "archive_sha256": archive_sha256,
+        "total_files": len(file_list),
+        "total_uncompressed_bytes": total_uncompressed_bytes,
+        "created_at_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "files": manifest_files,
+    }
+    local_manifest = s_d.parent / f"{archive_name}.manifest.json"
+    local_manifest.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
+    manifest_sha256 = sha256_file(local_manifest)
+
+    # 4. Check destination storage capacity
+    check_storage_capacity(
+        d_d,
+        required_bytes=archive_size_bytes + local_manifest.stat().st_size,
+        safety_margin_gb=safety_margin_gb,
+        account_quota_gb=account_quota_gb,
+    )
+
+    # 5. Sync archive and manifest to destination with SHA-256 validation
+    d_d.mkdir(parents=True, exist_ok=True)
+    dst_archive = d_d / archive_name
+    dst_manifest = d_d / f"{archive_name}.manifest.json"
+
+    res_archive = sync_and_verify_file(local_archive, dst_archive, expected_sha256=archive_sha256, delete_source_after=True)
+    res_manifest = sync_and_verify_file(local_manifest, dst_manifest, expected_sha256=manifest_sha256, delete_source_after=True)
+
+    if delete_source_after:
+        shutil.rmtree(s_d)
+
+    total_time = time.time() - t0
+    return {
+        "status": "ARCHIVE_VERIFIED_SYNC",
+        "archive_name": archive_name,
+        "archive_sha256": archive_sha256,
+        "archive_size_gb": round(archive_size_bytes / (1024**3), 2),
+        "total_files": len(file_list),
+        "total_uncompressed_gb": round(total_uncompressed_bytes / (1024**3), 2),
+        "total_seconds": round(total_time, 2),
+        "dst_archive_path": str(dst_archive),
+        "dst_manifest_path": str(dst_manifest),
+    }
+
+
+def restore_and_verify_archive(
+    archive_path: str | Path,
+    target_extract_dir: str | Path,
+    expected_sha256: str | None = None,
+) -> dict[str, Any]:
+    """Extract a verified tar archive into target directory and verify constituent files."""
+    arc_p = Path(archive_path).resolve()
+    tgt_p = Path(target_extract_dir).resolve()
+
+    if not arc_p.is_file():
+        raise FileNotFoundError(f"Archive not found: {arc_p}")
+
+    # Check companion manifest if present
+    manifest_p = arc_p.parent / f"{arc_p.name}.manifest.json"
+    manifest = None
+    if manifest_p.is_file():
+        try:
+            manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
+            if expected_sha256 is None:
+                expected_sha256 = manifest.get("archive_sha256")
+        except Exception:
+            pass
+
+    # Verify archive checksum
+    actual_sha = sha256_file(arc_p)
+    if expected_sha256 and actual_sha.lower() != expected_sha256.lower():
+        raise ChecksumVerificationError(
+            f"Archive checksum mismatch for {arc_p.name}! Expected {expected_sha256}, got {actual_sha}"
+        )
+
+    # Extract to target directory
+    tgt_p.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    with tarfile.open(arc_p, "r") as tar:
+        if hasattr(tarfile, "data_filter"):
+            tar.extractall(tgt_p, filter="data")
+        else:
+            tar.extractall(tgt_p)
+    extract_time = time.time() - t0
+
+    # If manifest is present, verify extracted files
+    verified_files = 0
+    if manifest and "files" in manifest:
+        for rel_name, f_info in manifest["files"].items():
+            extracted_f = tgt_p / rel_name
+            if not extracted_f.is_file() or extracted_f.stat().st_size != f_info["size_bytes"]:
+                raise ChecksumVerificationError(f"Extracted file missing or size mismatch: {rel_name}")
+            actual_f_sha = sha256_file(extracted_f)
+            if actual_f_sha != f_info["sha256"]:
+                raise ChecksumVerificationError(f"Extracted file checksum mismatch: {rel_name}")
+            verified_files += 1
+
+    return {
+        "status": "ARCHIVE_EXTRACTED_AND_VERIFIED",
+        "archive_path": str(arc_p),
+        "target_dir": str(tgt_p),
+        "extract_seconds": round(extract_time, 2),
+        "verified_files_count": verified_files,
     }
 
 
@@ -214,17 +379,14 @@ class CheckpointManager:
 
     def _load_manifest(self) -> dict[str, Any]:
         """Load manifest from persistent store if available, else local store, else new."""
-        # Try persistent store first
         if self.persistent_manifest_file and self.persistent_manifest_file.is_file():
             try:
                 data = json.loads(self.persistent_manifest_file.read_text(encoding="utf-8"))
-                # Mirror to local
                 self.local_manifest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
                 return data
             except Exception as e:
                 print(f"[WARNING] Failed to read persistent manifest: {e}")
 
-        # Try local store
         if self.local_manifest_file.is_file():
             try:
                 return json.loads(self.local_manifest_file.read_text(encoding="utf-8"))
@@ -240,12 +402,10 @@ class CheckpointManager:
     def _save_manifest(self) -> None:
         """Persist manifest atomically to both local and persistent stores."""
         content = json.dumps(self.manifest, indent=2)
-        # Write local
         tmp_local = self.local_dir / f"tmp_manifest_{os.getpid()}.json"
         tmp_local.write_text(content, encoding="utf-8")
         tmp_local.replace(self.local_manifest_file)
 
-        # Write persistent if configured
         if self.persistent_dir and self.persistent_manifest_file:
             try:
                 tmp_persist = self.persistent_dir / f"tmp_manifest_{os.getpid()}.json"

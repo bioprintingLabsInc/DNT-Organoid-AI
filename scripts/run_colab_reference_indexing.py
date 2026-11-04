@@ -23,7 +23,9 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.quantification_bridge.checkpoints import (
     CheckpointManager,
+    archive_and_sync_directory,
     check_storage_capacity,
+    restore_and_verify_archive,
     sha256_file,
     sync_and_verify_directory,
 )
@@ -145,6 +147,18 @@ def main():
         help="Minimum free disk safety margin required on persistent storage (default: 10.0 GB)",
     )
     parser.add_argument(
+        "--account-quota-gb",
+        type=float,
+        default=5000.0,
+        help="Total Google Drive account capacity in GB (default: 5000.0 GB = 5 TB)",
+    )
+    parser.add_argument(
+        "--use-archive",
+        action="store_true",
+        default=True,
+        help="Package index into a single verified tar archive for Google Drive transfer (default: True)",
+    )
+    parser.add_argument(
         "--skip-if-already-verified",
         action="store_true",
         help="Skip re-indexing if a verified index already exists in persistent storage",
@@ -182,10 +196,30 @@ def main():
     print(f"Available CPU Cores: {env_metrics['cpu_cores']}")
     print(f"Local Scratch Free Space: {env_metrics['scratch_disk_free_gb']} GB")
 
-    # 4. Check for Existing Verified Index in Persistent Storage
-    persistent_index_dir = (args.persistent_dir / "references" / "star_index") if args.persistent_dir else None
-    if args.skip_if_already_verified and persistent_index_dir and persistent_index_dir.is_dir():
-        print(f"\nChecking existing index in persistent store: {persistent_index_dir}...")
+    # 4. Check for Existing Verified Index in Persistent Storage (Archive or Directory)
+    persistent_ref_dir = (args.persistent_dir / "references") if args.persistent_dir else None
+    persistent_archive = (persistent_ref_dir / "star_index_GRCh38_112_dense.tar") if persistent_ref_dir else None
+    persistent_index_dir = (persistent_ref_dir / "star_index") if persistent_ref_dir else None
+
+    if args.skip_if_already_verified and persistent_archive and persistent_archive.is_file():
+        print(f"\n[FOUND] Verified index archive detected on persistent store: {persistent_archive.name}")
+        print("Restoring and verifying index into local high-speed SSD (/content)...")
+        rest_res = restore_and_verify_archive(
+            archive_path=persistent_archive,
+            target_extract_dir=paths["star_index_dir"],
+        )
+        print(f"[RESTORED] Extracted and verified {rest_res['verified_files_count']} files in {rest_res['extract_seconds']}s.")
+        checkpoint_mgr.record_stage_completed(
+            "STAR_INDEX_RESTORED_FROM_PERSISTENT",
+            artifacts=[{"archive": str(persistent_archive), "extracted_to": str(paths["star_index_dir"])}],
+        )
+        print("\n" + "=" * 80)
+        print("REFERENCE INDEX READY (RESTORED FROM PERSISTENT STORE).")
+        print("MANDATORY SCIENTIFIC REVIEW GATE: Execution paused before FASTQ acquisition.")
+        print("=" * 80)
+        sys.exit(0)
+    elif args.skip_if_already_verified and persistent_index_dir and persistent_index_dir.is_dir():
+        print(f"\nChecking existing index directory in persistent store: {persistent_index_dir}...")
         p_eval = verify_index_artifacts(persistent_index_dir)
         if p_eval["is_complete"]:
             print(f"[FOUND] Valid index already exists in persistent store ({p_eval['total_index_gb']} GB).")
@@ -256,36 +290,55 @@ def main():
     )
 
     # 9. Persistent Storage Backup (Google Drive / POSIX Storage)
-    if persistent_index_dir:
+    if persistent_ref_dir:
         print("\n--- STAGE 6: PERSISTENT STORAGE BACKUP (PRE-FLIGHT & VERIFICATION) ---")
-        print(f"Target persistent directory: {persistent_index_dir}")
+        print(f"Target persistent directory: {persistent_ref_dir}")
 
-        # Check capacity before transferring
-        cap_metrics = check_storage_capacity(
-            persistent_index_dir,
-            required_bytes=eval_res["total_index_bytes"],
-            safety_margin_gb=args.safety_margin_gb,
-        )
-        print(f"Persistent Storage Free: {cap_metrics['free_gb']} GB")
-        print(f"Required Space: {cap_metrics['required_gb']} GB (plus {args.safety_margin_gb} GB safety margin)")
+        if args.use_archive:
+            print("Packaging index into single verified tar archive to minimize Google Drive API overhead...")
+            archive_res = archive_and_sync_directory(
+                src_dir=paths["star_index_dir"],
+                dst_dir=persistent_ref_dir,
+                archive_name="star_index_GRCh38_112_dense.tar",
+                safety_margin_gb=args.safety_margin_gb,
+                account_quota_gb=args.account_quota_gb,
+                delete_source_after=False,  # Retain local copy on fast SSD for active alignment!
+            )
+            print(
+                f"[OK] Successfully archived and synced {archive_res['total_files']} files "
+                f"({archive_res['archive_size_gb']} GB archive) to persistent storage in {archive_res['total_seconds']}s."
+            )
+            checkpoint_mgr.record_stage_completed(
+                "STAR_INDEX_PERSISTED_TO_GDRIVE",
+                artifacts=[{"archive": archive_res["dst_archive_path"], "sha256": archive_res["archive_sha256"]}],
+            )
+        else:
+            # Check capacity before transferring
+            cap_metrics = check_storage_capacity(
+                persistent_index_dir,
+                required_bytes=eval_res["total_index_bytes"],
+                safety_margin_gb=args.safety_margin_gb,
+                account_quota_gb=args.account_quota_gb,
+            )
+            print(f"Persistent Storage Free: {cap_metrics['free_gb']} GB")
+            print(f"Required Space: {cap_metrics['required_gb']} GB (plus {args.safety_margin_gb} GB safety margin)")
 
-        # Sync and verify every single file with SHA-256
-        print("Synchronizing index files with SHA-256 cryptographic verification...")
-        sync_res = sync_and_verify_directory(
-            src_dir=paths["star_index_dir"],
-            dst_dir=persistent_index_dir,
-            safety_margin_gb=args.safety_margin_gb,
-            delete_source_after=False,  # Keep local copy on fast SSD for active alignment!
-        )
-        print(
-            f"[OK] Successfully backed up {sync_res['total_files']} files ({round(sync_res['total_bytes'] / (1024**3), 2)} GB) "
-            f"to persistent storage in {sync_res['total_seconds']}s."
-        )
-
-        checkpoint_mgr.record_stage_completed(
-            "STAR_INDEX_PERSISTED_TO_GDRIVE",
-            artifacts=[{"dir": str(persistent_index_dir), "files_verified": sync_res["total_files"]}],
-        )
+            # Sync and verify every single file with SHA-256
+            print("Synchronizing index files with SHA-256 cryptographic verification...")
+            sync_res = sync_and_verify_directory(
+                src_dir=paths["star_index_dir"],
+                dst_dir=persistent_index_dir,
+                safety_margin_gb=args.safety_margin_gb,
+                delete_source_after=False,  # Keep local copy on fast SSD for active alignment!
+            )
+            print(
+                f"[OK] Successfully backed up {sync_res['total_files']} files ({round(sync_res['total_bytes'] / (1024**3), 2)} GB) "
+                f"to persistent storage in {sync_res['total_seconds']}s."
+            )
+            checkpoint_mgr.record_stage_completed(
+                "STAR_INDEX_PERSISTED_TO_GDRIVE",
+                artifacts=[{"dir": str(persistent_index_dir), "files_verified": sync_res["total_files"]}],
+            )
 
     # 10. Mandatory Scientific Review Halt
     print("\n" + "=" * 80)

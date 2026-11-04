@@ -149,3 +149,45 @@ def test_checkpoint_manager_graceful_without_persistent_dir():
         mgr.record_stage_completed("LOCAL_ONLY_STAGE")
         assert mgr.is_stage_completed("LOCAL_ONLY_STAGE") is True
         assert (local_dir / "checkpoint_manifest.json").is_file()
+
+
+def test_archive_and_sync_and_restore():
+    """Verify single-archive synchronization and bit-for-bit file extraction verification."""
+    from src.quantification_bridge.checkpoints import archive_and_sync_directory, restore_and_verify_archive
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_p = Path(tmpdir)
+        src_dir = tmp_p / "star_index"
+        src_dir.mkdir()
+        (src_dir / "chrName.txt").write_text("chr1\nchr2\n", encoding="utf-8")
+        (src_dir / "Genome").write_bytes(b"Simulated genome binary stream\x01\x02\x03" * 50)
+        (src_dir / "SA").write_bytes(b"Simulated suffix array binary stream\x04\x05\x06" * 50)
+
+        dst_dir = tmp_p / "drive_backup"
+
+        # Archive and sync
+        sync_res = archive_and_sync_directory(
+            src_dir=src_dir,
+            dst_dir=dst_dir,
+            archive_name="test_index.tar",
+            safety_margin_gb=0.1,
+            account_quota_gb=5000.0,
+            delete_source_after=False,
+        )
+        assert sync_res["status"] == "ARCHIVE_VERIFIED_SYNC"
+        assert sync_res["total_files"] == 3
+        assert Path(sync_res["dst_archive_path"]).is_file()
+        assert Path(sync_res["dst_manifest_path"]).is_file()
+
+        # Restore from archive into a clean directory
+        restore_dir = tmp_p / "restored_index"
+        rest_res = restore_and_verify_archive(
+            archive_path=sync_res["dst_archive_path"],
+            target_extract_dir=restore_dir,
+        )
+        assert rest_res["status"] == "ARCHIVE_EXTRACTED_AND_VERIFIED"
+        assert rest_res["verified_files_count"] == 3
+        assert (restore_dir / "chrName.txt").read_text(encoding="utf-8") == "chr1\nchr2\n"
+        assert (restore_dir / "Genome").read_bytes() == (src_dir / "Genome").read_bytes()
+        assert (restore_dir / "SA").read_bytes() == (src_dir / "SA").read_bytes()
+
