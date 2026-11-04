@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import time
+from typing import Any
 
 # Add repo root to python path
 REPO_ROOT = Path(__file__).resolve().parents[1]
