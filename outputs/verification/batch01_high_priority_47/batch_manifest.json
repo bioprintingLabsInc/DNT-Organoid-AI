@@ -1,0 +1,22 @@
+{
+  "batch_id": "batch01_high_priority_47",
+  "start_utc": "2026-11-04T19:18:11.976378+00:00",
+  "end_utc": "2026-11-04T19:18:57.505578+00:00",
+  "total_reviewed": 47,
+  "decisions": {
+    "INCLUDE": 12,
+    "NEEDS_REVIEW": 17,
+    "EXCLUDE": 18
+  },
+  "sample_records_extracted": 1036,
+  "files_generated": [
+    "verified_datasets.csv",
+    "verified_datasets.xlsx",
+    "decision_log.csv",
+    "decision_log.xlsx",
+    "sample_level_metadata_22fields.csv",
+    "sample_level_metadata_22fields.xlsx",
+    "verification_evidence.json",
+    "batch_manifest.json"
+  ]
+}

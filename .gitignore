@@ -33,6 +33,7 @@ data/model_ready/*
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 !data/model_ready/.gitkeep
+references/
 *.fastq
 *.fastq.gz
 *.fq
@@ -44,6 +45,8 @@ data/model_ready/*
 outputs/*/*
 !outputs/*/.gitkeep
 !outputs/geo_search/**
+!outputs/verification/**
+outputs/verification/cache/**
 *.pkl
 *.joblib
 *.onnx

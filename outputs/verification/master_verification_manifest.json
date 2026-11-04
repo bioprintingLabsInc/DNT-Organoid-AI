@@ -1,0 +1,23 @@
+{
+  "execution_title": "DNT AI GEO Master Cohort Verification v1.0",
+  "start_utc": "2026-11-04T19:25:27.783190+00:00",
+  "end_utc": "2026-11-04T19:29:08.060759+00:00",
+  "total_datasets_reviewed": 1666,
+  "decisions": {
+    "INCLUDE": 70,
+    "NEEDS_REVIEW": 346,
+    "EXCLUDE": 1250
+  },
+  "sample_records_extracted": 1690,
+  "unique_compounds_identified": 190,
+  "files_generated": [
+    "data/metadata/dnt_master_dataset_inventory.csv",
+    "data/metadata/dnt_master_dataset_inventory.xlsx",
+    "data/metadata/dnt_sample_metadata_v1.csv",
+    "data/metadata/dnt_sample_metadata_v1.xlsx",
+    "outputs/verification/master_verification_log.csv",
+    "outputs/verification/master_verification_log.xlsx",
+    "outputs/verification/master_evidence_archive.json",
+    "outputs/verification/master_verification_manifest.json"
+  ]
+}
