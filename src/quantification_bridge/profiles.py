@@ -344,36 +344,25 @@ def probe_hardware_baseline(
 
 
 def probe_tool_inventory() -> ToolInventory:
-    """Audit installed versions and paths of required bioinformatics tools."""
+    """Audit required tools independently so one missing binary cannot hide the others."""
     tools = ["fastp", "STAR", "featureCounts", "samtools", "infer_experiment.py", "fasterq-dump"]
     inventory: dict[str, dict[str, str | None]] = {}
-
-    batch_script = (
-        "which fastp; which STAR; which featureCounts; which samtools; which infer_experiment.py; which fasterq-dump; "
-        "echo '===DELIM==='; fastp --version 2>&1; "
-        "echo '===DELIM==='; STAR --version; "
-        "echo '===DELIM==='; featureCounts -v 2>&1 | grep featureCounts || true; "
-        "echo '===DELIM==='; samtools --version | head -n 1; "
-        "echo '===DELIM==='; infer_experiment.py --version 2>&1; "
-        "echo '===DELIM==='; fasterq-dump --version 2>&1"
-    )
-
-    res = run_wsl(batch_script)
-    if res.returncode == 0:
-        sections = res.stdout.strip().split("===DELIM===")
-        if len(sections) >= 7:
-            paths = [l.strip() for l in sections[0].strip().splitlines() if l.strip()]
-            for i, t in enumerate(tools):
-                t_path = paths[i] if i < len(paths) else None
-                t_ver = sections[i + 1].strip() if (i + 1) < len(sections) else "UNKNOWN"
-                inventory[t] = {
-                    "path": t_path if t_path and "not found" not in t_path.lower() else None,
-                    "version": t_ver if t_ver else None,
-                }
-    else:
-        for t in tools:
-            inventory[t] = {"path": None, "version": None}
-
+    for tool in tools:
+        if sys.platform == "win32":
+            # The command runs inside WSL; never rely on a combined shell exit code.
+            path_result = run_wsl(f"command -v {tool}")
+            found_path = path_result.stdout.strip() if path_result.returncode == 0 else None
+            version_result = run_wsl(f"{tool} --version") if found_path else None
+        else:
+            found_path = shutil.which(tool)
+            version_result = (
+                subprocess.run([found_path, "--version"], capture_output=True, text=True, check=False)
+                if found_path else None
+            )
+        version = None
+        if version_result is not None:
+            version = (version_result.stdout or version_result.stderr or "").strip() or None
+        inventory[tool] = {"path": found_path, "version": version}
     return ToolInventory(tools=inventory)
 
 
