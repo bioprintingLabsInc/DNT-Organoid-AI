@@ -43,8 +43,8 @@ class DatasetVerificationTests(unittest.TestCase):
         self.assertIn("biological_model", df_csv.columns)
         self.assertIn("compounds", df_csv.columns)
         
-        # Verify decision vocabulary
-        valid_decisions = {"INCLUDE", "NEEDS_REVIEW", "EXCLUDE"}
+        # Verify decision vocabulary (Phase 3 adds REFERENCE_DATASET)
+        valid_decisions = {"INCLUDE", "NEEDS_REVIEW", "EXCLUDE", "REFERENCE_DATASET"}
         actual_decisions = set(df_csv["decision"].unique())
         self.assertTrue(actual_decisions.issubset(valid_decisions), f"Invalid decisions: {actual_decisions}")
         
