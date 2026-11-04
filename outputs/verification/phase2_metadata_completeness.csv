@@ -1,0 +1,25 @@
+metadata_field,valid_extracted_values,total_samples,actual_completeness_pct
+Dataset ID,1298,1298,100.0
+Sample ID,1298,1298,100.0
+Sample Title,1298,1298,100.0
+Species,1298,1298,100.0
+Cell Type / Organoid Type,1298,1298,100.0
+Cell Line / Donor,1035,1298,79.74
+Organoid Age / Differentiation Day,571,1298,43.99
+Age at Exposure,571,1298,43.99
+Age at RNA Collection,571,1298,43.99
+Compound Name,1298,1298,100.0
+Compound ID,0,1298,0.0
+Compound Concentration,1080,1298,83.2
+Exposure Duration,1032,1298,79.51
+Exposure Pattern,1298,1298,100.0
+Treatment / Control Group,1298,1298,100.0
+Biological Replicate ID,949,1298,73.11
+Biological Replicates,1298,1298,100.0
+RNA-seq Type,1298,1298,100.0
+Sequencing Platform,1298,1298,100.0
+Study / Batch ID,1298,1298,100.0
+Gene Expression Data,1298,1298,100.0
+DNT Outcome Label,1298,1298,100.0
+DNT Evidence Source,1298,1298,100.0
+DNT Label Confidence,1298,1298,100.0

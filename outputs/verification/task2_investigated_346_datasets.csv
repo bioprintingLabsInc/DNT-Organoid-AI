@@ -1,0 +1,347 @@
+gse,prev_decision,phase2_decision,biological_model,compounds,sample_count,rationale
+GSE104276,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,39,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE107806,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,10,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE111571,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,20,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE111906,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE113125,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Ionizing Radiation,6,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 6 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE116233,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,56,Excluded: Non-human organism (Mus musculus; Homo sapiens).
+GSE119834,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,98,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE119861,NEEDS_REVIEW,INCLUDE,Human Brain Organoid / Spheroid,Methamphetamine,14,"Included (Phase 2 Verified): Verified human neural model (Human Brain Organoid / Spheroid) exposed to Methamphetamine with confirmed matched controls (n=8), chemical treatments (n=6), biological replicates (n=14), and accessible RNA-seq (scRNA-seq / snRNA-seq)."
+GSE121384,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE122550,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE122568,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE125033,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,14,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE125520,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,5,Excluded: Non-human organism (Aedes aegypti; Homo sapiens).
+GSE127064,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,59,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE129290,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,21,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE131250,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE132105,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE132447,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,42,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE136009,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,39,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE136282,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE137800,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Ionizing Radiation,26,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 26 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE139273,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,13,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE140057,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE141028,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE142174,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,108,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE142730,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE143155,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,30,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE143692,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE145122,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE145994,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,8464,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE147047,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE147404,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,20,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151039,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,26,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE151995,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,6,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE151997,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE154267,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,78,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE154799,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,8,Excluded: Non-human organism (Rattus norvegicus; Homo sapiens).
+GSE154825,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157253,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE157573,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,60,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE157676,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Valproic acid,9,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Valproic acid), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE158674,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,12,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE159487,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Valproic acid,150,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Valproic acid), but sample group structure (0 ctrl, 150 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE160088,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,21,Excluded: Non-human organism (Mus musculus; Homo sapiens).
+GSE160224,NEEDS_REVIEW,NEEDS_REVIEW,Human Differentiated Neurons,Neurodegenerative Protein Aggregates,9,"Needs Review (Phase 2): Candidate neural model (Human Differentiated Neurons) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE163156,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE164052,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,54,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE164053,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE164054,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,29,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE164089,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE164478,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,128,Excluded: Non-human organism (blank sample; Homo sapiens).
+GSE166442,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE169751,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Methylmercury,6,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Methylmercury with confirmed matched controls (n=2), chemical treatments (n=4), biological replicates (n=6), and accessible RNA-seq (scRNA-seq / snRNA-seq)."
+GSE171343,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,240,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE171344,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,36,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE172544,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,30,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE173129,NEEDS_REVIEW,EXCLUDE,Human Glial / Neuro-immune Cells,NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE173146,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,4,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE175555,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE175719,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE175721,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE178687,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE181144,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,29,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE181145,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,18,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE182307,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,32,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE182308,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE182761,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,9,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE184694,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE185324,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE186757,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE189225,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE189226,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE189533,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Dexamethasone,12,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Dexamethasone), but sample group structure (0 ctrl, 12 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE189534,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Dexamethasone,16,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Dexamethasone), but sample group structure (0 ctrl, 16 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE193711,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE193714,NEEDS_REVIEW,EXCLUDE,Human Glial / Neuro-immune Cells,NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE196073,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE196109,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,125,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE196190,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE196423,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE197252,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE197697,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,22,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE198575,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,48,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE199502,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Trimethyltin (TMT),36,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Trimethyltin (TMT) with confirmed matched controls (n=9), chemical treatments (n=27), biological replicates (n=36), and accessible RNA-seq (Bulk RNA-seq)."
+GSE201704,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE201895,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,16,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE201897,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,32,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE202992,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE205496,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,10,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE206088,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE207088,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE208418,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,76,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE208781,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE208783,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE210206,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Oxycodone; Buprenorphine,18,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Oxycodone, Buprenorphine), but sample group structure (0 ctrl, 18 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE210316,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,50,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE211063,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,24,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE211723,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,9,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE212535,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,9,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE212671,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,20,Excluded: Non-human organism (Homo sapiens; Homo sapiens/Mus musculus xenograft).
+GSE213302,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,78,Excluded: Non-human organism (Rattus norvegicus; Homo sapiens).
+GSE214108,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,48,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE214189,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),6-Hydroxydopamine (6-OHDA),18,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (6-Hydroxydopamine (6-OHDA)), but sample group structure (0 ctrl, 18 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE214210,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE214382,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,23,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE214882,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,32,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE215362,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,24,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE216700,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Ionizing Radiation,4,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 4 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE219245,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Cocaine,2,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Cocaine), but sample group structure (0 ctrl, 2 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE219246,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Cocaine,22,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Cocaine), but sample group structure (0 ctrl, 22 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE220690,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE221714,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,Ionizing Radiation,24,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE224346,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE224500,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,24,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE225761,NEEDS_REVIEW,EXCLUDE,Human Glial / Neuro-immune Cells,NONE,6,Excluded: Non-human organism (Rattus norvegicus; Homo sapiens).
+GSE226746,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,84,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE227014,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE227070,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),6-Hydroxydopamine (6-OHDA),6,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (6-Hydroxydopamine (6-OHDA)), but sample group structure (0 ctrl, 6 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE227181,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,9,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE227266,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,14,Excluded: Non-human organism (Rattus norvegicus; Homo sapiens).
+GSE227640,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,24,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE228156,NEEDS_REVIEW,NEEDS_REVIEW,Human Differentiated Neurons,Neurodegenerative Protein Aggregates,66,"Needs Review (Phase 2): Candidate neural model (Human Differentiated Neurons) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 66 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE228926,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,31,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE229452,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE230389,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,4,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE231341,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE232079,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,28,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE232464,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE232647,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE232669,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,18,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE233651,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE234417,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE234795,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,16,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE235040,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,30,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE238140,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE239369,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE239443,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,14,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE239444,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,11,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE240447,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,21,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE240854,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE241071,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,9,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE241453,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE241543,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE241631,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE241889,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE243177,NEEDS_REVIEW,NEEDS_REVIEW,Human Glial / Neuro-immune Cells,Neurodegenerative Protein Aggregates,7,"Needs Review (Phase 2): Candidate neural model (Human Glial / Neuro-immune Cells) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (6 ctrl, 1 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE243254,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,20,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE244886,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,28,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE246680,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),6-Hydroxydopamine (6-OHDA),9,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (6-Hydroxydopamine (6-OHDA)), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE247084,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,18,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE247086,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE247600,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,8,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE249009,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,48,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE249166,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,14,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE249360,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE250142,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE250143,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE250609,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,7,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE251684,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE251886,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,18,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE252132,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE252522,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,32,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE252523,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE252524,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,36,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE252932,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,48,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE253174,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,22,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE253412,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,7,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE253569,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Polychlorinated Biphenyls (PCBs),24,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Polychlorinated Biphenyls (PCBs)), but sample group structure (0 ctrl, 24 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE253648,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,5,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE253788,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE253821,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,8,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE253823,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,6,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE254205,NEEDS_REVIEW,EXCLUDE,Human Glial / Neuro-immune Cells,NONE,102,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE254742,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE254828,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE255013,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,16,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE255033,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE255588,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,28,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE256142,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,18,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE256148,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,7,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE259421,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,42,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE261618,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,3,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE261775,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,94,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE261875,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,32,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE261878,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,46,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE262517,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE266155,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE267613,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE268177,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,93,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE268178,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE269254,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Triptolide,17,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Triptolide), but sample group structure (0 ctrl, 17 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE269379,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,10,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE270481,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,24,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE270891,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE271374,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Ionizing Radiation,24,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 24 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE272241,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE272271,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,14,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE273907,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,7,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE275547,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE275765,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,78,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE276101,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,50,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE276176,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,101,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE276684,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE276803,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,23,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE276869,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,Bisphenols (BPA/BPS); Endocrine Disrupting Chemicals (Mix N),672,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE277602,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE277604,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,5,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE278224,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE278265,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Neurodegenerative Protein Aggregates,6,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 6 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE278450,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,Ionizing Radiation,22,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE278671,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,12,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE278678,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,28,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE278679,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE278697,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,13,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE278723,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,248,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 248 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE279590,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,61,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE279591,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,4,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE280909,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE280910,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE281327,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE281451,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,54,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE281452,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE282345,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE282369,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,17,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE282494,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE283484,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,9,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE284828,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE285126,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE285209,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,15,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE285273,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,16,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE285320,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Paclitaxel,24,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Paclitaxel), but sample group structure (0 ctrl, 24 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE286565,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,40,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE287216,NEEDS_REVIEW,EXCLUDE,Human Glial / Neuro-immune Cells,NONE,15,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE287509,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Propofol,12,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Propofol), but sample group structure (0 ctrl, 12 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE288022,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,9,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE288254,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE288841,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE289218,NEEDS_REVIEW,INCLUDE,Human Brain Organoid / Spheroid,Ionizing Radiation,4,"Included (Phase 2 Verified): Verified human neural model (Human Brain Organoid / Spheroid) exposed to Ionizing Radiation with confirmed matched controls (n=2), chemical treatments (n=2), biological replicates (n=4), and accessible RNA-seq (Bulk RNA-seq)."
+GSE290435,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Lead (Pb),60,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Lead (Pb) with confirmed matched controls (n=30), chemical treatments (n=30), biological replicates (n=60), and accessible RNA-seq (Bulk RNA-seq)."
+GSE290452,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE290525,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,6,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Neurodegenerative Protein Aggregates with confirmed matched controls (n=3), chemical treatments (n=3), biological replicates (n=6), and accessible RNA-seq (scRNA-seq / snRNA-seq)."
+GSE290910,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE292688,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,331,Excluded: Non-human organism (Homo sapiens; Pan troglodytes).
+GSE293169,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE293252,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,Cytarabine,51,Excluded: Non-human organism (Mus musculus; Homo sapiens).
+GSE293573,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE294029,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,27,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE294657,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,4,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE294687,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE294939,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,74,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE295097,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Ionizing Radiation,3,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Ionizing Radiation), but sample group structure (1 ctrl, 2 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE295508,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,9,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE295634,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,32,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE295998,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,24,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 24 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE296202,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE296710,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,8,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE296711,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE298027,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE298342,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,6,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE298758,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,36,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE299341,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,52,Excluded: Pure genetic perturbation (siRNA/shRNA/CRISPR/AAV) lacking chemical/toxicant exposure.
+GSE299369,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,6,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (6 ctrl, 0 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE299777,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE299790,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,8,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Neurodegenerative Protein Aggregates with confirmed matched controls (n=4), chemical treatments (n=4), biological replicates (n=8), and accessible RNA-seq (scRNA-seq / snRNA-seq)."
+GSE300150,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,55,Excluded: Non-human organism (Rattus norvegicus; Homo sapiens).
+GSE301194,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded: Non-human organism (Homo sapiens; Mus musculus).
+GSE301238,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,69,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE301239,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,51,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE301276,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Ionizing Radiation,5,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Ionizing Radiation), but sample group structure (5 ctrl, 0 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE301277,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Ionizing Radiation,2,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Ionizing Radiation), but sample group structure (2 ctrl, 0 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE301685,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE301787,NEEDS_REVIEW,EXCLUDE,Human Differentiated Neurons,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE302545,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,20,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE302654,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Triptolide,29,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Triptolide), but sample group structure (0 ctrl, 29 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE302899,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Ionizing Radiation,7,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 7 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE303508,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,6,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE303931,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE304103,NEEDS_REVIEW,INCLUDE,Human Brain Organoid / Spheroid,Propylene Glycol Butyl Ether (PGBE),64,"Included (Phase 2 Verified): Verified human neural model (Human Brain Organoid / Spheroid) exposed to Propylene Glycol Butyl Ether (PGBE) with confirmed matched controls (n=48), chemical treatments (n=16), biological replicates (n=64), and accessible RNA-seq (Bulk RNA-seq)."
+GSE304173,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE304761,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,30,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE304866,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE304918,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE305132,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,68,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE305186,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,15,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE305269,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE305954,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE306010,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE306153,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,24,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE307094,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,18,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 18 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE307124,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE307787,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,9,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE308404,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,9,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE308978,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,4,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE312520,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),6-Hydroxydopamine (6-OHDA),9,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (6-Hydroxydopamine (6-OHDA)), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE312628,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,36,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE312881,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Paclitaxel,71,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Paclitaxel with confirmed matched controls (n=35), chemical treatments (n=36), biological replicates (n=71), and accessible RNA-seq (Bulk RNA-seq)."
+GSE313106,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,48,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE313206,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,14,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE313207,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,17,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE313768,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,115,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE313924,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE315126,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,21,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE315127,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,24,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE315664,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,60,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE316010,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Manganese,12,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Manganese), but sample group structure (0 ctrl, 12 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE316338,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,10,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE318014,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,11,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE319077,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,18,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE319314,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,23,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE324490,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,30,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE324491,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,30,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE324518,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE324694,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,10,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE324959,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Particulate Matter (PM2.5),85,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Particulate Matter (PM2.5)), but sample group structure (0 ctrl, 85 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE325804,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Neurodegenerative Protein Aggregates,3,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (1 ctrl, 2 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE327797,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,Manganese,60,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE329738,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,4,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE329931,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,6,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE330092,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,12,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE335200,NEEDS_REVIEW,NEEDS_REVIEW,Human Brain Organoid / Spheroid,Neurodegenerative Protein Aggregates,9,"Needs Review (Phase 2): Candidate neural model (Human Brain Organoid / Spheroid) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE335291,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,17,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE335293,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,17,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE335405,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,59,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE335629,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,3,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE335920,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,48,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE335985,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,8,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE336661,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,34,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE339482,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,15,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE347233,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,4,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE348515,NEEDS_REVIEW,INCLUDE,Human Neural Progenitor Cells (NPC/NSC),Rotenone,204,"Included (Phase 2 Verified): Verified human neural model (Human Neural Progenitor Cells (NPC/NSC)) exposed to Rotenone with confirmed matched controls (n=54), chemical treatments (n=150), biological replicates (n=204), and accessible RNA-seq (Bulk RNA-seq)."
+GSE351508,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE351619,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Ionizing Radiation,12,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Ionizing Radiation), but sample group structure (0 ctrl, 12 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE58933,NEEDS_REVIEW,EXCLUDE,Unspecified / Non-Neural Cellular Model,NONE,18,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE63935,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,303,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE66777,NEEDS_REVIEW,EXCLUDE,Human Neural Differentiation Model,NONE,5,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE67124,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,12,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE76608,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,NONE,8,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE78464,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,2,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE78960,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,48,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE80073,NEEDS_REVIEW,EXCLUDE,Human Brain Organoid / Spheroid,NONE,20,Excluded from chemical training set: Useful reference baseline organoid developmental atlas (unexposed).
+GSE84712,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,79,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE85431,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,16,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE86457,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,34,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).
+GSE89115,NEEDS_REVIEW,NEEDS_REVIEW,Human Neural Progenitor Cells (NPC/NSC),Neurodegenerative Protein Aggregates,9,"Needs Review (Phase 2): Candidate neural model (Human Neural Progenitor Cells (NPC/NSC)) with chemical exposure (Neurodegenerative Protein Aggregates), but sample group structure (0 ctrl, 9 treat) or biological replicate independence requires manual bench protocol confirmation."
+GSE92459,NEEDS_REVIEW,EXCLUDE,Non-Neural Tissue / Cancer Model,Ionizing Radiation,21,Excluded: Biological model is non-neural or malignant cancer (Non-Neural Tissue / Cancer Model).
+GSE98111,NEEDS_REVIEW,EXCLUDE,Human Neural Progenitor Cells (NPC/NSC),NONE,4,Excluded: Lacks confirmed chemical/toxicological exposure (unexposed baseline or genetic variant).

@@ -1,0 +1,122 @@
+{
+  "Dataset ID": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Sample ID": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Sample Title": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Species": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Cell Type / Organoid Type": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Cell Line / Donor": {
+    "valid_count": 1035,
+    "total_samples": 1298,
+    "actual_completeness_pct": 79.74
+  },
+  "Organoid Age / Differentiation Day": {
+    "valid_count": 571,
+    "total_samples": 1298,
+    "actual_completeness_pct": 43.99
+  },
+  "Age at Exposure": {
+    "valid_count": 571,
+    "total_samples": 1298,
+    "actual_completeness_pct": 43.99
+  },
+  "Age at RNA Collection": {
+    "valid_count": 571,
+    "total_samples": 1298,
+    "actual_completeness_pct": 43.99
+  },
+  "Compound Name": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Compound ID": {
+    "valid_count": 0,
+    "total_samples": 1298,
+    "actual_completeness_pct": 0.0
+  },
+  "Compound Concentration": {
+    "valid_count": 1080,
+    "total_samples": 1298,
+    "actual_completeness_pct": 83.2
+  },
+  "Exposure Duration": {
+    "valid_count": 1032,
+    "total_samples": 1298,
+    "actual_completeness_pct": 79.51
+  },
+  "Exposure Pattern": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Treatment / Control Group": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Biological Replicate ID": {
+    "valid_count": 949,
+    "total_samples": 1298,
+    "actual_completeness_pct": 73.11
+  },
+  "Biological Replicates": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "RNA-seq Type": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Sequencing Platform": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Study / Batch ID": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "Gene Expression Data": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "DNT Outcome Label": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "DNT Evidence Source": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  },
+  "DNT Label Confidence": {
+    "valid_count": 1298,
+    "total_samples": 1298,
+    "actual_completeness_pct": 100.0
+  }
+}

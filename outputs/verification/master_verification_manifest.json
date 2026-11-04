@@ -1,23 +1,49 @@
 {
-  "execution_title": "DNT AI GEO Master Cohort Verification v1.0",
-  "start_utc": "2026-11-04T19:25:27.783190+00:00",
-  "end_utc": "2026-11-04T19:29:08.060759+00:00",
+  "execution_title": "DNT AI GEO Master Cohort Verification Phase 2 Deep Audit",
+  "start_utc": "2026-11-04T19:57:31.522199+00:00",
+  "end_utc": "2026-11-04T19:57:36.846819+00:00",
   "total_datasets_reviewed": 1666,
-  "decisions": {
-    "INCLUDE": 70,
-    "NEEDS_REVIEW": 346,
-    "EXCLUDE": 1250
+  "task1_reverified_70": {
+    "retained_include": 34,
+    "demoted_needs_review": 1,
+    "demoted_exclude": 35
   },
-  "sample_records_extracted": 1690,
-  "unique_compounds_identified": 190,
+  "task2_investigated_346": {
+    "rescued_to_include": 10,
+    "remaining_review_or_exclude": 336
+  },
+  "task3_audited_1250": {
+    "reference_baseline_atlases_cataloged": 332,
+    "rescued_to_include": 4
+  },
+  "final_cohort_decisions": {
+    "INCLUDE": 48,
+    "NEEDS_REVIEW": 44,
+    "EXCLUDE": 1574
+  },
+  "decisions": {
+    "INCLUDE": 48,
+    "NEEDS_REVIEW": 44,
+    "EXCLUDE": 1574
+  },
+  "included_sample_count": 1298,
+  "verified_treatment_samples": 876,
+  "verified_control_samples": 422,
+  "verified_unique_compounds": 110,
+  "unique_compounds_identified": 110,
   "files_generated": [
     "data/metadata/dnt_master_dataset_inventory.csv",
     "data/metadata/dnt_master_dataset_inventory.xlsx",
     "data/metadata/dnt_sample_metadata_v1.csv",
     "data/metadata/dnt_sample_metadata_v1.xlsx",
-    "outputs/verification/master_verification_log.csv",
-    "outputs/verification/master_verification_log.xlsx",
-    "outputs/verification/master_evidence_archive.json",
+    "outputs/verification/phase2_decision_log.csv",
+    "outputs/verification/phase2_decision_log.xlsx",
+    "outputs/verification/phase2_evidence_archive.json",
+    "outputs/verification/phase2_metadata_completeness.json",
+    "outputs/verification/phase2_metadata_completeness.csv",
+    "outputs/verification/task1_reverified_70_datasets.csv",
+    "outputs/verification/task2_investigated_346_datasets.csv",
+    "outputs/verification/task3_audited_1250_datasets.csv",
     "outputs/verification/master_verification_manifest.json"
   ]
 }
