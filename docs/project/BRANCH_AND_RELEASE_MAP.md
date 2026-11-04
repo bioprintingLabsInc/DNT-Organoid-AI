@@ -12,6 +12,9 @@ This document explains the repository branching strategy, validated release mile
 | **`feature/streamlit-demo-hardening`** | Web interface hardening & GEO resolution | `ca26d34` | Validated Streamlit web interface on GSE232218 |
 | **`feature/stage8c-pathway-analysis-v1`** | Pathway and signaling features v1 | `7a69c25` | **FROZEN RELEASE BASELINE** (`stage8c-v1-frozen`) |
 | **`chore/repository-organization-handoff-v1`** | Documentation & handoff reorganization | Current | Documentation-only branch based on `stage8c-v1-frozen` |
+| **eature/dnt-dataset-verification-phase3-repair** | Phase 3 Comprehensive Scientific Verification Repair | d0863cd | **ACTIVE VERIFICATION BRANCH**: 1,666 GEO records verified across 34 batches; 48 INCLUDE, 44 NEEDS_REVIEW, 332 REFERENCE_DATASET, 1,242 EXCLUDE; 1,298 samples; 219 conditions. |
+| **eature/dnt-dataset-verification-phase3** | Phase 3 Audit History Branch (Preserved) | 5f11cac | **IMMUTABLE AUDIT TRAIL**: Preserved record of initial automated run anomaly for scientific auditability. |
+| **eature/dnt-dataset-verification-v1** | Phase 2 Deep Dataset Verification Audit | 1889bb7 | Complete Phase 2 deep verification audit across 1,666 GEO datasets. |
 
 ### Historical Feature Branches (Archived for Traceability):
 * `feature/gene-harmonization-v1` (commit `b904a41`): Step 6B Gene Harmonization locked.
