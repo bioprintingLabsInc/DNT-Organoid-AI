@@ -63,6 +63,7 @@ def check_storage_capacity(
     target_path: str | Path,
     required_bytes: int,
     safety_margin_gb: float = 5.0,
+    user_confirmed_account_free_gb: float | None = None,
     user_verified_account_free_gb: float | None = None,
     account_quota_gb: float | None = None,
     google_drive_service: Any = None,
@@ -73,7 +74,7 @@ def check_storage_capacity(
     FUSE filesystem statistics (statvfs) report virtual disk metrics that do not establish
     true account-level quota. Therefore, an account-level quota MUST be verified either:
     1. Via authorized Google Drive API client (google_drive_service) querying about().get(fields='storageQuota').
-    2. Via explicit user confirmation of account headroom (user_verified_account_free_gb) verified at
+    2. Via explicit user confirmation of account headroom (user_confirmed_account_free_gb) verified at
        https://drive.google.com/drive/quota.
 
     Folder-based file scanning is strictly prohibited from being reported as verified account headroom.
@@ -96,6 +97,7 @@ def check_storage_capacity(
     account_quota_info = None
 
     is_gdrive = is_google_drive_path(p) or is_google_drive_path(probe_path) or is_google_drive_path(Path(target_path))
+    confirmed_user_free = user_confirmed_account_free_gb if user_confirmed_account_free_gb is not None else user_verified_account_free_gb
 
     if google_drive_service is not None:
         # 1. Query authorized Google Drive API metadata
@@ -117,14 +119,15 @@ def check_storage_capacity(
                 }
         except Exception as e:
             raise StorageError(f"Failed to query authorized Google Drive API storageQuota: {e}")
-    elif user_verified_account_free_gb is not None:
+    elif confirmed_user_free is not None:
         # 2. Explicit manual user verification
-        account_free_bytes = int(user_verified_account_free_gb * (1024**3))
+        account_free_bytes = int(confirmed_user_free * (1024**3))
         effective_free = min(free, account_free_bytes)
         quota_source = "USER_VERIFIED_ACCOUNT_QUOTA"
         account_quota_info = {
             "source": quota_source,
-            "user_verified_account_free_gb": user_verified_account_free_gb,
+            "user_confirmed_account_free_gb": confirmed_user_free,
+            "user_verified_account_free_gb": confirmed_user_free,
             "effective_free_gb": round(effective_free / (1024**3), 2),
             "verified": True,
         }
@@ -134,8 +137,8 @@ def check_storage_capacity(
             f"Target path '{target_path}' is on Google Drive FUSE storage. "
             "Virtual filesystem statistics cannot establish total Google Drive account usage. "
             "You must either provide an authorized google_drive_service client or supply "
-            "user_verified_account_free_gb (manually confirmed via https://drive.google.com/drive/quota). "
-            "Estimating account quota from scanned folder contents is prohibited."
+            "user_confirmed_account_free_gb (manually confirmed via https://drive.google.com/drive/quota). "
+            "Estimating account quota from scanned folder contents or hardcoded assumptions is prohibited."
         )
     elif account_quota_gb is not None and account_quota_gb > 0:
         # Local non-Drive path with specified quota limit
@@ -187,6 +190,11 @@ def sync_and_verify_file(
     expected_sha256: str | None = None,
     delete_source_after: bool = False,
     chunk_size: int = 1024 * 1024,
+    safety_margin_gb: float = 1.0,
+    user_confirmed_account_free_gb: float | None = None,
+    user_verified_account_free_gb: float | None = None,
+    account_quota_gb: float | None = None,
+    google_drive_service: Any = None,
 ) -> dict[str, Any]:
     """Copy a file to destination and verify cryptographic SHA-256 before optional source cleanup."""
     s = Path(src_file).resolve()
@@ -197,7 +205,15 @@ def sync_and_verify_file(
 
     file_size = s.stat().st_size
     # Preflight destination storage capacity
-    check_storage_capacity(d.parent, required_bytes=file_size, safety_margin_gb=1.0)
+    check_storage_capacity(
+        d.parent,
+        required_bytes=file_size,
+        safety_margin_gb=safety_margin_gb,
+        user_confirmed_account_free_gb=user_confirmed_account_free_gb,
+        user_verified_account_free_gb=user_verified_account_free_gb,
+        account_quota_gb=account_quota_gb,
+        google_drive_service=google_drive_service,
+    )
 
     d.parent.mkdir(parents=True, exist_ok=True)
 
@@ -242,6 +258,10 @@ def sync_and_verify_directory(
     dst_dir: str | Path,
     safety_margin_gb: float = 5.0,
     delete_source_after: bool = False,
+    user_confirmed_account_free_gb: float | None = None,
+    user_verified_account_free_gb: float | None = None,
+    account_quota_gb: float | None = None,
+    google_drive_service: Any = None,
 ) -> dict[str, Any]:
     """Recursively copy a directory and verify all constituent file SHA-256 checksums."""
     s_d = Path(src_dir).resolve()
@@ -253,7 +273,15 @@ def sync_and_verify_directory(
     file_list: list[Path] = [p for p in s_d.rglob("*") if p.is_file()]
     total_bytes = sum(f.stat().st_size for f in file_list)
 
-    check_storage_capacity(d_d, required_bytes=total_bytes, safety_margin_gb=safety_margin_gb)
+    check_storage_capacity(
+        d_d,
+        required_bytes=total_bytes,
+        safety_margin_gb=safety_margin_gb,
+        user_confirmed_account_free_gb=user_confirmed_account_free_gb,
+        user_verified_account_free_gb=user_verified_account_free_gb,
+        account_quota_gb=account_quota_gb,
+        google_drive_service=google_drive_service,
+    )
 
     d_d.mkdir(parents=True, exist_ok=True)
 
@@ -262,7 +290,15 @@ def sync_and_verify_directory(
     for src_f in file_list:
         rel_path = src_f.relative_to(s_d)
         dst_f = d_d / rel_path
-        res = sync_and_verify_file(src_f, dst_f, delete_source_after=False)
+        res = sync_and_verify_file(
+            src_f,
+            dst_f,
+            delete_source_after=False,
+            user_confirmed_account_free_gb=user_confirmed_account_free_gb,
+            user_verified_account_free_gb=user_verified_account_free_gb,
+            account_quota_gb=account_quota_gb,
+            google_drive_service=google_drive_service,
+        )
         verified_files.append(res)
 
     total_time = time.time() - t0
@@ -287,6 +323,7 @@ def archive_and_sync_directory(
     dst_dir: str | Path,
     archive_name: str = "star_index_GRCh38_112_dense.tar",
     safety_margin_gb: float = 10.0,
+    user_confirmed_account_free_gb: float | None = None,
     user_verified_account_free_gb: float | None = None,
     account_quota_gb: float | None = None,
     google_drive_service: Any = None,
@@ -342,6 +379,7 @@ def archive_and_sync_directory(
         d_d,
         required_bytes=archive_size_bytes + local_manifest.stat().st_size,
         safety_margin_gb=safety_margin_gb,
+        user_confirmed_account_free_gb=user_confirmed_account_free_gb,
         user_verified_account_free_gb=user_verified_account_free_gb,
         account_quota_gb=account_quota_gb,
         google_drive_service=google_drive_service,
@@ -352,8 +390,26 @@ def archive_and_sync_directory(
     dst_archive = d_d / archive_name
     dst_manifest = d_d / f"{archive_name}.manifest.json"
 
-    res_archive = sync_and_verify_file(local_archive, dst_archive, expected_sha256=archive_sha256, delete_source_after=True)
-    res_manifest = sync_and_verify_file(local_manifest, dst_manifest, expected_sha256=manifest_sha256, delete_source_after=True)
+    res_archive = sync_and_verify_file(
+        local_archive,
+        dst_archive,
+        expected_sha256=archive_sha256,
+        delete_source_after=True,
+        user_confirmed_account_free_gb=user_confirmed_account_free_gb,
+        user_verified_account_free_gb=user_verified_account_free_gb,
+        account_quota_gb=account_quota_gb,
+        google_drive_service=google_drive_service,
+    )
+    res_manifest = sync_and_verify_file(
+        local_manifest,
+        dst_manifest,
+        expected_sha256=manifest_sha256,
+        delete_source_after=True,
+        user_confirmed_account_free_gb=user_confirmed_account_free_gb,
+        user_verified_account_free_gb=user_verified_account_free_gb,
+        account_quota_gb=account_quota_gb,
+        google_drive_service=google_drive_service,
+    )
 
     if delete_source_after:
         shutil.rmtree(s_d)

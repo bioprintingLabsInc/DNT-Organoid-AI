@@ -310,31 +310,34 @@ class QuantificationBridgePipeline:
 
         # 1. FASTA Verification
         fasta_spec = refs_spec["fasta"]
-        if not self.fasta_path.exists():
+        if not self.fasta_path.exists() or sha256_file(self.fasta_path).lower() != fasta_spec["sha256"].lower():
             print(f"Acquiring FASTA from {fasta_spec['source_url']}...")
-            dl_cmd = f"python {to_wsl_path(self.repo_root / 'scripts' / 'download_reference_fasta.py')}"
-            res = run_wsl(dl_cmd)
-            if res.returncode != 0:
-                raise RuntimeError(f"Reference FASTA acquisition failed:\n{res.stdout}\n{res.stderr}")
+            from scripts.download_reference_fasta import download_and_verify_fasta
+            download_and_verify_fasta(dest_path=self.fasta_path, num_chunks=8)
 
         observed_fasta_sha = sha256_file(self.fasta_path)
-        if observed_fasta_sha != fasta_spec["sha256"]:
+        if observed_fasta_sha.lower() != fasta_spec["sha256"].lower():
             raise AssertionError(f"FASTA SHA-256 mismatch! Expected {fasta_spec['sha256']}, got {observed_fasta_sha}")
         print(f"[OK] Reference FASTA verified (SHA-256: {observed_fasta_sha})")
 
         # 2. GTF Verification
         gtf_spec = refs_spec["gtf"]
-        if not self.gtf_path.exists():
+        if not self.gtf_path.exists() or sha256_file(self.gtf_path).lower() != gtf_spec["sha256"].lower():
             print(f"Acquiring GTF from {gtf_spec['source_url']}...")
             self.gtf_path.parent.mkdir(parents=True, exist_ok=True)
-            wsl_gtf = to_wsl_path(self.gtf_path)
-            curl_cmd = f"curl -C - --retry 5 --retry-delay 5 -L '{gtf_spec['source_url']}' -o '{wsl_gtf}'"
-            res = run_wsl(curl_cmd)
-            if res.returncode != 0:
-                raise RuntimeError(f"GTF download failed:\n{res.stderr}")
+            tmp_gtf = self.gtf_path.parent / f"{self.gtf_path.name}.tmp"
+            req = urllib.request.Request(gtf_spec["source_url"], headers={"User-Agent": "DNT-Organoid-AI/2.0"})
+            with urllib.request.urlopen(req, timeout=60) as resp, open(tmp_gtf, "wb") as f_out:
+                shutil.copyfileobj(resp, f_out, length=4 * 1024 * 1024)
+
+            downloaded_gtf_sha = sha256_file(tmp_gtf)
+            if downloaded_gtf_sha.lower() != gtf_spec["sha256"].lower():
+                tmp_gtf.unlink(missing_ok=True)
+                raise AssertionError(f"GTF SHA-256 mismatch! Expected {gtf_spec['sha256']}, got {downloaded_gtf_sha}")
+            tmp_gtf.replace(self.gtf_path)
 
         observed_gtf_sha = sha256_file(self.gtf_path)
-        if observed_gtf_sha != gtf_spec["sha256"]:
+        if observed_gtf_sha.lower() != gtf_spec["sha256"].lower():
             raise AssertionError(f"GTF SHA-256 mismatch! Expected {gtf_spec['sha256']}, got {observed_gtf_sha}")
         print(f"[OK] Reference GTF verified (SHA-256: {observed_gtf_sha})")
 

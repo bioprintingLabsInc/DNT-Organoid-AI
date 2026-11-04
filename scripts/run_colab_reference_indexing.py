@@ -202,10 +202,12 @@ def main():
         help="Total Google Drive account capacity in GB (default: 5000.0 GB = 5 TB)",
     )
     parser.add_argument(
+        "--user-confirmed-account-free-gb",
         "--user-verified-account-free-gb",
+        dest="user_confirmed_account_free_gb",
         type=float,
         default=None,
-        help="User-verified Google Drive available account headroom in GB (confirmed via https://drive.google.com/drive/quota)",
+        help="User-confirmed Google Drive available account headroom in GB (confirmed via https://drive.google.com/drive/quota)",
     )
     parser.add_argument(
         "--use-archive",
@@ -369,7 +371,7 @@ def main():
                 dst_dir=persistent_ref_dir,
                 archive_name="star_index_GRCh38_112_dense.tar",
                 safety_margin_gb=args.safety_margin_gb,
-                user_verified_account_free_gb=args.user_verified_account_free_gb,
+                user_confirmed_account_free_gb=args.user_confirmed_account_free_gb,
                 account_quota_gb=args.account_quota_gb,
                 delete_source_after=False,  # Retain local copy on fast SSD for active alignment!
             )
