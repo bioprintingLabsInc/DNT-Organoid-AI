@@ -16,7 +16,7 @@ url = (
     "https://www.ebi.ac.uk/ena/portal/api/filereport?"
     "accession=PRJNA802072&result=read_run&"
     "fields=study_accession,sample_accession,experiment_accession,run_accession,"
-    "sample_alias,sample_title,fastq_ftp,fastq_md5,read_count,base_count,library_layout&"
+    "sample_alias,fastq_ftp,fastq_md5,read_count,base_count,library_layout&"
     "format=tsv&download=true"
 )
 
@@ -54,11 +54,13 @@ for s in approved_runs:
     biosample_ok = e["sample_accession"] == s["biosample_accession"]
     experiment_ok = e["experiment_accession"] == s["experiment_accession"]
     reads_ok = int(e["read_count"]) == s["paired_reads_expected"]
-    layout = e.get("library_layout", "PAIRED")
+    layout = e.get("library_layout", "")
+    layout_ok = layout.upper() == "PAIRED"
+    bases_ok = int(e["base_count"]) == s["total_bases_expected"]
 
-    if not (md5_ok and ftp_ok and alias_ok and biosample_ok and experiment_ok and reads_ok):
+    if not (md5_ok and ftp_ok and alias_ok and biosample_ok and experiment_ok and reads_ok and layout_ok and bases_ok):
         all_reconciled = False
-        print(f"DISCREPANCY in {rid}: md5={md5_ok}, ftp={ftp_ok}, alias={alias_ok}, biosample={biosample_ok}, exp={experiment_ok}, reads={reads_ok}")
+        print(f"DISCREPANCY in {rid}: md5={md5_ok}, ftp={ftp_ok}, alias={alias_ok}, biosample={biosample_ok}, exp={experiment_ok}, reads={reads_ok}, bases={bases_ok}, paired_layout={layout_ok}")
     else:
         print(f"{rid:<13} {s['sample_alias']:<13} {s['group']:<10} {s['dose']:<4.0f} {s['dose_unit']:<3} {s['day']:<4} {layout:<8} {e['sample_accession']:<14} {e['experiment_accession']:<13} {int(e['read_count']):<12,d} MATCH_VERIFIED")
 
