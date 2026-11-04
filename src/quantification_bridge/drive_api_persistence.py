@@ -214,3 +214,90 @@ def archive_and_upload_directory(
         "local_archive_path": str(local_archive),
         "local_manifest_path": str(local_manifest),
     }
+
+
+def download_verified_archive(
+    drive_service,
+    local_directory: str | Path,
+    archive_name: str = "star_index_GRCh38_112_dense.tar",
+    drive_folder_path: tuple[str, ...] = ("DNT_Organoid_AI_Persistence", "references"),
+) -> Path | None:
+    """Download a prior API-verified archive plus its SHA-256 manifest to local SSD.
+
+    Returns None if the complete remote archive/manifest pair cannot be found.
+    The caller must still run restore_and_verify_archive for per-file checks.
+    """
+    from io import BytesIO
+    from googleapiclient.http import MediaIoBaseDownload
+
+    if drive_service is None:
+        return None
+    parent = "root"
+    for name in drive_folder_path:
+        found = _list_named(drive_service, parent, name, folder_only=True)
+        if not found:
+            return None
+        if len(found) != 1:
+            raise RuntimeError(f"Ambiguous Drive folder: {name!r}")
+        parent = found[0]["id"]
+
+    archives = _list_named(drive_service, parent, archive_name)
+    manifests = _list_named(drive_service, parent, archive_name + ".manifest.json")
+    if not archives or not manifests:
+        return None
+    if len(archives) != 1 or len(manifests) != 1:
+        raise RuntimeError("Duplicate remote archive or manifest; cannot choose verified backup")
+
+    archive_meta, manifest_meta = archives[0], manifests[0]
+    stream = BytesIO()
+    downloader = MediaIoBaseDownload(
+        stream, drive_service.files().get_media(fileId=manifest_meta["id"]),
+        chunksize=_CHUNK_SIZE,
+    )
+    done = False
+    while not done:
+        _, done = downloader.next_chunk(num_retries=6)
+    manifest_bytes = stream.getvalue()
+    if hashlib.md5(manifest_bytes).hexdigest() != manifest_meta.get("md5Checksum"):
+        raise RuntimeError("Remote companion manifest MD5 verification failed")
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    expected_sha = manifest.get("archive_sha256")
+    size = int(manifest.get("archive_size_bytes", -1))
+    if not expected_sha or size <= 0 or str(size) != str(archive_meta.get("size")):
+        raise RuntimeError("Manifest is incomplete or does not match remote archive size")
+
+    local_directory = Path(local_directory).resolve()
+    local_directory.mkdir(parents=True, exist_ok=True)
+    archive = local_directory / archive_name
+    manifest_path = local_directory / (archive_name + ".manifest.json")
+    if archive.is_file() and archive.stat().st_size == size and _digest(archive, "sha256") == expected_sha:
+        manifest_path.write_bytes(manifest_bytes)
+        print("[RESTORE] Reusing existing SHA-256 verified local archive")
+        return archive
+
+    free = shutil.disk_usage(local_directory).free
+    if free < size + 10 * 1024 ** 3:
+        raise RuntimeError("Insufficient local disk to download Drive archive safely")
+
+    temporary = local_directory / (archive_name + ".downloading")
+    print("Restoring STAR archive from Google Drive API to local SSD...")
+    with temporary.open("wb") as output:
+        downloader = MediaIoBaseDownload(
+            output, drive_service.files().get_media(fileId=archive_meta["id"]),
+            chunksize=_CHUNK_SIZE,
+        )
+        done = False
+        last_percent = -10
+        while not done:
+            status, done = downloader.next_chunk(num_retries=6)
+            if status:
+                pct = int(status.progress() * 100)
+                if pct >= last_percent + 10:
+                    print(f"[DOWNLOAD] {pct}%")
+                    last_percent = pct
+    if temporary.stat().st_size != size or _digest(temporary, "sha256") != expected_sha:
+        raise RuntimeError("Restored archive SHA-256 verification failed; refusing extraction")
+    temporary.replace(archive)
+    manifest_path.write_bytes(manifest_bytes)
+    print("[RESTORE] Google Drive archive SHA-256 verified")
+    return archive
