@@ -43,6 +43,7 @@ data/model_ready/*
 # Generated outputs and model artifacts
 outputs/*/*
 !outputs/*/.gitkeep
+!outputs/geo_search/**
 *.pkl
 *.joblib
 *.onnx

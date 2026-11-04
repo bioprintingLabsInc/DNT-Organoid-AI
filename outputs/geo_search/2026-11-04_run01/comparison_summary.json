@@ -1,0 +1,20 @@
+{
+  "run_id": "2026-11-04_run01",
+  "execution_date_utc": "2026-11-04",
+  "total_search_matches": 1546,
+  "queries": {
+    "Q1_BIO_EXPOSURE": 66,
+    "Q2_BIO_TRANSCRIPTOMICS": 1358,
+    "Q3_EXPOSURE_TRANSCRIPTOMICS": 122
+  },
+  "total_unique_geo_datasets": 1452,
+  "original_historical_cohort_size": 516,
+  "overlapping_with_original_516": 302,
+  "newly_discovered_datasets": 1150,
+  "historical_cohort_not_recalled": 214,
+  "reproducibility": {
+    "protocol": "DNT-GEO-SEARCH-v1.0",
+    "keywords_config_sha256": "143e5009cfd1a909b5f27af868e0146c42d2f60426729ebedc891394377f334d",
+    "output_directory": "outputs\\geo_search\\2026-11-04_run01"
+  }
+}

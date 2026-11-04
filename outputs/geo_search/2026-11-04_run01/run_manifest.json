@@ -1,0 +1,35 @@
+{
+  "protocol": "DNT-GEO-SEARCH-v1.0",
+  "run_started_utc": "2026-11-04T18:31:30.249492+00:00",
+  "config_sha256": "143e5009cfd1a909b5f27af868e0146c42d2f60426729ebedc891394377f334d",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "queries": [
+    {
+      "query_id": "Q1_BIO_EXPOSURE",
+      "exact_query": "(\"Brain organoid\"[All Fields] OR \"Cerebral organoid\"[All Fields] OR \"Cortical organoid\"[All Fields] OR \"Forebrain organoid\"[All Fields] OR \"Midbrain organoid\"[All Fields] OR \"Neural organoid\"[All Fields] OR \"Brain spheroid\"[All Fields] OR \"Neural spheroid\"[All Fields] OR \"BrainSphere\"[All Fields] OR \"3D brain\"[All Fields] OR \"3D neural\"[All Fields] OR \"Neural assembloid\"[All Fields] OR \"Cortical spheroid\"[All Fields] OR \"Neurosphere\"[All Fields] OR \"Neural rosette\"[All Fields] OR \"Brain organ-on-chip\"[All Fields] OR \"Neural progenitor cells\"[All Fields] OR \"Neural stem cells\"[All Fields] OR \"iPSC-derived neurons\"[All Fields] OR \"Human neural cells\"[All Fields] OR \"Neural differentiation\"[All Fields] OR \"Cortical neurons\"[All Fields] OR \"Dopaminergic neurons\"[All Fields] OR \"Neural precursor cells\"[All Fields] OR \"iPSC-derived neural cells\"[All Fields] OR \"Neurodevelopment\"[All Fields]) AND (\"Developmental neurotoxicity\"[All Fields] OR \"Neurodevelopmental toxicity\"[All Fields] OR \"Neurotoxicity\"[All Fields] OR \"Developmental toxicology\"[All Fields] OR \"Chemical-induced neurotoxicity\"[All Fields] OR \"Chemical exposure\"[All Fields] OR \"Drug-induced neurotoxicity\"[All Fields] OR \"Environmental toxicants\"[All Fields] OR \"Pesticide exposure\"[All Fields] OR \"Heavy metal exposure\"[All Fields] OR \"Prenatal exposure\"[All Fields] OR \"Neurotoxic compounds\"[All Fields]) AND Homo sapiens[Organism] AND gse[Entry Type]",
+      "start_utc": "2026-11-04T18:31:30.355195+00:00",
+      "end_utc": "2026-11-04T18:31:33.000147+00:00",
+      "esearch_reported_count": 66,
+      "retrieved_gse_accessions": 66
+    },
+    {
+      "query_id": "Q2_BIO_TRANSCRIPTOMICS",
+      "exact_query": "(\"Brain organoid\"[All Fields] OR \"Cerebral organoid\"[All Fields] OR \"Cortical organoid\"[All Fields] OR \"Forebrain organoid\"[All Fields] OR \"Midbrain organoid\"[All Fields] OR \"Neural organoid\"[All Fields] OR \"Brain spheroid\"[All Fields] OR \"Neural spheroid\"[All Fields] OR \"BrainSphere\"[All Fields] OR \"3D brain\"[All Fields] OR \"3D neural\"[All Fields] OR \"Neural assembloid\"[All Fields] OR \"Cortical spheroid\"[All Fields] OR \"Neurosphere\"[All Fields] OR \"Neural rosette\"[All Fields] OR \"Brain organ-on-chip\"[All Fields] OR \"Neural progenitor cells\"[All Fields] OR \"Neural stem cells\"[All Fields] OR \"iPSC-derived neurons\"[All Fields] OR \"Human neural cells\"[All Fields] OR \"Neural differentiation\"[All Fields] OR \"Cortical neurons\"[All Fields] OR \"Dopaminergic neurons\"[All Fields] OR \"Neural precursor cells\"[All Fields] OR \"iPSC-derived neural cells\"[All Fields] OR \"Neurodevelopment\"[All Fields]) AND (\"RNA sequencing\"[All Fields] OR \"RNA-seq\"[All Fields] OR \"Transcriptomics\"[All Fields] OR \"Bulk RNA-seq\"[All Fields] OR \"Single-cell RNA-seq\"[All Fields] OR \"snRNA-seq\"[All Fields] OR \"Gene expression profiling\"[All Fields]) AND Homo sapiens[Organism] AND gse[Entry Type]",
+      "start_utc": "2026-11-04T18:31:33.000147+00:00",
+      "end_utc": "2026-11-04T18:31:54.100453+00:00",
+      "esearch_reported_count": 1358,
+      "retrieved_gse_accessions": 1358
+    },
+    {
+      "query_id": "Q3_EXPOSURE_TRANSCRIPTOMICS",
+      "exact_query": "(\"Developmental neurotoxicity\"[All Fields] OR \"Neurodevelopmental toxicity\"[All Fields] OR \"Neurotoxicity\"[All Fields] OR \"Developmental toxicology\"[All Fields] OR \"Chemical-induced neurotoxicity\"[All Fields] OR \"Chemical exposure\"[All Fields] OR \"Drug-induced neurotoxicity\"[All Fields] OR \"Environmental toxicants\"[All Fields] OR \"Pesticide exposure\"[All Fields] OR \"Heavy metal exposure\"[All Fields] OR \"Prenatal exposure\"[All Fields] OR \"Neurotoxic compounds\"[All Fields]) AND (\"RNA sequencing\"[All Fields] OR \"RNA-seq\"[All Fields] OR \"Transcriptomics\"[All Fields] OR \"Bulk RNA-seq\"[All Fields] OR \"Single-cell RNA-seq\"[All Fields] OR \"snRNA-seq\"[All Fields] OR \"Gene expression profiling\"[All Fields]) AND Homo sapiens[Organism] AND gse[Entry Type]",
+      "start_utc": "2026-11-04T18:31:54.100453+00:00",
+      "end_utc": "2026-11-04T18:31:58.110382+00:00",
+      "esearch_reported_count": 122,
+      "retrieved_gse_accessions": 122
+    }
+  ],
+  "unique_accessions": 1452,
+  "run_finished_utc": "2026-11-04T18:31:58.114425+00:00"
+}

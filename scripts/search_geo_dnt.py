@@ -27,9 +27,10 @@ def now():
 
 def get(endpoint, params):
     url = API + endpoint + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": "DNT-Organoid-AI-GEO-discovery/1.0"})
     for attempt in range(5):
         try:
-            with urllib.request.urlopen(url, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=60) as response:
                 return json.load(response)
         except Exception:
             if attempt == 4:
@@ -52,6 +53,7 @@ def main():
     p.add_argument("--output-dir", required=True)
     p.add_argument("--config", default="config/dnt_geo_search_keywords_v1.json")
     p.add_argument("--email", default=os.getenv("NCBI_EMAIL"))
+    p.add_argument("--api-key", default=os.getenv("NCBI_API_KEY"))
     args = p.parse_args()
     if not args.email:
         p.error("Pass --email or set NCBI_EMAIL to identify requests to NCBI.")
@@ -68,6 +70,8 @@ def main():
         start = now()
         base = {"db":"gds","term":query,"retmode":"json",
                 "tool":"DNT-Organoid-AI-GEO-discovery","email":args.email}
+        if args.api_key:
+            base["api_key"] = args.api_key
         first = get("esearch.fcgi",{**base,"retmax":0})
         total = int(first["esearchresult"]["count"])
         uids = []
@@ -80,9 +84,12 @@ def main():
         accessions = []
         for offset in range(0,len(uids),100):
             batch = uids[offset:offset+100]
-            summary = get("esummary.fcgi",{"db":"gds","id":",".join(batch),
+            summary_params = {"db":"gds","id":",".join(batch),
                         "retmode":"json","tool":"DNT-Organoid-AI-GEO-discovery",
-                        "email":args.email})
+                        "email":args.email}
+            if args.api_key:
+                summary_params["api_key"] = args.api_key
+            summary = get("esummary.fcgi", summary_params)
             for uid in batch:
                 record = summary["result"].get(str(uid),{})
                 acc = str(record.get("accession",""))
