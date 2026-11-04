@@ -44,7 +44,7 @@ class DatasetVerificationTests(unittest.TestCase):
         self.assertIn("compounds", df_csv.columns)
         
         # Verify decision vocabulary
-        valid_decisions = {"INCLUDE", "NEEDS_REVIEW", "EXCLUDE"}
+        valid_decisions = {"INCLUDE", "NEEDS_REVIEW", "EXCLUDE", "REFERENCE_DATASET"}
         actual_decisions = set(df_csv["decision"].unique())
         self.assertTrue(actual_decisions.issubset(valid_decisions), f"Invalid decisions: {actual_decisions}")
         
@@ -70,7 +70,7 @@ class DatasetVerificationTests(unittest.TestCase):
         self.assertTrue((df["Biological Replicates"] == "YES").all())
         
         # Outcome labels
-        valid_outcomes = {"CONTROL_BASELINE", "DNT_RELEVANT_NEUROTOXICANT", "POTENTIAL_NEUROTOXICANT"}
+        valid_outcomes = {"CONTROL_BASELINE", "DNT_RELEVANT_NEUROTOXICANT", "POTENTIAL_NEUROTOXICANT", "CHEMICAL_EXPOSURE_CANDIDATE"}
         self.assertTrue(set(df["DNT Outcome Label"].unique()).issubset(valid_outcomes))
         
     def test_manifest_integrity_and_decision_accounting(self):
