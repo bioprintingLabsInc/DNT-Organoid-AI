@@ -44,6 +44,29 @@ profiles:
       tier: "canonical_reference"
       deterministic_tie_breaking: true
 
+  colab_highmem:
+    display_name: "Google Colab High-RAM Cloud Instance"
+    description: "Cloud-hosted execution in Google Colab (80+ GB RAM, 12 threads, 200+ GB local scratch). Canonical dense STAR indexing (sparseD 1, nbases 14) with persistent Google Drive checkpoint synchronization."
+    hardware_minimum:
+      physical_ram_gb: 75.0
+      cpu_cores: 8
+      storage_gb: 150.0
+    star:
+      genome_sa_sparse_d: 1
+      genome_sa_index_nbases: 14
+      limit_genome_generate_ram: 60000000000
+      bam_sort_mode: "SortedByCoordinate"
+      limit_bam_sort_ram: 15000000000
+      threads: 12
+    samtools:
+      external_sort_enabled: false
+      sort_mem_per_thread: "2G"
+    qc_policy:
+      enforce_strict_rejection: false
+    reproducibility:
+      tier: "canonical_reference"
+      deterministic_tie_breaking: true
+
   workstation_standard:
     display_name: "Laboratory Workstation (Standard Dedicated Node)"
     description: "Dedicated laboratory workstations or mid-tier compute nodes (32-64 GB RAM, 8-16 cores). Moderate sparse index (sparseD 2) with bounded coordinate sorting."

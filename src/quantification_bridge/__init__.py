@@ -5,6 +5,14 @@ frozen Stages 1-7, Stage 8C, and Stage 8A.1. Registered as the execution engine
 for Route.RAW_READ_PIPELINE.
 """
 
+from .checkpoints import (
+    CheckpointManager,
+    ChecksumVerificationError,
+    InsufficientStorageCapacityError,
+    check_storage_capacity,
+    sync_and_verify_directory,
+    sync_and_verify_file,
+)
 from .manifest import APPROVED_2_SAMPLE_TECHNICAL_PILOT, get_approved_technical_pilot_runs
 from .pairing import FastqPair, FastqPairingError, determine_read_mate, extract_sample_stem, group_fastq_pairs
 from .pipeline import QuantificationBridgePipeline
@@ -28,14 +36,18 @@ __version__ = "0.3.1"
 
 __all__ = [
     "APPROVED_2_SAMPLE_TECHNICAL_PILOT",
+    "CheckpointManager",
+    "ChecksumVerificationError",
     "ExecutionProfile",
     "FastqPair",
     "FastqPairingError",
     "HardwareBaseline",
+    "InsufficientStorageCapacityError",
     "PreflightCheckResult",
     "PreflightFinding",
     "QuantificationBridgePipeline",
     "ToolInventory",
+    "check_storage_capacity",
     "determine_read_mate",
     "evaluate_qc_metric",
     "extract_sample_stem",
@@ -47,5 +59,7 @@ __all__ = [
     "probe_tool_inventory",
     "resolve_pipeline_paths",
     "run_profile_preflight_checks",
+    "sync_and_verify_directory",
+    "sync_and_verify_file",
     "validate_pilot_configuration",
 ]
