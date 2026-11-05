@@ -398,28 +398,37 @@ def load_sample_metadata(
 # -----------------------------------------------------------------------------
 
 def compute_file_content_hash(path: Path | str) -> str:
-    """Compute deterministic content-based hash using file size, mtime, and chunk digest."""
+    """Compute deterministic content-based hash using file content digest."""
     p = Path(path).resolve()
     if not p.exists():
         return f"missing:{p.name}"
     if p.is_dir():
         hasher = hashlib.sha256()
-        for item in sorted(p.glob("*")):
+        for item in sorted(p.rglob("*")):
             if item.is_file():
                 st = item.stat()
-                hasher.update(f"{item.name}:{st.st_size}:{st.st_mtime}".encode("utf-8"))
+                hasher.update(f"{item.name}:{st.st_size}".encode("utf-8"))
+                try:
+                    with item.open("rb") as f:
+                        hasher.update(f.read(65536))
+                except Exception:
+                    pass
         return hasher.hexdigest()
     st = p.stat()
     hasher = hashlib.sha256()
-    hasher.update(f"{p.name}:{st.st_size}:{st.st_mtime}".encode("utf-8"))
+    hasher.update(f"{p.name}:{st.st_size}".encode("utf-8"))
     try:
         with p.open("rb") as f:
-            head = f.read(65536)
-            hasher.update(head)
-            if st.st_size > 131072:
+            bytes_read = 0
+            while bytes_read < 10_000_000:
+                chunk = f.read(65536)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+                bytes_read += len(chunk)
+            if st.st_size > 10_000_000:
                 f.seek(-65536, os.SEEK_END)
-                tail = f.read(65536)
-                hasher.update(tail)
+                hasher.update(f.read(65536))
     except Exception:
         pass
     return hasher.hexdigest()
@@ -434,7 +443,12 @@ def _verify_output_integrity(out: Path | str) -> bool:
     if out_p.is_dir():
         # Directory output (e.g. STAR index): check essential files exist and non-empty
         genome_f = out_p / "Genome"
-        if genome_f.is_file() and genome_f.stat().st_size > 0:
+        sa_f = out_p / "SA"
+        if genome_f.exists() or sa_f.exists() or "star" in out_p.name.lower():
+            if not (genome_f.is_file() and genome_f.stat().st_size > 0):
+                return False
+            if not (sa_f.is_file() and sa_f.stat().st_size > 0):
+                return False
             return True
         files = [f for f in out_p.iterdir() if f.is_file() and f.stat().st_size > 0]
         return len(files) > 0
@@ -448,18 +462,45 @@ def _verify_output_integrity(out: Path | str) -> bool:
             json.loads(out_p.read_text(encoding="utf-8"))
         except Exception:
             return False
+    elif name_lower.endswith(".fastq.gz") or name_lower.endswith(".fq.gz"):
+        try:
+            with gzip.open(out_p, "rb") as gz:
+                head = gz.read(256)
+                if not head or not head.startswith(b"@"):
+                    return False
+        except Exception:
+            return False
     elif name_lower.endswith(".gz"):
         try:
             with gzip.open(out_p, "rb") as gz:
-                gz.read(64)
+                head = gz.read(64)
+                if not head:
+                    return False
+        except Exception:
+            return False
+    elif name_lower.endswith(".fastq") or name_lower.endswith(".fq"):
+        try:
+            with out_p.open("rb") as f:
+                head = f.read(256)
+                if not head or not head.startswith(b"@"):
+                    return False
         except Exception:
             return False
     elif name_lower.endswith(".bam"):
         try:
             with out_p.open("rb") as bf:
                 head = bf.read(64)
-                if not (head.startswith(b"\x1f\x8b") or head.startswith(b"BAM\x01") or b"bam" in head.lower()):
+            if head.startswith(b"BAM\x01"):
+                return True
+            if head.startswith(b"\x1f\x8b"):
+                with gzip.open(out_p, "rb") as gz:
+                    decomp_head = gz.read(64)
+                    if decomp_head.startswith(b"BAM\x01") or b"bam" in decomp_head.lower():
+                        return True
                     return False
+            elif b"bam" in head.lower():
+                return True
+            return False
         except Exception:
             return False
 
@@ -505,10 +546,15 @@ class CheckpointManager:
         if data.get("config_hash") != config_hash:
             return False
 
-        # Verify all output files exist, are non-empty, and intact
+        # Verify all output files exist, are non-empty, intact, and unaltered
+        recorded_hashes = data.get("output_hashes", {})
         for out in expected_outputs:
-            if not _verify_output_integrity(out):
+            out_p = Path(out).resolve()
+            if not _verify_output_integrity(out_p):
                 return False
+            if str(out_p) in recorded_hashes:
+                if compute_file_content_hash(out_p) != recorded_hashes[str(out_p)]:
+                    return False
 
         return True
 
@@ -524,6 +570,11 @@ class CheckpointManager:
         """Write an atomic checkpoint record to disk."""
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         chk_p = self._get_path(stage, identifier)
+        output_hashes: dict[str, str] = {}
+        for o in outputs:
+            p = Path(o).resolve()
+            if p.exists():
+                output_hashes[str(p)] = compute_file_content_hash(p)
         record = {
             "stage": stage,
             "identifier": identifier,
@@ -531,6 +582,7 @@ class CheckpointManager:
             "input_hash": input_hash,
             "config_hash": config_hash,
             "outputs": [str(Path(o).resolve()) for o in outputs],
+            "output_hashes": output_hashes,
             "metrics": metrics or {},
             "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
@@ -940,17 +992,25 @@ class UniversalFastqPipeline:
     def _compute_plan_signature(self, stage_ids: list[str]) -> str:
         items = [
             f"study:{self.config.study_id}",
+            f"source_type:{self.config.source_type}",
+            f"experiment_id:{self.config.experiment_id}",
             f"layout:{self.config.read_layout}",
             f"strand:{self.config.strandedness}",
-            f"fasta:{self.references.genome_fasta}:{self.references.genome_fasta.stat().st_size if self.references.genome_fasta.is_file() else 'missing'}",
-            f"gtf:{self.references.gtf_annotation}:{self.references.gtf_annotation.stat().st_size if self.references.gtf_annotation.is_file() else 'missing'}",
+            f"threads:{self.config.threads}",
+            f"profile:{self.profile.name}",
+            f"min_bio_reps:{self.config.min_biological_replicates}",
+            f"enforce_res:{self.config.enforce_resources}",
+            f"species:{self.references.species}",
+            f"fasta:{compute_file_content_hash(self.references.genome_fasta)}",
+            f"gtf:{compute_file_content_hash(self.references.gtf_annotation)}",
+            f"sjdb_overhang:{self.references.sjdb_overhang}",
             f"star_idx:{self.references.star_index_dir or ''}",
             f"stages:{','.join(stage_ids)}",
         ]
         for s in sorted(self.samples, key=lambda x: x.sample_id):
-            r1_info = f"{s.r1_path.stat().st_size}" if s.r1_path and s.r1_path.is_file() else (s.sra_accession or "missing")
-            r2_info = f"{s.r2_path.stat().st_size}" if s.r2_path and s.r2_path.is_file() else "none"
-            items.append(f"sample:{s.sample_id}:{s.read_layout}:{s.sra_accession or 'none'}:{r1_info}:{r2_info}")
+            r1_hash = compute_file_content_hash(s.r1_path) if s.r1_path and s.r1_path.is_file() else (s.sra_accession or "missing")
+            r2_hash = compute_file_content_hash(s.r2_path) if s.r2_path and s.r2_path.is_file() else "none"
+            items.append(f"sample:{s.sample_id}:{s.read_layout}:{s.sra_accession or 'none'}:{r1_hash}:{r2_hash}")
         return hashlib.sha256(";".join(items).encode("utf-8")).hexdigest()
 
     def plan(self) -> ProcessingPlan:
@@ -976,7 +1036,7 @@ class UniversalFastqPipeline:
             "name": "Reference Verification & STAR Index",
             "action": "Verify FASTA/GTF and build STAR index if not present",
             "target": str(star_idx_target),
-            "can_reuse": star_idx_target.is_dir() and (star_idx_target / "Genome").is_file(),
+            "can_reuse": star_idx_target.is_dir() and (star_idx_target / "Genome").is_file() and (star_idx_target / "SA").is_file(),
         })
 
         # 2. Per-sample trimming

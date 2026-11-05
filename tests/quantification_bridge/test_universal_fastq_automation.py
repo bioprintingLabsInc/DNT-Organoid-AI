@@ -34,6 +34,11 @@ from src.quantification_bridge import (
     validate_paired_fastqs,
     validate_single_fastq,
 )
+from src.quantification_bridge.universal_pipeline import (
+    CheckpointManager,
+    _verify_output_integrity,
+    compute_file_content_hash,
+)
 from src.quantification_bridge.downstream_bridge import execute_downstream_pipeline
 from src.quantification_bridge.rseqc_runner import StrandednessDecision, infer_strandedness_decision
 
@@ -779,6 +784,44 @@ def test_13_approval_token_reproducibility_and_stale_rejection(tmp_path: Path):
     pipeline.approve(plan1.approval_token)
     assert pipeline._approved_token == plan1.approval_token
 
+    # 5. Same-size reference file modification invalidates prior approval token
+    fasta_content = fasta.read_text(encoding="utf-8")
+    assert "chr1" in fasta_content
+    # Replace chr1 with chr2: exact same byte length and valid FASTA
+    modified_fasta = fasta_content.replace("chr1", "chr2")
+    assert len(modified_fasta) == len(fasta_content)
+    fasta.write_text(modified_fasta, encoding="utf-8")
+
+    plan_after_edit = pipeline.plan()
+    assert plan_after_edit.approval_token != plan1.approval_token
+    res_stale_file = pipeline.run()
+    assert res_stale_file.status == "BLOCKED_STALE_APPROVAL"
+    assert any(f.code == "STALE_APPROVAL_TOKEN" for f in res_stale_file.findings)
+
+    # Restore content and confirm fresh approval works
+    fasta.write_text(fasta_content, encoding="utf-8")
+    plan_restored = pipeline.plan()
+    assert plan_restored.approval_token == plan1.approval_token
+    pipeline.approve(plan_restored.approval_token)
+
+    # 6. Changed processing parameters (e.g. threads, strandedness) produce different approval token
+    cfg_threads = UniversalPipelineConfig(
+        study_id="STUDY_APPROVAL",
+        work_dir=tmp_path / "work_appr",
+        threads=8,
+        require_approval=True,
+        enforce_resources=False,
+    )
+    pipeline_threads = UniversalFastqPipeline(config=cfg_threads, references=refs, samples=samples)
+    plan_threads = pipeline_threads.plan()
+    assert plan_threads.approval_token != plan1.approval_token
+
+    # Executing with old token from 4-thread run is rejected
+    pipeline_threads.approve(plan1.approval_token)
+    res_stale_param = pipeline_threads.run()
+    assert res_stale_param.status == "BLOCKED_STALE_APPROVAL"
+    assert any(f.code == "STALE_APPROVAL_TOKEN" for f in res_stale_param.findings)
+
 
 # -----------------------------------------------------------------------------
 # Test 14: Mixed sequencing layouts and mismatches blocked
@@ -825,59 +868,159 @@ def test_14_mixed_sequencing_layouts_and_mismatches_blocked(tmp_path: Path):
 # -----------------------------------------------------------------------------
 
 def test_15_sra_retrieval_preflight_and_execution_chaining(tmp_path: Path, monkeypatch):
-    """Verify SRA accession identification in preflight, planning stage, and execution chaining to fastp."""
+    """Verify SRA accession identification in preflight, planning stage, and real pipeline.run() execution chaining to fastp for paired and single end."""
     fasta = tmp_path / "genome.fa"
     gtf = tmp_path / "genes.gtf"
     make_dummy_fasta(fasta)
     make_dummy_gtf(gtf)
 
-    sra_acc = "SRR17834458"
-    samples = [
-        SampleInput(sample_id="SMPL_SRA_01", sra_accession=sra_acc, read_layout="paired_end")
+    # 1. PAIRED-END SRA WORKFLOW
+    sra_acc_pe = "SRR17834458"
+    samples_pe = [
+        SampleInput(sample_id="SMPL_SRA_PE", sra_accession=sra_acc_pe, read_layout="paired_end")
     ]
-    cfg = UniversalPipelineConfig(study_id="STUDY_SRA", work_dir=tmp_path / "w_sra", read_layout="paired_end", enforce_resources=False)
+    cfg_pe = UniversalPipelineConfig(study_id="STUDY_SRA_PE", work_dir=tmp_path / "w_sra_pe", read_layout="paired_end", strandedness=0, enforce_resources=False)
     refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
 
-    p = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+    p_pe = UniversalFastqPipeline(config=cfg_pe, references=refs, samples=samples_pe)
 
     # Preflight detects SRA requirement
-    pre = p.validate_inputs()
-    assert p.samples[0].sample_id in pre.sample_validation
-    assert pre.sample_validation["SMPL_SRA_01"]["status"] == "REQUIRES_SRA_RETRIEVAL"
+    pre = p_pe.validate_inputs()
+    assert pre.sample_validation["SMPL_SRA_PE"]["status"] == "REQUIRES_SRA_RETRIEVAL"
 
     # Plan includes 00_sra stage
-    plan = p.plan()
-    sra_stages = [st for st in plan.planned_stages if st["stage_id"].startswith("00_sra")]
+    plan_pe = p_pe.plan()
+    sra_stages = [st for st in plan_pe.planned_stages if st["stage_id"].startswith("00_sra")]
     assert len(sra_stages) == 1
-    assert sra_stages[0]["accession"] == sra_acc
+    assert sra_stages[0]["accession"] == sra_acc_pe
 
-    # Mock extract_sra to simulate successful download without external network
-    r1_mock = tmp_path / "sra_mock_1.fastq"
-    r2_mock = tmp_path / "sra_mock_2.fastq"
-    make_dummy_fastq(r1_mock, ["read1"], mate_suffix="/1", is_gz=False)
-    make_dummy_fastq(r2_mock, ["read1"], mate_suffix="/2", is_gz=False)
+    # Mock extract_sra to return simulated paired fastqs
+    r1_mock = tmp_path / "sra_mock_1.fastq.gz"
+    r2_mock = tmp_path / "sra_mock_2.fastq.gz"
+    make_dummy_fastq(r1_mock, ["read1", "read2"], mate_suffix="/1", is_gz=True)
+    make_dummy_fastq(r2_mock, ["read1", "read2"], mate_suffix="/2", is_gz=True)
 
+    extracted_calls = []
     from src.quantification_bridge.sra_runner import SraExtractionResult
     def mock_extract_sra(sra_path, output_dir, threads=6, temp_dir=None):
+        out_p = Path(output_dir)
+        out_p.mkdir(parents=True, exist_ok=True)
+        extracted_calls.append({"sra_path": str(sra_path), "output_dir": out_p})
+        layout = "PAIRED" if str(sra_path) == sra_acc_pe else "SINGLE"
         return SraExtractionResult(
             status="SRA_EXTRACTION_SUCCESS",
-            run_accession=sra_acc,
-            layout="PAIRED",
+            run_accession=str(sra_path),
+            layout=layout,
             fastq_r1=r1_mock,
-            fastq_r2=r2_mock,
+            fastq_r2=r2_mock if layout == "PAIRED" else None,
             tool_name="mocked_fasterq_dump",
             tool_version="3.1.1",
-            output_dir=Path(output_dir),
-            temp_dir=Path(output_dir),
+            output_dir=out_p,
+            temp_dir=out_p,
         )
 
     monkeypatch.setattr("src.quantification_bridge.universal_pipeline.extract_sra", mock_extract_sra)
 
-    # Execute SRA retrieval stage directly via pipeline resolution
-    p._ensure_directories()
-    sra_res = mock_extract_sra(sra_acc, p.sra_dir / "SMPL_SRA_01")
-    assert sra_res.fastq_r1.is_file()
-    assert sra_res.fastq_r2.is_file()
+    # Spy on fastp preprocessing to verify retrieved files reach fastp
+    fastp_calls = []
+    def mock_fastp(raw_r1, raw_r2, out_r1, out_r2, json_report, html_report, sample_id, threads=4):
+        fastp_calls.append({"raw_r1": Path(raw_r1), "raw_r2": Path(raw_r2) if raw_r2 else None, "sample_id": sample_id})
+        out_r1_p = Path(out_r1)
+        out_r1_p.parent.mkdir(parents=True, exist_ok=True)
+        make_dummy_fastq(out_r1_p, ["read1"], is_gz=True)
+        if out_r2:
+            out_r2_p = Path(out_r2)
+            out_r2_p.parent.mkdir(parents=True, exist_ok=True)
+            make_dummy_fastq(out_r2_p, ["read1"], is_gz=True)
+        json_report_p = Path(json_report)
+        json_report_p.parent.mkdir(parents=True, exist_ok=True)
+        json_report_p.write_text(json.dumps({"summary": {"before_filtering": {"total_reads": 100}}}), encoding="utf-8")
+        return {"metrics_summary": {"total_reads": 100}}
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.run_fastp_preprocessing", mock_fastp)
+
+    # Mock STAR alignment
+    def mock_align(trimmed_r1, trimmed_r2, index_dir, output_prefix, threads=4, profile=None, **kwargs):
+        prefix_p = Path(output_prefix)
+        prefix_p.parent.mkdir(parents=True, exist_ok=True)
+        bam = prefix_p.parent / f"{prefix_p.name}Aligned.sortedByCoord.out.bam"
+        bam.write_bytes(b"BAM\x01mock_bam_content")
+        final_log = prefix_p.parent / f"{prefix_p.name}Log.final.out"
+        final_log.write_text("Uniquely mapped reads % | 95.0%\nNumber of input reads | 100\n", encoding="utf-8")
+        return {"bam_path": bam, "log_final_path": final_log, "metrics": {"uniquely_mapped_percent": 95.0}}
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.align_reads_star", mock_align)
+
+    # Mock build_star_index
+    def mock_build_star(fasta_path, gtf_path, index_dir, **kwargs):
+        idx_p = Path(index_dir)
+        idx_p.mkdir(parents=True, exist_ok=True)
+        (idx_p / "Genome").write_bytes(b"mock genome")
+        (idx_p / "SA").write_bytes(b"mock sa")
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.build_star_index", mock_build_star)
+
+    # Mock featureCounts
+    def mock_fc(bam_paths, gtf_path, output_counts_path, **kwargs):
+        out_f = Path(output_counts_path)
+        out_f.parent.mkdir(parents=True, exist_ok=True)
+        header = "Geneid\tChr\tStart\tEnd\tStrand\tLength\t" + "\t".join([Path(b).name for b in bam_paths]) + "\n"
+        row = "ENSG1\tchr1\t1\t100\t+\t100\t" + "\t".join(["50" for _ in bam_paths]) + "\n"
+        out_f.write_text(header + row, encoding="utf-8")
+        summary_f = out_f.parent / f"{out_f.name}.summary"
+        summary_header = "Status\t" + "\t".join([Path(b).name for b in bam_paths]) + "\n"
+        summary_row = "Assigned\t" + "\t".join(["50" for _ in bam_paths]) + "\n"
+        summary_f.write_text(summary_header + summary_row, encoding="utf-8")
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.run_featurecounts", mock_fc)
+
+    # Execute real pipeline.run() with approved token for paired-end
+    p_pe.approve(plan_pe.approval_token)
+    res_pe = p_pe.run()
+
+    assert any(c["sra_path"] == sra_acc_pe for c in extracted_calls)
+    assert len(fastp_calls) == 1
+    assert fastp_calls[0]["raw_r1"] == r1_mock
+    assert fastp_calls[0]["raw_r2"] == r2_mock
+    assert "sra_extraction" in res_pe.completed_stages
+
+    # 2. SINGLE-END SRA WORKFLOW
+    r1_mock_se = tmp_path / "sra_mock_se.fastq.gz"
+    make_dummy_fastq(r1_mock_se, ["read1", "read2"], mate_suffix="", is_gz=True)
+
+    sra_acc_se = "SRR17834459"
+    samples_se = [
+        SampleInput(sample_id="SMPL_SRA_SE", sra_accession=sra_acc_se, read_layout="single_end")
+    ]
+    cfg_se = UniversalPipelineConfig(study_id="STUDY_SRA_SE", work_dir=tmp_path / "w_sra_se", read_layout="single_end", strandedness=0, enforce_resources=False)
+    p_se = UniversalFastqPipeline(config=cfg_se, references=refs, samples=samples_se)
+
+    def mock_extract_sra_se(sra_path, output_dir, threads=6, temp_dir=None):
+        out_p = Path(output_dir)
+        out_p.mkdir(parents=True, exist_ok=True)
+        return SraExtractionResult(
+            status="SRA_EXTRACTION_SUCCESS",
+            run_accession=str(sra_path),
+            layout="SINGLE",
+            fastq_r1=r1_mock_se,
+            fastq_r2=None,
+            tool_name="mocked_fasterq_dump",
+            tool_version="3.1.1",
+            output_dir=out_p,
+            temp_dir=out_p,
+        )
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.extract_sra", mock_extract_sra_se)
+    fastp_calls.clear()
+
+    plan_se = p_se.plan()
+    p_se.approve(plan_se.approval_token)
+    res_se = p_se.run()
+
+    assert len(fastp_calls) == 1
+    assert fastp_calls[0]["raw_r1"] == r1_mock_se
+    assert fastp_calls[0]["raw_r2"] is None
+    assert "sra_extraction" in res_se.completed_stages
 
 
 # -----------------------------------------------------------------------------
@@ -1010,3 +1153,164 @@ def test_17_genuine_mini_genome_end_to_end_quantification(tmp_path: Path):
     assert "star_index" in res.completed_stages
     assert "featurecounts" in res.completed_stages
     assert res.status in ("COMPLETED", "COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED", "PARTIALLY_COMPLETED")
+
+
+# -----------------------------------------------------------------------------
+# Test 18: Metadata units - no fallback assumptions and no normalization without units
+# -----------------------------------------------------------------------------
+
+def test_18_metadata_units_no_unsupported_defaults_and_no_normalization_without_units(tmp_path: Path):
+    """Verify that concentration and duration do not assume uM or hours, retain numeric values, and do not normalize without valid units."""
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    r1 = tmp_path / "s1_R1.fastq.gz"
+    r2 = tmp_path / "s1_R2.fastq.gz"
+    make_dummy_fastq(r1, ["r1"])
+    make_dummy_fastq(r2, ["r1"])
+
+    # Sample A: Dose and duration provided as numbers WITHOUT units
+    # Sample B: Dose and duration provided with unknown units ("drops", "cycles")
+    samples = [
+        SampleInput(
+            sample_id="SMPL_NO_UNITS",
+            r1_path=r1,
+            r2_path=r2,
+            read_layout="paired_end",
+            attributes={
+                "condition_status": "treatment",
+                "compound": "TestCompound_A",
+                "dose": 25.5,
+                "duration": 48.0,
+            },
+        ),
+        SampleInput(
+            sample_id="SMPL_UNKNOWN_UNITS",
+            r1_path=r1,
+            r2_path=r2,
+            read_layout="paired_end",
+            attributes={
+                "condition_status": "treatment",
+                "compound": "TestCompound_B",
+                "dose": 10.0,
+                "dose_unit": "drops",
+                "duration": 3.0,
+                "duration_unit": "cycles",
+            },
+        ),
+    ]
+
+    cfg = UniversalPipelineConfig(study_id="STUDY_UNITS_TEST", work_dir=tmp_path / "w_units", enforce_resources=False)
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+    doc = pipeline.canonical_metadata
+
+    # 1. Inspect Sample A (no units provided)
+    exp_a = next(e for e in doc["exposures"] if "testcompound_a" in e["condition_id"])
+    assert exp_a["concentration_or_dose"]["original_value"] == 25.5
+    assert exp_a["concentration_or_dose"]["normalized_value"] is None, "Concentration must not be normalized to uM without valid source units"
+    assert exp_a["concentration_or_dose_unit"]["original_value"] is None
+    assert exp_a["concentration_or_dose_unit"]["normalized_value"] is None
+    assert exp_a["concentration_or_dose_unit"]["value_status"] in ("unknown", "missing_not_reported")
+
+    assert exp_a["exposure_duration"]["original_value"] == 48.0
+    assert exp_a["exposure_duration"]["normalized_value"] is None, "Duration must not be normalized to hours without valid source units"
+    assert exp_a["exposure_duration_unit"]["original_value"] is None
+    assert exp_a["exposure_duration_unit"]["normalized_value"] is None
+    assert exp_a["exposure_duration_unit"]["value_status"] in ("unknown", "missing_not_reported")
+
+    # 2. Inspect Sample B (unknown units provided)
+    exp_b = next(e for e in doc["exposures"] if "testcompound_b" in e["condition_id"])
+    assert exp_b["concentration_or_dose"]["original_value"] == 10.0
+    assert exp_b["concentration_or_dose"]["normalized_value"] is None, "Concentration with unknown unit must not be normalized"
+    assert exp_b["concentration_or_dose_unit"]["original_value"] == "drops"
+    assert exp_b["concentration_or_dose_unit"]["normalized_value"] is None
+
+    assert exp_b["exposure_duration"]["original_value"] == 3.0
+    assert exp_b["exposure_duration"]["normalized_value"] is None, "Duration with unknown unit must not be normalized"
+    assert exp_b["exposure_duration_unit"]["original_value"] == "cycles"
+    assert exp_b["exposure_duration_unit"]["normalized_value"] is None
+
+
+# -----------------------------------------------------------------------------
+# Test 19: Checkpoint integrity - altered outputs, incomplete index, and safe reprocessing
+# -----------------------------------------------------------------------------
+
+def test_19_checkpoint_integrity_and_safe_reprocessing_on_invalidation(tmp_path: Path):
+    """Verify that altered output content, incomplete STAR index, or corrupted BAM/FASTQ invalidates checkpoint and triggers safe reprocessing."""
+    chk_dir = tmp_path / "checkpoints_hardening"
+    manager = CheckpointManager(checkpoint_dir=chk_dir)
+
+    out_file = tmp_path / "stage_output.bam"
+    out_file.write_bytes(b"BAM\x01mock_valid_initial_content")
+
+    input_hash = "hash_input_100"
+    config_hash = "hash_config_100"
+
+    manager.record_checkpoint(
+        stage="star_align",
+        identifier="smpl_chk_01",
+        outputs=[out_file],
+        input_hash=input_hash,
+        config_hash=config_hash,
+    )
+
+    # 1. Valid checkpoint passes verification
+    assert manager.is_stage_completed("star_align", "smpl_chk_01", [out_file], input_hash, config_hash) is True
+
+    # 2. Content altered with identical file length -> invalidates checkpoint
+    data = out_file.read_bytes()
+    altered_data = data[:-4] + b"XXXX"
+    assert len(altered_data) == len(data)
+    out_file.write_bytes(altered_data)
+
+    assert manager.is_stage_completed("star_align", "smpl_chk_01", [out_file], input_hash, config_hash) is False
+
+    # 3. Truncated BAM (< 4 bytes) -> invalidates checkpoint
+    out_file.write_bytes(b"BAM")
+    assert manager.is_stage_completed("star_align", "smpl_chk_01", [out_file], input_hash, config_hash) is False
+
+    # 4. Incomplete STAR index (missing SA) -> invalidates checkpoint
+    star_idx = tmp_path / "test_star_index"
+    star_idx.mkdir()
+    (star_idx / "Genome").write_bytes(b"genome data")
+    # SA file missing
+    manager.record_checkpoint(
+        stage="star_index",
+        identifier="global",
+        outputs=[star_idx],
+        input_hash="hash_idx_in",
+        config_hash="hash_idx_cfg",
+    )
+    assert manager.is_stage_completed("star_index", "global", [star_idx], "hash_idx_in", "hash_idx_cfg") is False
+
+    # Once SA file is created non-empty, index is complete and valid
+    (star_idx / "SA").write_bytes(b"suffix array data")
+    manager.record_checkpoint(
+        stage="star_index",
+        identifier="global",
+        outputs=[star_idx],
+        input_hash="hash_idx_in",
+        config_hash="hash_idx_cfg",
+    )
+    assert manager.is_stage_completed("star_index", "global", [star_idx], "hash_idx_in", "hash_idx_cfg") is True
+
+    # 5. Invalid/corrupted FASTQ -> invalidates checkpoint
+    fq_corrupt = tmp_path / "corrupt.fastq"
+    fq_corrupt.write_text("NOT_A_FASTQ_HEADER\nACGT\n+\nIIII\n", encoding="utf-8")
+    assert _verify_output_integrity(fq_corrupt) is False
+
+    # 6. Safe reprocessing: recomputing stage overwrites invalid output and restores valid checkpoint
+    out_file.write_bytes(b"BAM\x01recomputed_fresh_output")
+    manager.record_checkpoint(
+        stage="star_align",
+        identifier="smpl_chk_01",
+        outputs=[out_file],
+        input_hash=input_hash,
+        config_hash=config_hash,
+    )
+    assert manager.is_stage_completed("star_align", "smpl_chk_01", [out_file], input_hash, config_hash) is True
+

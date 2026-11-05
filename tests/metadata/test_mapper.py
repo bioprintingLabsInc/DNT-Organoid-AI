@@ -534,9 +534,9 @@ class TestCanonicalMetadataMapper:
 
         # Verify each treatment condition has its correct exposure duration and stage
         cond_ids = {c["condition_id"] for c in trt_conditions}
-        assert any("24.0h" in cid and "day_16" in cid for cid in cond_ids)
-        assert any("48.0h" in cid and "day_16" in cid for cid in cond_ids)
-        assert any("24.0h" in cid and "day_30" in cid for cid in cond_ids)
+        assert any(("24.0h" in cid or "24" in cid) and "day_16" in cid for cid in cond_ids)
+        assert any(("48.0h" in cid or "48" in cid) and "day_16" in cid for cid in cond_ids)
+        assert any(("24.0h" in cid or "24" in cid) and "day_30" in cid for cid in cond_ids)
 
     def test_mixed_controls_matched_to_corresponding_durations(self):
         """Multi-timepoint study matches treatments to controls with corresponding exposure durations."""

@@ -399,7 +399,7 @@ class CanonicalMetadataMapper:
             raw_dose, dose_key = _find_attribute_value(rec, self.rules["concentration_or_dose"])
             raw_dose_unit, dose_unit_key = _find_attribute_value(rec, self.rules["concentration_or_dose_unit"])
             dose_val = raw_dose if raw_dose is not None else self.defaults.get("concentration_or_dose")
-            dose_unit = raw_dose_unit if raw_dose_unit is not None else self.defaults.get("concentration_or_dose_unit", "uM" if dose_val is not None else None)
+            dose_unit = raw_dose_unit if raw_dose_unit is not None else self.defaults.get("concentration_or_dose_unit")
 
             norm_dose = normalize_concentration(dose_val, dose_unit, target_unit=self.target_dose_unit)
 
@@ -407,7 +407,7 @@ class CanonicalMetadataMapper:
             raw_dur, dur_key = _find_attribute_value(rec, self.rules["exposure_duration"])
             raw_dur_unit, dur_unit_key = _find_attribute_value(rec, self.rules["exposure_duration_unit"])
             dur_val = raw_dur if raw_dur is not None else self.defaults.get("exposure_duration")
-            dur_unit = raw_dur_unit if raw_dur_unit is not None else self.defaults.get("exposure_duration_unit", "h" if dur_val is not None else None)
+            dur_unit = raw_dur_unit if raw_dur_unit is not None else self.defaults.get("exposure_duration_unit")
 
             if dur_val is not None and dur_unit is not None:
                 norm_dur = normalize_duration(dur_val, dur_unit, target_unit=self.target_duration_unit)
@@ -507,8 +507,10 @@ class CanonicalMetadataMapper:
                     if clean_exp_stage or clean_col_stage:
                         st = clean_exp_stage or clean_col_stage
                         quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", st.lower()))
-                    if has_multiple_ctrl_durations and norm_dur is not None and norm_dur.normalized_value is not None:
-                        quals.append(f"{norm_dur.normalized_value}{norm_dur.normalized_unit}")
+                    if has_multiple_ctrl_durations:
+                        dur_lbl = f"{norm_dur.normalized_value}{norm_dur.normalized_unit}" if (norm_dur and norm_dur.normalized_unit) else (f"{dur_val}{dur_unit or ''}" if dur_val is not None else "")
+                        if dur_lbl:
+                            quals.append(dur_lbl)
                     if has_multiple_ctrl_cell_lines and cell_line_str:
                         quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", cell_line_str.lower()))
                     cond_id = f"cond_{exp_id}_control_{'_'.join(quals)}"
@@ -518,11 +520,14 @@ class CanonicalMetadataMapper:
                     cond_label = "Vehicle Control"
             elif is_treatment:
                 agent_slug = re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower()) if clean_agent else "unknown_agent"
-                dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit}" if dose_val is not None else "dose_unspecified"
+                dose_unit_str = f" {dose_unit}" if dose_unit else ""
+                dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit or ''}" if dose_val is not None else "dose_unspecified"
 
                 quals = []
-                if has_multiple_durations and norm_dur is not None and norm_dur.normalized_value is not None:
-                    quals.append(f"{norm_dur.normalized_value}{norm_dur.normalized_unit}")
+                if has_multiple_durations:
+                    dur_lbl = f"{norm_dur.normalized_value}{norm_dur.normalized_unit}" if (norm_dur and norm_dur.normalized_unit) else (f"{dur_val}{dur_unit or ''}" if dur_val is not None else "")
+                    if dur_lbl:
+                        quals.append(dur_lbl)
                 st_slug = clean_exp_stage or clean_col_stage
                 if has_multiple_stages and st_slug:
                     quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", st_slug.lower()))
@@ -533,10 +538,10 @@ class CanonicalMetadataMapper:
 
                 if quals:
                     cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}_{'_'.join(quals)}"
-                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val} {dose_unit} ({' '.join(quals)})"
+                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val}{dose_unit_str} ({' '.join(quals)})"
                 else:
                     cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}"
-                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val} {dose_unit}" if dose_val is not None else (clean_agent or "Unknown Agent")
+                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val}{dose_unit_str}".strip() if dose_val is not None else (clean_agent or "Unknown Agent")
             else:
                 cond_id = f"cond_{exp_id}_unknown_{sid}"
                 cond_label = f"Sample {sid} (unspecified condition)"
@@ -588,9 +593,12 @@ class CanonicalMetadataMapper:
                     )
                 if is_control:
                     exposure_entry["vehicle"] = make_value_record("vehicle", "vehicle", "exposures", exp_rec_id, "vehicle", "vehicle", source_loc=rec.source_locator)
-                    if norm_dur is not None and norm_dur.original_value is not None:
+                    if norm_dur is not None and norm_dur.original_value is not None and norm_dur.normalized_unit is not None:
                         exposure_entry["exposure_duration"] = make_value_record(norm_dur.original_value, norm_dur.normalized_value, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
                         exposure_entry["exposure_duration_unit"] = make_value_record(norm_dur.original_unit, norm_dur.normalized_unit, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator)
+                    elif dur_val is not None:
+                        exposure_entry["exposure_duration"] = make_value_record(dur_val, None, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
+                        exposure_entry["exposure_duration_unit"] = make_value_record(raw_dur_unit, None, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator, status="reported" if raw_dur_unit is not None else "unknown")
                     else:
                         exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
                         exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
@@ -600,14 +608,22 @@ class CanonicalMetadataMapper:
                     else:
                         exposure_entry["agent_name"] = make_value_record(None, None, "exposures", exp_rec_id, "agent_name", None, status="missing_not_reported")
                     if norm_dose.original_value is not None:
-                        exposure_entry["concentration_or_dose"] = make_value_record(norm_dose.original_value, norm_dose.normalized_value, "exposures", exp_rec_id, "concentration_or_dose", dose_key, source_loc=rec.source_locator)
-                        exposure_entry["concentration_or_dose_unit"] = make_value_record(norm_dose.original_unit, norm_dose.normalized_unit, "exposures", exp_rec_id, "concentration_or_dose_unit", dose_unit_key, source_loc=rec.source_locator)
+                        has_valid_dose_unit = norm_dose.normalized_unit is not None
+                        norm_dose_val = norm_dose.normalized_value if has_valid_dose_unit else None
+                        norm_dose_unit = norm_dose.normalized_unit if has_valid_dose_unit else None
+                        unit_status = "reported" if raw_dose_unit is not None else "unknown"
+                        exposure_entry["concentration_or_dose"] = make_value_record(norm_dose.original_value, norm_dose_val, "exposures", exp_rec_id, "concentration_or_dose", dose_key, source_loc=rec.source_locator)
+                        exposure_entry["concentration_or_dose_unit"] = make_value_record(norm_dose.original_unit, norm_dose_unit, "exposures", exp_rec_id, "concentration_or_dose_unit", dose_unit_key, source_loc=rec.source_locator, status=unit_status)
                     else:
                         exposure_entry["concentration_or_dose"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose", None, status="missing_not_reported")
                         exposure_entry["concentration_or_dose_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose_unit", None, status="missing_not_reported")
-                    if norm_dur is not None and norm_dur.original_value is not None:
+                    if norm_dur is not None and norm_dur.original_value is not None and norm_dur.normalized_unit is not None:
                         exposure_entry["exposure_duration"] = make_value_record(norm_dur.original_value, norm_dur.normalized_value, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
                         exposure_entry["exposure_duration_unit"] = make_value_record(norm_dur.original_unit, norm_dur.normalized_unit, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator)
+                    elif dur_val is not None:
+                        unit_status = "reported" if raw_dur_unit is not None else "unknown"
+                        exposure_entry["exposure_duration"] = make_value_record(dur_val, None, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
+                        exposure_entry["exposure_duration_unit"] = make_value_record(raw_dur_unit, None, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator, status=unit_status)
                     else:
                         exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
                         exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
@@ -649,14 +665,15 @@ class CanonicalMetadataMapper:
                 ),
                 "collection_time_relative_to_exposure": (
                     make_value_record(
-                        f"{dur_val} {dur_unit}",
-                        f"{norm_dur.normalized_value} {norm_dur.normalized_unit}",
+                        f"{dur_val} {dur_unit}".strip() if dur_unit else str(dur_val),
+                        f"{norm_dur.normalized_value} {norm_dur.normalized_unit}" if (norm_dur and norm_dur.normalized_unit) else None,
                         "samples",
                         sid,
                         "collection_time_relative_to_exposure",
                         dur_key,
+                        status="reported" if dur_val is not None else "unknown",
                     )
-                    if norm_dur is not None and norm_dur.normalized_value is not None
+                    if dur_val is not None
                     else make_value_record(
                         None,
                         None,
