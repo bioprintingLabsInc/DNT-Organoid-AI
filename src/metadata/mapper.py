@@ -49,7 +49,37 @@ DEFAULT_MAPPING_RULES: dict[str, tuple[str, ...]] = {
     "concentration_or_dose_unit": ("concentration_or_dose_unit", "dose_unit", "unit", "concentration_unit", "unit_concentration_unit"),
     "exposure_duration": ("exposure_duration", "duration", "time", "timepoint", "exposure_time", "factor_value_time"),
     "exposure_duration_unit": ("exposure_duration_unit", "duration_unit", "time_unit"),
-    "developmental_stage": ("developmental_age_or_stage_at_exposure", "developmental_stage", "stage", "day", "age", "developmental_age"),
+    "exposure_start_stage": (
+        "exposure_start_time_or_stage",
+        "developmental_age_or_stage_at_exposure",
+        "exposure_start_stage",
+        "exposure_start_day",
+        "exposure_start",
+        "start_day",
+        "start_stage",
+        "age_at_exposure",
+        "stage_at_exposure",
+    ),
+    "collection_stage": (
+        "developmental_age_or_stage_at_collection",
+        "collection_time_relative_to_exposure",
+        "collection_stage",
+        "collection_day",
+        "harvest_day",
+        "harvest_stage",
+        "collection_age",
+        "harvest_age",
+        "day_at_collection",
+    ),
+    "developmental_stage": (
+        "developmental_stage",
+        "stage",
+        "day",
+        "age",
+        "developmental_age",
+        "characteristics_age",
+        "characteristics_developmental_stage",
+    ),
     "species": ("species", "organism", "characteristics_organism"),
     "source_material_type": ("source_material_type", "material_type", "cell_type", "source_type"),
     "cell_line": ("cell_line_or_source_identifier", "cell_line", "line", "characteristics_cell_line", "cell_line_name"),
@@ -156,6 +186,10 @@ class CanonicalMetadataMapper:
             status: str = "reported",
         ) -> dict[str, Any]:
             nonlocal prov_counter
+            # If status is reported but original value is None, switch to explicit missingness
+            if val is None and status == "reported":
+                status = "unknown"
+
             if status != "reported":
                 return {
                     "original_value": None,
@@ -243,20 +277,60 @@ class CanonicalMetadataMapper:
 
         seen_sample_ids: set[str] = set()
 
-        # Pre-scan control records to determine if heterogeneous control groups exist in the study
-        ctrl_signatures: set[tuple[str, str, str, str]] = set()
+        # Pre-scan records to assess heterogeneity across controls and treatments
+        ctrl_signatures: set[tuple[str, str, str, str, str, str]] = set()
+        trt_durations: set[str] = set()
+        trt_stages: set[str] = set()
+        trt_cell_lines: set[str] = set()
+        trt_organoids: set[str] = set()
+        ctrl_durations: set[str] = set()
+        ctrl_cell_lines: set[str] = set()
+
         for rec in raw_records:
-            if _is_control_record(rec, self.rules, self.defaults):
+            is_ctrl = _is_control_record(rec, self.rules, self.defaults)
+
+            raw_dur_v, _ = _find_attribute_value(rec, self.rules["exposure_duration"])
+            dur_str_val = str(raw_dur_v).strip() if raw_dur_v is not None else ""
+
+            raw_es_v, _ = _find_attribute_value(rec, self.rules.get("exposure_start_stage", ()))
+            raw_cs_v, _ = _find_attribute_value(rec, self.rules.get("collection_stage", ()))
+            raw_gs_v, _ = _find_attribute_value(rec, self.rules.get("developmental_stage", ()))
+            st_str_val = (_clean_str(raw_es_v) or _clean_str(raw_cs_v) or _clean_str(raw_gs_v) or "").lower()
+
+            raw_cl_v, _ = _find_attribute_value(rec, self.rules["cell_line"])
+            cl_str_val = (_clean_str(raw_cl_v) or "").lower()
+
+            raw_org_v, _ = _find_attribute_value(rec, self.rules["organoid_type"])
+            org_str_val = (_clean_str(raw_org_v) or "").lower()
+
+            if is_ctrl:
                 raw_c_type, _ = _find_attribute_value(rec, self.rules["control_type"])
                 c_type = _clean_str(raw_c_type) or "vehicle"
                 raw_ag, _ = _find_attribute_value(rec, self.rules["agent_name"])
                 c_ag = _clean_str(raw_ag) or ""
-                raw_stage, _ = _find_attribute_value(rec, self.rules["developmental_stage"])
-                c_stage = _clean_str(raw_stage) or ""
-                raw_cl, _ = _find_attribute_value(rec, self.rules["cell_line"])
-                c_cl = _clean_str(raw_cl) or ""
-                ctrl_signatures.add((c_type, c_ag, c_stage, c_cl))
+                ctrl_signatures.add((c_type, c_ag, st_str_val, dur_str_val, cl_str_val, org_str_val))
+                if dur_str_val:
+                    ctrl_durations.add(dur_str_val)
+                if cl_str_val:
+                    ctrl_cell_lines.add(cl_str_val)
+            else:
+                if dur_str_val:
+                    trt_durations.add(dur_str_val)
+                if st_str_val:
+                    trt_stages.add(st_str_val)
+                if cl_str_val:
+                    trt_cell_lines.add(cl_str_val)
+                if org_str_val:
+                    trt_organoids.add(org_str_val)
+
         has_multiple_control_groups = len(ctrl_signatures) > 1
+        has_multiple_ctrl_durations = len(ctrl_durations) > 1
+        has_multiple_ctrl_cell_lines = len(ctrl_cell_lines) > 1
+
+        has_multiple_durations = len(trt_durations) > 1
+        has_multiple_stages = len(trt_stages) > 1
+        has_multiple_cell_lines = len(trt_cell_lines) > 1
+        has_multiple_organoids = len(trt_organoids) > 1
 
         for idx, rec in enumerate(raw_records):
             sid = rec.sample_id
@@ -322,62 +396,98 @@ class CanonicalMetadataMapper:
             raw_dose, dose_key = _find_attribute_value(rec, self.rules["concentration_or_dose"])
             raw_dose_unit, dose_unit_key = _find_attribute_value(rec, self.rules["concentration_or_dose_unit"])
             dose_val = raw_dose if raw_dose is not None else (0.0 if is_control else self.defaults.get("concentration_or_dose"))
-            dose_unit = raw_dose_unit if raw_dose_unit is not None else ("uM" if is_control else self.defaults.get("concentration_or_dose_unit", "uM"))
+            dose_unit = raw_dose_unit if raw_dose_unit is not None else ("uM" if is_control else self.defaults.get("concentration_or_dose_unit", "uM" if dose_val is not None else None))
 
             norm_dose = normalize_concentration(dose_val, dose_unit, target_unit=self.target_dose_unit)
 
-            # Resolve Duration
+            # Resolve Duration (no unsupported default)
             raw_dur, dur_key = _find_attribute_value(rec, self.rules["exposure_duration"])
             raw_dur_unit, dur_unit_key = _find_attribute_value(rec, self.rules["exposure_duration_unit"])
-            dur_val = raw_dur if raw_dur is not None else self.defaults.get("exposure_duration", 48.0)
-            dur_unit = raw_dur_unit if raw_dur_unit is not None else self.defaults.get("exposure_duration_unit", "h")
+            dur_val = raw_dur if raw_dur is not None else self.defaults.get("exposure_duration")
+            dur_unit = raw_dur_unit if raw_dur_unit is not None else self.defaults.get("exposure_duration_unit", "h" if dur_val is not None else None)
 
-            norm_dur = normalize_duration(dur_val, dur_unit, target_unit=self.target_duration_unit)
+            if dur_val is not None and dur_unit is not None:
+                norm_dur = normalize_duration(dur_val, dur_unit, target_unit=self.target_duration_unit)
+            else:
+                norm_dur = None
 
-            # Resolve Developmental Stage
-            raw_stage, stage_key = _find_attribute_value(rec, self.rules["developmental_stage"])
-            clean_stage = _clean_str(raw_stage) or self.defaults.get("developmental_stage", "Day 45")
+            # Resolve Developmental Stages: Separate Exposure Start Age vs Collection Age
+            raw_exp_stage, exp_stage_key = _find_attribute_value(rec, self.rules.get("exposure_start_stage", ()))
+            clean_exp_stage = _clean_str(raw_exp_stage) or self.defaults.get("exposure_start_stage") or self.defaults.get("developmental_age_or_stage_at_exposure")
 
-            # Resolve Biological Source / Cell Line
+            raw_col_stage, col_stage_key = _find_attribute_value(rec, self.rules.get("collection_stage", ()))
+            clean_col_stage = _clean_str(raw_col_stage) or self.defaults.get("collection_stage") or self.defaults.get("developmental_age_or_stage_at_collection")
+
+            raw_gen_stage, gen_stage_key = _find_attribute_value(rec, self.rules.get("developmental_stage", ()))
+            clean_gen_stage = _clean_str(raw_gen_stage) or self.defaults.get("developmental_stage")
+
+            if clean_exp_stage is None and clean_gen_stage is not None:
+                clean_exp_stage = clean_gen_stage
+                exp_stage_key = gen_stage_key
+
+            if clean_col_stage is None and clean_gen_stage is not None:
+                clean_col_stage = clean_gen_stage
+                col_stage_key = gen_stage_key
+
+            # Resolve Biological Source / Cell Line / Material Type
             raw_species, sp_key = _find_attribute_value(rec, self.rules["species"])
             species_str = _clean_str(raw_species) or self.defaults.get("species", "Homo sapiens")
 
             raw_cell_line, cl_key = _find_attribute_value(rec, self.rules["cell_line"])
-            cell_line_str = _clean_str(raw_cell_line) or self.defaults.get("cell_line", "cell_line_01")
+            cell_line_str = _clean_str(raw_cell_line) or self.defaults.get("cell_line")
 
             raw_mat_type, mat_key = _find_attribute_value(rec, self.rules["source_material_type"])
-            mat_type_str = _clean_str(raw_mat_type) or self.defaults.get("source_material_type", "iPSC")
-            if mat_type_str not in ["iPSC", "hESC", "other"]:
-                mat_type_str = "iPSC" if "ipsc" in mat_type_str.lower() else "other"
+            mat_type_str = _clean_str(raw_mat_type) or self.defaults.get("source_material_type")
 
-            bio_source_id = f"source_{re.sub(r'[^a-zA-Z0-9_]', '_', cell_line_str)}"
+            # Controlled vocabulary: biological_source_type in [iPSC, hESC, other]
+            if mat_type_str:
+                m_lower = mat_type_str.lower()
+                if "ipsc" in m_lower or "induced pluripotent" in m_lower:
+                    mat_type_str = "iPSC"
+                elif "hesc" in m_lower or "embryonic" in m_lower:
+                    mat_type_str = "hESC"
+                elif mat_type_str in ["iPSC", "hESC", "other"]:
+                    pass
+                else:
+                    mat_type_str = "other"
+            elif cell_line_str:
+                cl_lower = cell_line_str.lower()
+                if any(k in cl_lower for k in ["ipsc", "wtc", "bioni"]):
+                    mat_type_str = "iPSC"
+                elif any(k in cl_lower for k in ["hesc", "h9", "h1"]):
+                    mat_type_str = "hESC"
+                else:
+                    mat_type_str = "other"
+            else:
+                mat_type_str = "other"
+
+            bio_source_id = f"source_{re.sub(r'[^a-zA-Z0-9_]', '_', cell_line_str)}" if cell_line_str else f"source_{exp_id}_unknown"
             if bio_source_id not in bio_sources_map:
                 bio_sources_map[bio_source_id] = {
                     "biological_source_id": bio_source_id,
-                    "species": make_value_record(species_str, species_str, "biological_sources", bio_source_id, "species", sp_key),
-                    "source_material_type": make_value_record(mat_type_str, mat_type_str, "biological_sources", bio_source_id, "source_material_type", mat_key),
-                    "cell_line_or_source_identifier": make_value_record(cell_line_str, cell_line_str, "biological_sources", bio_source_id, "cell_line_or_source_identifier", cl_key),
+                    "species": make_value_record(species_str, species_str, "biological_sources", bio_source_id, "species", sp_key, status="reported" if species_str else "unknown"),
+                    "source_material_type": make_value_record(mat_type_str, mat_type_str, "biological_sources", bio_source_id, "source_material_type", mat_key, status="reported"),
+                    "cell_line_or_source_identifier": make_value_record(cell_line_str, cell_line_str, "biological_sources", bio_source_id, "cell_line_or_source_identifier", cl_key, status="reported" if cell_line_str else "unknown"),
                     "metadata_validation_status": "not_validated",
                 }
 
-            # Resolve Organoid Context
+            # Resolve Organoid Context (no unsupported defaults)
             raw_org_type, org_key = _find_attribute_value(rec, self.rules["organoid_type"])
-            org_type_str = _clean_str(raw_org_type) or self.defaults.get("organoid_type", "cerebral organoid")
+            org_type_str = _clean_str(raw_org_type) or self.defaults.get("organoid_type")
 
             raw_region, reg_key = _find_attribute_value(rec, self.rules["brain_region"])
-            region_str = _clean_str(raw_region) or self.defaults.get("brain_region", "dorsal forebrain")
+            region_str = _clean_str(raw_region) or self.defaults.get("brain_region")
 
-            org_ctx_id = f"ctx_{re.sub(r'[^a-zA-Z0-9_]', '_', org_type_str)}"
+            org_ctx_id = f"ctx_{re.sub(r'[^a-zA-Z0-9_]', '_', org_type_str)}" if org_type_str else f"ctx_{exp_id}_unknown"
             if org_ctx_id not in organoid_contexts_map:
                 organoid_contexts_map[org_ctx_id] = {
                     "organoid_context_id": org_ctx_id,
-                    "organoid_type": make_value_record(org_type_str, org_type_str, "organoid_contexts", org_ctx_id, "organoid_type", org_key),
-                    "brain_region_or_model_identity": make_value_record(region_str, region_str, "organoid_contexts", org_ctx_id, "brain_region_or_model_identity", reg_key),
+                    "organoid_type": make_value_record(org_type_str, org_type_str, "organoid_contexts", org_ctx_id, "organoid_type", org_key, status="reported" if org_type_str else "unknown"),
+                    "brain_region_or_model_identity": make_value_record(region_str, region_str, "organoid_contexts", org_ctx_id, "brain_region_or_model_identity", reg_key, status="reported" if region_str else "unknown"),
                     "metadata_validation_status": "not_validated",
                 }
 
             # Construct Grouping Condition ID
-            # Group by: treatment/control + agent + dose + duration
             if is_control:
                 raw_ctrl_type, ctrl_type_key = _find_attribute_value(rec, self.rules["control_type"])
                 clean_ctrl_type = _clean_str(raw_ctrl_type) or "vehicle"
@@ -388,8 +498,13 @@ class CanonicalMetadataMapper:
                     quals = [clean_ctrl_type]
                     if clean_agent and clean_agent.lower() not in ("control", "ctrl", "vehicle", "none", "mock", "untreated", ""):
                         quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower()))
-                    if clean_stage:
-                        quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_stage.lower()))
+                    if clean_exp_stage or clean_col_stage:
+                        st = clean_exp_stage or clean_col_stage
+                        quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", st.lower()))
+                    if has_multiple_ctrl_durations and norm_dur is not None and norm_dur.normalized_value is not None:
+                        quals.append(f"{norm_dur.normalized_value}{norm_dur.normalized_unit}")
+                    if has_multiple_ctrl_cell_lines and cell_line_str:
+                        quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", cell_line_str.lower()))
                     cond_id = f"cond_{exp_id}_control_{'_'.join(quals)}"
                     cond_label = f"Control ({' '.join(quals)})"
                 else:
@@ -397,9 +512,24 @@ class CanonicalMetadataMapper:
                     cond_label = "Vehicle Control"
             else:
                 agent_slug = re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower())
-                dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit}"
-                cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}"
-                cond_label = f"{clean_agent} {dose_val} {dose_unit}"
+                dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit}" if dose_val is not None else "dose_unspecified"
+
+                quals = []
+                if has_multiple_durations and norm_dur is not None and norm_dur.normalized_value is not None:
+                    quals.append(f"{norm_dur.normalized_value}{norm_dur.normalized_unit}")
+                if has_multiple_stages and clean_exp_stage:
+                    quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_exp_stage.lower()))
+                if has_multiple_cell_lines and cell_line_str:
+                    quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", cell_line_str.lower()))
+                if has_multiple_organoids and org_type_str:
+                    quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", org_type_str.lower()))
+
+                if quals:
+                    cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}_{'_'.join(quals)}"
+                    cond_label = f"{clean_agent} {dose_val} {dose_unit} ({' '.join(quals)})"
+                else:
+                    cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}"
+                    cond_label = f"{clean_agent} {dose_val} {dose_unit}" if dose_val is not None else clean_agent
 
             if cond_id not in conditions_map:
                 cond_dict = {
@@ -420,24 +550,59 @@ class CanonicalMetadataMapper:
                     "exposure_id": exp_rec_id,
                     "condition_id": cond_id,
                     "exposure_scope": "condition_planned",
-                    "developmental_age_or_stage_at_exposure": make_value_record(clean_stage, clean_stage, "exposures", exp_rec_id, "developmental_age_or_stage_at_exposure", stage_key, source_loc=rec.source_locator),
+                    "developmental_age_or_stage_at_exposure": make_value_record(
+                        clean_exp_stage,
+                        clean_exp_stage,
+                        "exposures",
+                        exp_rec_id,
+                        "developmental_age_or_stage_at_exposure",
+                        exp_stage_key,
+                        source_loc=rec.source_locator,
+                        status="reported" if clean_exp_stage is not None else "unknown",
+                    ),
                     "metadata_validation_status": "not_validated",
                 }
+                if clean_exp_stage is not None:
+                    exposure_entry["exposure_start_time_or_stage"] = make_value_record(
+                        clean_exp_stage,
+                        clean_exp_stage,
+                        "exposures",
+                        exp_rec_id,
+                        "exposure_start_time_or_stage",
+                        exp_stage_key,
+                        source_loc=rec.source_locator,
+                    )
                 if is_control:
                     exposure_entry["vehicle"] = make_value_record("vehicle", "vehicle", "exposures", exp_rec_id, "vehicle", "vehicle", source_loc=rec.source_locator)
+                    if norm_dur is not None and norm_dur.original_value is not None:
+                        exposure_entry["exposure_duration"] = make_value_record(norm_dur.original_value, norm_dur.normalized_value, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
+                        exposure_entry["exposure_duration_unit"] = make_value_record(norm_dur.original_unit, norm_dur.normalized_unit, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator)
+                    else:
+                        exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
+                        exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
                 else:
                     exposure_entry["agent_name"] = make_value_record(clean_agent, clean_agent, "exposures", exp_rec_id, "agent_name", agent_key, source_loc=rec.source_locator)
                     if norm_dose.original_value is not None:
                         exposure_entry["concentration_or_dose"] = make_value_record(norm_dose.original_value, norm_dose.normalized_value, "exposures", exp_rec_id, "concentration_or_dose", dose_key, source_loc=rec.source_locator)
                         exposure_entry["concentration_or_dose_unit"] = make_value_record(norm_dose.original_unit, norm_dose.normalized_unit, "exposures", exp_rec_id, "concentration_or_dose_unit", dose_unit_key, source_loc=rec.source_locator)
-                    if norm_dur.original_value is not None:
+                    if norm_dur is not None and norm_dur.original_value is not None:
                         exposure_entry["exposure_duration"] = make_value_record(norm_dur.original_value, norm_dur.normalized_value, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
                         exposure_entry["exposure_duration_unit"] = make_value_record(norm_dur.original_unit, norm_dur.normalized_unit, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator)
+                    else:
+                        exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
+                        exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
                 exposures_map[exp_rec_id] = exposure_entry
 
-            # Resolve Biological Replicate ID
+            # Resolve Biological Replicate ID (no invented default)
             raw_rep, rep_key = _find_attribute_value(rec, self.rules["biological_replicate_id"])
-            rep_str = _clean_str(raw_rep) or f"rep_{sid}"
+            clean_rep = _clean_str(raw_rep) or self.defaults.get("biological_replicate_id")
+            if clean_rep and clean_rep.lower() in ("none", "nan", "unknown", "unverified", "null", ""):
+                clean_rep = None
+
+            if clean_rep is not None:
+                rep_record = make_value_record(clean_rep, clean_rep, "samples", sid, "biological_replicate_id", rep_key, status="reported")
+            else:
+                rep_record = make_value_record(None, None, "samples", sid, "biological_replicate_id", rep_key, status="unknown")
 
             # Construct Canonical Sample Entry
             sample_entry: dict[str, Any] = {
@@ -446,9 +611,36 @@ class CanonicalMetadataMapper:
                 "condition_id": cond_id,
                 "biological_source_id": bio_source_id,
                 "organoid_context_id": org_ctx_id,
-                "biological_replicate_id": make_value_record(rep_str, rep_str, "samples", sid, "biological_replicate_id", rep_key),
-                "developmental_age_or_stage_at_collection": make_value_record(clean_stage, clean_stage, "samples", sid, "developmental_age_or_stage_at_collection", stage_key),
-                "collection_time_relative_to_exposure": make_value_record(f"{dur_val} {dur_unit}", f"{norm_dur.normalized_value} {norm_dur.normalized_unit}", "samples", sid, "collection_time_relative_to_exposure", dur_key),
+                "biological_replicate_id": rep_record,
+                "developmental_age_or_stage_at_collection": make_value_record(
+                    clean_col_stage,
+                    clean_col_stage,
+                    "samples",
+                    sid,
+                    "developmental_age_or_stage_at_collection",
+                    col_stage_key,
+                    status="reported" if clean_col_stage is not None else "unknown",
+                ),
+                "collection_time_relative_to_exposure": (
+                    make_value_record(
+                        f"{dur_val} {dur_unit}",
+                        f"{norm_dur.normalized_value} {norm_dur.normalized_unit}",
+                        "samples",
+                        sid,
+                        "collection_time_relative_to_exposure",
+                        dur_key,
+                    )
+                    if norm_dur is not None and norm_dur.normalized_value is not None
+                    else make_value_record(
+                        None,
+                        None,
+                        "samples",
+                        sid,
+                        "collection_time_relative_to_exposure",
+                        None,
+                        status="unknown",
+                    )
+                ),
                 "metadata_validation_status": "not_validated",
             }
             samples.append(sample_entry)

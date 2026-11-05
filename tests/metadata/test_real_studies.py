@@ -35,7 +35,11 @@ class TestRealPublicStudiesMetadata:
         assert ctx.study_id == "study_E-MTAB-15191"
 
         # Map to canonical schema
-        mapper = CanonicalMetadataMapper(target_dose_unit="uM", target_duration_unit="h")
+        mapper = CanonicalMetadataMapper(
+            target_dose_unit="uM",
+            target_duration_unit="h",
+            custom_mapping_rules={"biological_replicate_id": ("Source Name", "source_name")},
+        )
         canonical_doc, map_findings = mapper.map_study(ctx, recs, source_reference="E-MTAB-15191.sdrf.txt")
 
         assert len(canonical_doc["samples"]) == 16
