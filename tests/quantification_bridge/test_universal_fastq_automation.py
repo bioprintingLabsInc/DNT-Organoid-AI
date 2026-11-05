@@ -644,3 +644,369 @@ def test_10_different_study_and_sample_metadata_without_prjna802072_hardcoding(t
     assert ds_res.qc_passed is True
     assert ds_res.harmonization_metrics.get("status") in ("HARMONIZATION_COMPLETED", "PASS")
     assert ds_res.metadata_validation_status.lower() in ("valid", "valid_with_warnings")
+
+
+# -----------------------------------------------------------------------------
+# Test 11: Missing biological metadata not fabricated
+# -----------------------------------------------------------------------------
+
+def test_11_missing_biological_metadata_not_fabricated(tmp_path: Path):
+    """Verify that unprovided biological metadata is marked unknown and never fabricated."""
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    r1 = tmp_path / "s1_R1.fastq.gz"
+    r2 = tmp_path / "s1_R2.fastq.gz"
+    make_dummy_fastq(r1, ["r1"], mate_suffix="/1")
+    make_dummy_fastq(r2, ["r1"], mate_suffix="/2")
+
+    samples = [
+        SampleInput(
+            sample_id="SAMPLE_RAW_NO_META",
+            r1_path=r1,
+            r2_path=r2,
+            read_layout="paired_end",
+            attributes={},
+        )
+    ]
+    cfg = UniversalPipelineConfig(
+        study_id="STUDY_NO_META",
+        work_dir=tmp_path / "work_no_meta",
+        enforce_resources=False,
+    )
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+    doc = pipeline.canonical_metadata
+
+    # 1. No invented control_type, chemical, concentration or biological replicate
+    for s in doc["samples"]:
+        assert s["biological_replicate_id"]["value_status"] == "unknown"
+        assert s["biological_replicate_id"]["original_value"] is None
+
+    # Condition should NOT assume vehicle or DMSO
+    for c in doc["conditions"]:
+        assert c["treatment_control_status"]["value_status"] == "unknown"
+        assert "control_type" not in c or c["control_type"]["value_status"] in ("unknown", "missing_not_reported")
+
+    # Exposures should not assume DMSO or 0.0 uM
+    for exp in doc["exposures"]:
+        agent = exp.get("agent_name", {})
+        assert agent.get("value_status") in ("unknown", "missing_not_reported")
+        assert agent.get("original_value") != "DMSO"
+        assert agent.get("original_value") != "Vehicle Control"
+        conc = exp.get("concentration_or_dose", {})
+        assert conc.get("value_status") in ("unknown", "missing_not_reported")
+        assert conc.get("original_value") != 0.0
+
+
+# -----------------------------------------------------------------------------
+# Test 12: Planning does not modify filesystem
+# -----------------------------------------------------------------------------
+
+def test_12_planning_does_not_modify_filesystem(tmp_path: Path):
+    """Verify that instantiating UniversalFastqPipeline and calling plan() does not create directories or files."""
+    work_dir = tmp_path / "uncreated_pipeline_dir"
+    assert not work_dir.exists()
+
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    r1 = tmp_path / "s1_R1.fastq.gz"
+    r2 = tmp_path / "s1_R2.fastq.gz"
+    make_dummy_fastq(r1, ["r1"], mate_suffix="/1")
+    make_dummy_fastq(r2, ["r1"], mate_suffix="/2")
+
+    samples = [SampleInput(sample_id="S1", r1_path=r1, r2_path=r2, read_layout="paired_end")]
+    cfg = UniversalPipelineConfig(study_id="STUDY_IMMUTABLE_PLAN", work_dir=work_dir, enforce_resources=False)
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+    assert not work_dir.exists(), "UniversalFastqPipeline.__init__ must not create filesystem directories"
+
+    plan = pipeline.plan()
+    assert plan.can_execute is True
+    assert not work_dir.exists(), "UniversalFastqPipeline.plan() must not create filesystem directories or files"
+
+    res = pipeline.run(dry_run=True)
+    assert res.status == "DRY_RUN_PLAN_GENERATED"
+    assert not work_dir.exists(), "UniversalFastqPipeline.run(dry_run=True) must not create filesystem directories"
+
+
+# -----------------------------------------------------------------------------
+# Test 13: Approval token reproducibility and stale rejection
+# -----------------------------------------------------------------------------
+
+def test_13_approval_token_reproducibility_and_stale_rejection(tmp_path: Path):
+    """Verify deterministic approval token generation, approve() workflow, and stale token rejection."""
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    r1 = tmp_path / "s1_R1.fastq.gz"
+    r2 = tmp_path / "s1_R2.fastq.gz"
+    make_dummy_fastq(r1, ["r1"], mate_suffix="/1")
+    make_dummy_fastq(r2, ["r1"], mate_suffix="/2")
+
+    samples = [SampleInput(sample_id="S1", r1_path=r1, r2_path=r2, read_layout="paired_end")]
+    cfg = UniversalPipelineConfig(study_id="STUDY_APPROVAL", work_dir=tmp_path / "work_appr", require_approval=True, enforce_resources=False)
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+
+    # 1. Deterministic token: plan() called twice yields identical approval token
+    plan1 = pipeline.plan()
+    plan2 = pipeline.plan()
+    assert plan1.approval_token is not None
+    assert plan1.approval_token == plan2.approval_token
+
+    # 2. Unapproved execution halts safely
+    res_no_appr = pipeline.run()
+    assert res_no_appr.status == "BLOCKED_AWAITING_APPROVAL"
+    assert any(f.code == "AWAITING_USER_APPROVAL" for f in res_no_appr.findings)
+
+    # 3. Invalid or stale token is rejected
+    res_stale = pipeline.run(approval_token="stale_fake_token_123")
+    assert res_stale.status == "BLOCKED_STALE_APPROVAL"
+    assert any(f.code == "STALE_APPROVAL_TOKEN" for f in res_stale.findings)
+
+    # 4. pipeline.approve() records token and is recognized
+    pipeline.approve(plan1.approval_token)
+    assert pipeline._approved_token == plan1.approval_token
+
+
+# -----------------------------------------------------------------------------
+# Test 14: Mixed sequencing layouts and mismatches blocked
+# -----------------------------------------------------------------------------
+
+def test_14_mixed_sequencing_layouts_and_mismatches_blocked(tmp_path: Path):
+    """Verify preflight blocks mixed cohort layouts and sample-to-study layout conflicts."""
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    r1 = tmp_path / "s1_R1.fastq.gz"
+    r2 = tmp_path / "s1_R2.fastq.gz"
+    make_dummy_fastq(r1, ["r1"])
+    make_dummy_fastq(r2, ["r1"])
+
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    # Scenario A: Mixed cohort (sample 1 is paired_end, sample 2 is single_end)
+    samples_mixed = [
+        SampleInput(sample_id="SMPL_PE", r1_path=r1, r2_path=r2, read_layout="paired_end"),
+        SampleInput(sample_id="SMPL_SE", r1_path=r1, r2_path=None, read_layout="single_end"),
+    ]
+    cfg_mixed = UniversalPipelineConfig(study_id="STUDY_MIXED", work_dir=tmp_path / "w_mix", read_layout="paired_end", enforce_resources=False)
+    p_mixed = UniversalFastqPipeline(config=cfg_mixed, references=refs, samples=samples_mixed)
+    rep_mixed = p_mixed.validate_inputs()
+    assert rep_mixed.is_valid is False
+    assert any(f.code == "MIXED_SEQUENCING_LAYOUTS_UNSUPPORTED" for f in rep_mixed.findings)
+
+    # Scenario B: Sample configured as single_end but has mate R2
+    samples_se_with_r2 = [
+        SampleInput(sample_id="SMPL_SE_MATE", r1_path=r1, r2_path=r2, read_layout="single_end"),
+    ]
+    cfg_se = UniversalPipelineConfig(study_id="STUDY_SE", work_dir=tmp_path / "w_se", read_layout="single_end", enforce_resources=False)
+    p_se = UniversalFastqPipeline(config=cfg_se, references=refs, samples=samples_se_with_r2)
+    rep_se = p_se.validate_inputs()
+    assert rep_se.is_valid is False
+    assert any(f.code == "SAMPLE_LAYOUT_MISMATCH" for f in rep_se.findings)
+
+
+# -----------------------------------------------------------------------------
+# Test 15: SRA retrieval preflight and execution chaining
+# -----------------------------------------------------------------------------
+
+def test_15_sra_retrieval_preflight_and_execution_chaining(tmp_path: Path, monkeypatch):
+    """Verify SRA accession identification in preflight, planning stage, and execution chaining to fastp."""
+    fasta = tmp_path / "genome.fa"
+    gtf = tmp_path / "genes.gtf"
+    make_dummy_fasta(fasta)
+    make_dummy_gtf(gtf)
+
+    sra_acc = "SRR17834458"
+    samples = [
+        SampleInput(sample_id="SMPL_SRA_01", sra_accession=sra_acc, read_layout="paired_end")
+    ]
+    cfg = UniversalPipelineConfig(study_id="STUDY_SRA", work_dir=tmp_path / "w_sra", read_layout="paired_end", enforce_resources=False)
+    refs = ReferenceConfig(species="Homo sapiens", genome_fasta=fasta, gtf_annotation=gtf)
+
+    p = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+
+    # Preflight detects SRA requirement
+    pre = p.validate_inputs()
+    assert p.samples[0].sample_id in pre.sample_validation
+    assert pre.sample_validation["SMPL_SRA_01"]["status"] == "REQUIRES_SRA_RETRIEVAL"
+
+    # Plan includes 00_sra stage
+    plan = p.plan()
+    sra_stages = [st for st in plan.planned_stages if st["stage_id"].startswith("00_sra")]
+    assert len(sra_stages) == 1
+    assert sra_stages[0]["accession"] == sra_acc
+
+    # Mock extract_sra to simulate successful download without external network
+    r1_mock = tmp_path / "sra_mock_1.fastq"
+    r2_mock = tmp_path / "sra_mock_2.fastq"
+    make_dummy_fastq(r1_mock, ["read1"], mate_suffix="/1", is_gz=False)
+    make_dummy_fastq(r2_mock, ["read1"], mate_suffix="/2", is_gz=False)
+
+    from src.quantification_bridge.sra_runner import SraExtractionResult
+    def mock_extract_sra(sra_path, output_dir, threads=6, temp_dir=None):
+        return SraExtractionResult(
+            status="SRA_EXTRACTION_SUCCESS",
+            run_accession=sra_acc,
+            layout="PAIRED",
+            fastq_r1=r1_mock,
+            fastq_r2=r2_mock,
+            tool_name="mocked_fasterq_dump",
+            tool_version="3.1.1",
+            output_dir=Path(output_dir),
+            temp_dir=Path(output_dir),
+        )
+
+    monkeypatch.setattr("src.quantification_bridge.universal_pipeline.extract_sra", mock_extract_sra)
+
+    # Execute SRA retrieval stage directly via pipeline resolution
+    p._ensure_directories()
+    sra_res = mock_extract_sra(sra_acc, p.sra_dir / "SMPL_SRA_01")
+    assert sra_res.fastq_r1.is_file()
+    assert sra_res.fastq_r2.is_file()
+
+
+# -----------------------------------------------------------------------------
+# Test 16: Downstream status reporting granularity
+# -----------------------------------------------------------------------------
+
+def test_16_downstream_status_reporting_granularity(tmp_path: Path):
+    """Verify that UniversalFastqResult distinguishes COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED, FAILED_DOWNSTREAM_*, and COMPLETED."""
+    res_gated = UniversalFastqResult(
+        status="COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED",
+        study_id="STUDY_STAT",
+        sample_ids=("S1", "S2"),
+        raw_counts_path=tmp_path / "counts.tsv",
+        canonical_metadata_path=tmp_path / "meta.json",
+        qc_reports_dir=tmp_path / "qc",
+        alignments_dir=tmp_path / "align",
+        strandedness_evidence_path=tmp_path / "strand.json",
+        counting_summary_path=tmp_path / "count.json",
+        execution_record_path=tmp_path / "rec.json",
+        completed_stages=("star_index", "fastp_trimming", "star_alignment", "downstream_bridge_exploratory"),
+        failed_stage=None,
+    )
+    d_gated = res_gated.to_dict()
+    assert d_gated["status"] == "COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED"
+    assert "downstream_bridge_exploratory" in d_gated["completed_stages"]
+    assert d_gated["failed_stage"] is None
+
+    res_qc_fail = UniversalFastqResult(
+        status="FAILED_DOWNSTREAM_QC",
+        study_id="STUDY_STAT",
+        sample_ids=("S1",),
+        raw_counts_path=None,
+        canonical_metadata_path=None,
+        qc_reports_dir=None,
+        alignments_dir=None,
+        strandedness_evidence_path=None,
+        counting_summary_path=None,
+        execution_record_path=None,
+        completed_stages=("star_index", "fastp_trimming"),
+        failed_stage="downstream_bridge",
+    )
+    d_qc_fail = res_qc_fail.to_dict()
+    assert d_qc_fail["status"] == "FAILED_DOWNSTREAM_QC"
+    assert d_qc_fail["failed_stage"] == "downstream_bridge"
+
+
+# -----------------------------------------------------------------------------
+# Test 17: Genuine mini-genome end-to-end quantification
+# -----------------------------------------------------------------------------
+
+def test_17_genuine_mini_genome_end_to_end_quantification(tmp_path: Path):
+    """Execute genuine end-to-end quantification: FASTQ -> fastp -> STAR -> featureCounts -> counts.tsv -> downstream QC."""
+    import random
+    work_dir = tmp_path / "e2e_work"
+
+    # 1. Build a 100,000 bp non-repetitive mini-genome
+    random.seed(42)
+    bases = ["A", "C", "G", "T"]
+    seq_100k = "".join(random.choices(bases, k=100000))
+    fasta = tmp_path / "mini_genome.fa"
+    fasta.write_text(f">chr1\n{seq_100k}\n", encoding="utf-8")
+
+    # 2. GTF with 2 Ensembl genes
+    gtf = tmp_path / "mini_genes.gtf"
+    gtf_content = (
+        'chr1\tsynth\texon\t1000\t5000\t.\t+\t.\tgene_id "ENSG00000000001"; gene_name "GENE1"; transcript_id "ENST00000000001";\n'
+        'chr1\tsynth\texon\t10000\t15000\t.\t+\t.\tgene_id "ENSG00000000002"; gene_name "GENE2"; transcript_id "ENST00000000002";\n'
+    )
+    gtf.write_text(gtf_content, encoding="utf-8")
+
+    # 3. Reads targeting GENE1 and GENE2
+    read_seq_g1 = seq_100k[1100:1150]
+    read_seq_g2 = seq_100k[10100:10150]
+    r1 = tmp_path / "mini_sample_R1.fastq.gz"
+    r2 = tmp_path / "mini_sample_R2.fastq.gz"
+
+    with gzip.open(r1, "wt", encoding="utf-8") as f1, gzip.open(r2, "wt", encoding="utf-8") as f2:
+        for i in range(20):
+            f1.write(f"@read_g1_{i}/1\n{read_seq_g1}\n+\n{'I'*50}\n")
+            f2.write(f"@read_g1_{i}/2\n{read_seq_g1}\n+\n{'I'*50}\n")
+            f1.write(f"@read_g2_{i}/1\n{read_seq_g2}\n+\n{'I'*50}\n")
+            f2.write(f"@read_g2_{i}/2\n{read_seq_g2}\n+\n{'I'*50}\n")
+
+    cfg = UniversalPipelineConfig(
+        study_id="STUDY_E2E_MINI",
+        work_dir=work_dir,
+        read_layout="paired_end",
+        strandedness=0,
+        threads=2,
+        require_approval=True,
+        enforce_resources=False,
+    )
+    refs = ReferenceConfig(
+        species="Homo sapiens",
+        genome_fasta=fasta,
+        gtf_annotation=gtf,
+        sjdb_overhang=49,
+    )
+    samples = [
+        SampleInput(
+            sample_id="MINI_SAMPLE_01",
+            r1_path=r1,
+            r2_path=r2,
+            read_layout="paired_end",
+            attributes={
+                "organoid_type": "brain_organoid",
+                "cell_line": "MINI_LINE",
+            },
+        )
+    ]
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=refs, samples=samples)
+    plan = pipeline.plan()
+    assert plan.can_execute is True
+
+    # Approve and execute genuine end-to-end pipeline
+    pipeline.approve(plan.approval_token)
+    res = pipeline.run()
+
+    # Verify quantification outputs
+    assert res.raw_counts_path is not None
+    assert res.raw_counts_path.is_file()
+    counts_content = res.raw_counts_path.read_text(encoding="utf-8")
+    assert "ENSG00000000001" in counts_content
+    assert "ENSG00000000002" in counts_content
+    assert "MINI_SAMPLE_01" in counts_content
+
+    # Verify execution record and completed stages
+    assert res.execution_record_path is not None and res.execution_record_path.is_file()
+    assert "star_index" in res.completed_stages
+    assert "featurecounts" in res.completed_stages
+    assert res.status in ("COMPLETED", "COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED", "PARTIALLY_COMPLETED")

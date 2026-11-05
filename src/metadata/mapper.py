@@ -355,40 +355,37 @@ class CanonicalMetadataMapper:
             status_lower = cond_str.lower() if cond_str else ""
 
             is_control = False
+            is_treatment = False
             raw_ctrl_type, ctrl_type_key = _find_attribute_value(rec, self.rules.get("control_type", ("control_type", "vehicle", "control")))
             if raw_ctrl_type and str(raw_ctrl_type).lower() in ["vehicle", "control", "untreated", "negative_reference"]:
                 is_control = True
             elif any(k in status_lower for k in ["control", "ctrl", "baseline", "untreated", "vehicle", "none", "dmso"]):
                 is_control = True
             elif "treat" in status_lower or "exposed" in status_lower or "vpa" in status_lower:
-                is_control = False
+                is_treatment = True
             else:
                 # Check agent name if condition status is ambiguous
                 raw_agent_check, _ = _find_attribute_value(rec, self.rules["agent_name"])
                 if raw_agent_check and str(raw_agent_check).lower() in ["none", "untreated", "vehicle", "control"]:
                     is_control = True
                 elif raw_agent_check and str(raw_agent_check).strip():
-                    is_control = False
+                    is_treatment = True
                 else:
                     findings.append(
                         MappingFinding(
                             severity="WARNING",
                             rule="ambiguous_condition_status",
                             field_path=f"samples[{idx}].condition_status",
-                            message=f"Sample '{sid}' has ambiguous condition status '{cond_str}'; defaulting to treatment.",
+                            message=f"Sample '{sid}' has unprovided or ambiguous condition status; preserved as unknown.",
                         )
                     )
-                    is_control = False
 
-            treatment_status = "control" if is_control else "treatment"
+            treatment_status = "control" if is_control else ("treatment" if is_treatment else None)
 
             # Resolve Chemical Identity
             raw_agent, agent_key = _find_attribute_value(rec, self.rules["agent_name"])
             clean_agent = _clean_str(raw_agent) or self.defaults.get("agent_name")
-            if is_control and not clean_agent:
-                clean_agent = "Vehicle Control"
-            elif not is_control and not clean_agent:
-                clean_agent = "Unknown Agent"
+            if is_treatment and not clean_agent:
                 findings.append(
                     MappingFinding(
                         severity="WARNING",
@@ -401,8 +398,8 @@ class CanonicalMetadataMapper:
             # Resolve Dose / Concentration
             raw_dose, dose_key = _find_attribute_value(rec, self.rules["concentration_or_dose"])
             raw_dose_unit, dose_unit_key = _find_attribute_value(rec, self.rules["concentration_or_dose_unit"])
-            dose_val = raw_dose if raw_dose is not None else (0.0 if is_control else self.defaults.get("concentration_or_dose"))
-            dose_unit = raw_dose_unit if raw_dose_unit is not None else ("uM" if is_control else self.defaults.get("concentration_or_dose_unit", "uM" if dose_val is not None else None))
+            dose_val = raw_dose if raw_dose is not None else self.defaults.get("concentration_or_dose")
+            dose_unit = raw_dose_unit if raw_dose_unit is not None else self.defaults.get("concentration_or_dose_unit", "uM" if dose_val is not None else None)
 
             norm_dose = normalize_concentration(dose_val, dose_unit, target_unit=self.target_dose_unit)
 
@@ -519,8 +516,8 @@ class CanonicalMetadataMapper:
                 else:
                     cond_id = f"cond_{exp_id}_control"
                     cond_label = "Vehicle Control"
-            else:
-                agent_slug = re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower())
+            elif is_treatment:
+                agent_slug = re.sub(r"[^a-zA-Z0-9_]", "_", clean_agent.lower()) if clean_agent else "unknown_agent"
                 dose_slug = f"{norm_dose.normalized_value or dose_val}{norm_dose.normalized_unit or dose_unit}" if dose_val is not None else "dose_unspecified"
 
                 quals = []
@@ -536,17 +533,24 @@ class CanonicalMetadataMapper:
 
                 if quals:
                     cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}_{'_'.join(quals)}"
-                    cond_label = f"{clean_agent} {dose_val} {dose_unit} ({' '.join(quals)})"
+                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val} {dose_unit} ({' '.join(quals)})"
                 else:
                     cond_id = f"cond_{exp_id}_{agent_slug}_{dose_slug}"
-                    cond_label = f"{clean_agent} {dose_val} {dose_unit}" if dose_val is not None else clean_agent
+                    cond_label = f"{clean_agent or 'Unknown Agent'} {dose_val} {dose_unit}" if dose_val is not None else (clean_agent or "Unknown Agent")
+            else:
+                cond_id = f"cond_{exp_id}_unknown_{sid}"
+                cond_label = f"Sample {sid} (unspecified condition)"
 
             if cond_id not in conditions_map:
+                if treatment_status is not None:
+                    treat_rec = make_value_record(treatment_status, treatment_status, "conditions", cond_id, "treatment_control_status", cond_status_key)
+                else:
+                    treat_rec = make_value_record(None, None, "conditions", cond_id, "treatment_control_status", cond_status_key, status="unknown")
                 cond_dict = {
                     "condition_id": cond_id,
                     "experiment_id": exp_id,
                     "condition_label": make_value_record(cond_label, cond_label, "conditions", cond_id, "condition_label", "condition_label"),
-                    "treatment_control_status": make_value_record(treatment_status, treatment_status, "conditions", cond_id, "treatment_control_status", cond_status_key),
+                    "treatment_control_status": treat_rec,
                     "metadata_validation_status": "not_validated",
                 }
                 if is_control:
@@ -590,17 +594,29 @@ class CanonicalMetadataMapper:
                     else:
                         exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
                         exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
-                else:
-                    exposure_entry["agent_name"] = make_value_record(clean_agent, clean_agent, "exposures", exp_rec_id, "agent_name", agent_key, source_loc=rec.source_locator)
+                elif is_treatment:
+                    if clean_agent:
+                        exposure_entry["agent_name"] = make_value_record(clean_agent, clean_agent, "exposures", exp_rec_id, "agent_name", agent_key, source_loc=rec.source_locator)
+                    else:
+                        exposure_entry["agent_name"] = make_value_record(None, None, "exposures", exp_rec_id, "agent_name", None, status="missing_not_reported")
                     if norm_dose.original_value is not None:
                         exposure_entry["concentration_or_dose"] = make_value_record(norm_dose.original_value, norm_dose.normalized_value, "exposures", exp_rec_id, "concentration_or_dose", dose_key, source_loc=rec.source_locator)
                         exposure_entry["concentration_or_dose_unit"] = make_value_record(norm_dose.original_unit, norm_dose.normalized_unit, "exposures", exp_rec_id, "concentration_or_dose_unit", dose_unit_key, source_loc=rec.source_locator)
+                    else:
+                        exposure_entry["concentration_or_dose"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose", None, status="missing_not_reported")
+                        exposure_entry["concentration_or_dose_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose_unit", None, status="missing_not_reported")
                     if norm_dur is not None and norm_dur.original_value is not None:
                         exposure_entry["exposure_duration"] = make_value_record(norm_dur.original_value, norm_dur.normalized_value, "exposures", exp_rec_id, "exposure_duration", dur_key, source_loc=rec.source_locator)
                         exposure_entry["exposure_duration_unit"] = make_value_record(norm_dur.original_unit, norm_dur.normalized_unit, "exposures", exp_rec_id, "exposure_duration_unit", dur_unit_key, source_loc=rec.source_locator)
                     else:
                         exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
                         exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
+                else:
+                    exposure_entry["agent_name"] = make_value_record(None, None, "exposures", exp_rec_id, "agent_name", None, status="unknown")
+                    exposure_entry["concentration_or_dose"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose", None, status="missing_not_reported")
+                    exposure_entry["concentration_or_dose_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "concentration_or_dose_unit", None, status="missing_not_reported")
+                    exposure_entry["exposure_duration"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration", None, status="missing_not_reported")
+                    exposure_entry["exposure_duration_unit"] = make_value_record(None, None, "exposures", exp_rec_id, "exposure_duration_unit", None, status="missing_not_reported")
                 exposures_map[exp_rec_id] = exposure_entry
 
             # Resolve Biological Replicate ID (no invented default)

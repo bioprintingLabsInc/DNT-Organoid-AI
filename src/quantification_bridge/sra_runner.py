@@ -94,10 +94,9 @@ def extract_sra(
     threads: int = 6,
     temp_dir: str | Path | None = None,
 ) -> SraExtractionResult:
-    """Extract an SRA archive to FASTQ files via fasterq-dump / fastq-dump with governed temp storage."""
-    sra_p = Path(sra_path).resolve()
-    if not sra_p.is_file():
-        raise FileNotFoundError(f"SRA file not found: {sra_p}")
+    """Extract an SRA archive or accession to FASTQ files via fasterq-dump / fastq-dump with governed temp storage."""
+    sra_str = str(sra_path).strip()
+    is_accession = bool(re.match(r"^[SED]RR\d+$", sra_str, re.IGNORECASE))
 
     out_p = Path(output_dir).resolve()
     out_p.mkdir(parents=True, exist_ok=True)
@@ -108,12 +107,53 @@ def extract_sra(
         temp_p = Path(temp_dir).resolve()
     temp_p.mkdir(parents=True, exist_ok=True)
 
-    run_acc = sra_p.stem
+    if is_accession and not Path(sra_path).is_file():
+        run_acc = sra_str
+        wsl_sra = run_acc
+    else:
+        sra_p = Path(sra_path).resolve()
+        if not sra_p.is_file():
+            raise FileNotFoundError(f"SRA file not found: {sra_p}")
+        run_acc = sra_p.stem
+        wsl_sra = to_wsl_path(sra_p)
+
+    # Check if previously extracted files exist in output directory
+    r1 = out_p / f"{run_acc}_1.fastq"
+    r2 = out_p / f"{run_acc}_2.fastq"
+    r1_gz = out_p / f"{run_acc}_1.fastq.gz"
+    r2_gz = out_p / f"{run_acc}_2.fastq.gz"
+    single = out_p / f"{run_acc}.fastq"
+    single_gz = out_p / f"{run_acc}.fastq.gz"
+
+    if (r1.is_file() and r2.is_file()) or (r1_gz.is_file() and r2_gz.is_file()):
+        return SraExtractionResult(
+            status="SRA_EXTRACTION_SUCCESS",
+            run_accession=run_acc,
+            layout="PAIRED",
+            fastq_r1=r1 if r1.is_file() else r1_gz,
+            fastq_r2=r2 if r2.is_file() else r2_gz,
+            tool_name="cached",
+            tool_version="cached",
+            output_dir=out_p,
+            temp_dir=temp_p,
+        )
+    elif single.is_file() or single_gz.is_file():
+        return SraExtractionResult(
+            status="SRA_EXTRACTION_SUCCESS",
+            run_accession=run_acc,
+            layout="SINGLE",
+            fastq_r1=single if single.is_file() else single_gz,
+            fastq_r2=None,
+            tool_name="cached",
+            tool_version="cached",
+            output_dir=out_p,
+            temp_dir=temp_p,
+        )
+
     tools = probe_sra_tools()
     if not tools["available"]:
         raise RuntimeError("Neither fasterq-dump nor fastq-dump is installed in the governed environment.")
 
-    wsl_sra = to_wsl_path(sra_p)
     wsl_out = to_wsl_path(out_p)
     wsl_temp = to_wsl_path(temp_p)
 

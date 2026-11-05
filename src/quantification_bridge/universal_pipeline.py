@@ -252,6 +252,8 @@ class UniversalFastqResult:
     downstream_result: DownstreamBridgeResult | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
     findings: tuple[PipelineFinding, ...] = field(default_factory=tuple)
+    completed_stages: tuple[str, ...] = field(default_factory=tuple)
+    failed_stage: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -268,6 +270,8 @@ class UniversalFastqResult:
             "downstream_result": self.downstream_result.to_dict() if self.downstream_result else None,
             "metrics": self.metrics,
             "findings": [f.to_dict() for f in self.findings],
+            "completed_stages": list(self.completed_stages),
+            "failed_stage": self.failed_stage,
         }
 
 
@@ -390,15 +394,84 @@ def load_sample_metadata(
 
 
 # -----------------------------------------------------------------------------
-# Checkpoint Governance
+# Checkpoint Governance & Output Integrity
 # -----------------------------------------------------------------------------
+
+def compute_file_content_hash(path: Path | str) -> str:
+    """Compute deterministic content-based hash using file size, mtime, and chunk digest."""
+    p = Path(path).resolve()
+    if not p.exists():
+        return f"missing:{p.name}"
+    if p.is_dir():
+        hasher = hashlib.sha256()
+        for item in sorted(p.glob("*")):
+            if item.is_file():
+                st = item.stat()
+                hasher.update(f"{item.name}:{st.st_size}:{st.st_mtime}".encode("utf-8"))
+        return hasher.hexdigest()
+    st = p.stat()
+    hasher = hashlib.sha256()
+    hasher.update(f"{p.name}:{st.st_size}:{st.st_mtime}".encode("utf-8"))
+    try:
+        with p.open("rb") as f:
+            head = f.read(65536)
+            hasher.update(head)
+            if st.st_size > 131072:
+                f.seek(-65536, os.SEEK_END)
+                tail = f.read(65536)
+                hasher.update(tail)
+    except Exception:
+        pass
+    return hasher.hexdigest()
+
+
+def _verify_output_integrity(out: Path | str) -> bool:
+    """Verify physical output existence, non-emptiness, and format validity."""
+    out_p = Path(out).resolve()
+    if not out_p.exists():
+        return False
+
+    if out_p.is_dir():
+        # Directory output (e.g. STAR index): check essential files exist and non-empty
+        genome_f = out_p / "Genome"
+        if genome_f.is_file() and genome_f.stat().st_size > 0:
+            return True
+        files = [f for f in out_p.iterdir() if f.is_file() and f.stat().st_size > 0]
+        return len(files) > 0
+
+    if out_p.stat().st_size == 0:
+        return False
+
+    name_lower = out_p.name.lower()
+    if name_lower.endswith(".json"):
+        try:
+            json.loads(out_p.read_text(encoding="utf-8"))
+        except Exception:
+            return False
+    elif name_lower.endswith(".gz"):
+        try:
+            with gzip.open(out_p, "rb") as gz:
+                gz.read(64)
+        except Exception:
+            return False
+    elif name_lower.endswith(".bam"):
+        try:
+            with out_p.open("rb") as bf:
+                head = bf.read(64)
+                if not (head.startswith(b"\x1f\x8b") or head.startswith(b"BAM\x01") or b"bam" in head.lower()):
+                    return False
+        except Exception:
+            return False
+
+    return True
+
 
 class CheckpointManager:
     """Atomic file-based checkpoint store ensuring safe resumption and preventing invalid reuse."""
 
-    def __init__(self, checkpoint_dir: Path) -> None:
+    def __init__(self, checkpoint_dir: Path | str) -> None:
         self.checkpoint_dir = Path(checkpoint_dir).resolve()
-        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        # Defer directory creation to maintain filesystem immutability during dry-run / planning
 
     def _get_path(self, stage: str, identifier: str) -> Path:
         clean_id = re.sub(r"[^A-Za-z0-9_.-]", "_", identifier)
@@ -413,6 +486,9 @@ class CheckpointManager:
         config_hash: str,
     ) -> bool:
         """Verify whether a previously executed stage can be safely reused without reprocessing."""
+        if not self.checkpoint_dir.is_dir():
+            return False
+
         chk_p = self._get_path(stage, identifier)
         if not chk_p.is_file():
             return False
@@ -429,10 +505,9 @@ class CheckpointManager:
         if data.get("config_hash") != config_hash:
             return False
 
-        # Verify all output files exist and are non-empty
+        # Verify all output files exist, are non-empty, and intact
         for out in expected_outputs:
-            out_p = Path(out).resolve()
-            if not out_p.is_file() or out_p.stat().st_size == 0:
+            if not _verify_output_integrity(out):
                 return False
 
         return True
@@ -447,6 +522,7 @@ class CheckpointManager:
         metrics: dict[str, Any] | None = None,
     ) -> None:
         """Write an atomic checkpoint record to disk."""
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         chk_p = self._get_path(stage, identifier)
         record = {
             "stage": stage,
@@ -498,10 +574,10 @@ class UniversalFastqPipeline:
         self.align_dir = self.out_dir / "alignments"
         self.counts_dir = self.out_dir / "counts"
         self.checkpoints_dir = self.out_dir / ".checkpoints"
+        self.sra_dir = self.out_dir / "sra_extracted"
+        self._approved_token: str | None = None
 
-        for d in (self.out_dir, self.qc_dir, self.trimmed_dir, self.align_dir, self.counts_dir, self.checkpoints_dir):
-            d.mkdir(parents=True, exist_ok=True)
-
+        # Defer directory creation to maintain filesystem immutability during dry-run / planning
         self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
 
         # Resolve or map metadata
@@ -514,19 +590,12 @@ class UniversalFastqPipeline:
                 study_title=config.study_title,
             )
         else:
-            # Build minimal canonical metadata from sample records
+            # Build minimal canonical metadata from sample records without inventing defaults
             raw_dicts = []
             for s in samples:
                 d = {"sample_id": s.sample_id}
                 d.update(s.attributes)
-                if not any(k in d for k in ("control_type", "treatment_control_status", "condition_status")):
-                    d["control_type"] = "vehicle"
-                if not any(k in d for k in ("chemical", "compound", "agent_name")):
-                    d["chemical"] = "DMSO" if d.get("control_type") == "vehicle" else "untreated"
-                if not any(k in d for k in ("concentration", "concentration_or_dose", "dose")):
-                    d["concentration"] = 0.0
-                if not any(k in d for k in ("concentration_unit", "concentration_or_dose_unit", "unit")):
-                    d["concentration_unit"] = "uM"
+                # Keep unprovided attributes explicitly missing or unknown - DO NOT invent vehicle, chemical, concentration, or unit
                 raw_dicts.append(d)
 
             self.canonical_metadata, self.raw_sample_records = load_sample_metadata(
@@ -535,6 +604,15 @@ class UniversalFastqPipeline:
                 source_type=config.source_type,
                 study_title=config.study_title,
             )
+
+    def _ensure_directories(self) -> None:
+        """Create output directories only upon approved execution initiation."""
+        for d in (self.out_dir, self.qc_dir, self.trimmed_dir, self.align_dir, self.counts_dir, self.checkpoints_dir, self.sra_dir):
+            d.mkdir(parents=True, exist_ok=True)
+
+    def approve(self, token: str) -> None:
+        """Explicitly record approval token for the planned execution."""
+        self._approved_token = token
 
     # -------------------------------------------------------------------------
     # Preflight Verification & Dry-Run Planning
@@ -663,6 +741,18 @@ class UniversalFastqPipeline:
                 )
             )
 
+        # Check layout consistency across samples in the cohort
+        layouts = {s.read_layout for s in self.samples if s.read_layout}
+        if len(layouts) > 1:
+            findings.append(
+                PipelineFinding(
+                    severity="FATAL",
+                    code="MIXED_SEQUENCING_LAYOUTS_UNSUPPORTED",
+                    message=f"Cohort contains mixed sequencing layouts: {sorted(layouts)}. Mixed single-end and paired-end runs within a single study pipeline run are not supported.",
+                    remediation="Split the cohort into separate single-end and paired-end pipeline runs.",
+                )
+            )
+
         for s in self.samples:
             # Duplicate sample ID check
             if s.sample_id in seen_sids:
@@ -676,9 +766,29 @@ class UniversalFastqPipeline:
                 )
             seen_sids.add(s.sample_id)
 
+            # Sample layout must match pipeline configured layout
+            if s.read_layout != self.config.read_layout:
+                findings.append(
+                    PipelineFinding(
+                        severity="FATAL",
+                        code="SAMPLE_LAYOUT_MISMATCH",
+                        message=f"Sample '{s.sample_id}' layout '{s.read_layout}' does not match pipeline configured layout '{self.config.read_layout}'.",
+                        remediation=f"Configure sample layout to match study layout '{self.config.read_layout}'.",
+                    )
+                )
+
             # Check read pairing and files
             if s.read_layout == "paired_end":
-                if s.r1_path is not None and s.r2_path is None:
+                if s.r1_path is None and s.r2_path is None and not s.sra_accession:
+                    findings.append(
+                        PipelineFinding(
+                            severity="FATAL",
+                            code="MISSING_FASTQ_INPUTS",
+                            message=f"Paired-end sample '{s.sample_id}' has neither FASTQ files nor SRA accession.",
+                            remediation="Provide paired FASTQ paths (r1_path, r2_path) or sra_accession.",
+                        )
+                    )
+                elif s.r1_path is not None and s.r2_path is None:
                     findings.append(
                         PipelineFinding(
                             severity="FATAL",
@@ -696,6 +806,12 @@ class UniversalFastqPipeline:
                             remediation="Provide R1 mate path or reclassify read_layout as 'single_end'.",
                         )
                     )
+                elif s.sra_accession and not s.r1_path:
+                    sample_checks[s.sample_id] = {
+                        "status": "REQUIRES_SRA_RETRIEVAL",
+                        "accession": s.sra_accession,
+                        "read_layout": "paired_end",
+                    }
                 elif s.r1_path and s.r2_path:
                     # Validate actual FASTQ files
                     if not s.r1_path.is_file():
@@ -727,6 +843,15 @@ class UniversalFastqPipeline:
                                 )
                             )
             elif s.read_layout == "single_end":
+                if s.r2_path is not None:
+                    findings.append(
+                        PipelineFinding(
+                            severity="FATAL",
+                            code="SAMPLE_LAYOUT_MISMATCH",
+                            message=f"Single-end sample '{s.sample_id}' has mate R2 path '{s.r2_path}'. Single-end samples must not have an R2 mate.",
+                            remediation="Remove R2 path or reconfigure layout to 'paired_end'.",
+                        )
+                    )
                 if s.r1_path is None:
                     if not s.sra_accession:
                         findings.append(
@@ -736,6 +861,12 @@ class UniversalFastqPipeline:
                                 message=f"Single-end sample '{s.sample_id}' has neither FASTQ path nor SRA accession.",
                             )
                         )
+                    else:
+                        sample_checks[s.sample_id] = {
+                            "status": "REQUIRES_SRA_RETRIEVAL",
+                            "accession": s.sra_accession,
+                            "read_layout": "single_end",
+                        }
                 elif not s.r1_path.is_file():
                     findings.append(
                         PipelineFinding(
@@ -806,10 +937,37 @@ class UniversalFastqPipeline:
             estimated_ram_gb=self.profile.physical_ram_gb_min,
         )
 
+    def _compute_plan_signature(self, stage_ids: list[str]) -> str:
+        items = [
+            f"study:{self.config.study_id}",
+            f"layout:{self.config.read_layout}",
+            f"strand:{self.config.strandedness}",
+            f"fasta:{self.references.genome_fasta}:{self.references.genome_fasta.stat().st_size if self.references.genome_fasta.is_file() else 'missing'}",
+            f"gtf:{self.references.gtf_annotation}:{self.references.gtf_annotation.stat().st_size if self.references.gtf_annotation.is_file() else 'missing'}",
+            f"star_idx:{self.references.star_index_dir or ''}",
+            f"stages:{','.join(stage_ids)}",
+        ]
+        for s in sorted(self.samples, key=lambda x: x.sample_id):
+            r1_info = f"{s.r1_path.stat().st_size}" if s.r1_path and s.r1_path.is_file() else (s.sra_accession or "missing")
+            r2_info = f"{s.r2_path.stat().st_size}" if s.r2_path and s.r2_path.is_file() else "none"
+            items.append(f"sample:{s.sample_id}:{s.read_layout}:{s.sra_accession or 'none'}:{r1_info}:{r2_info}")
+        return hashlib.sha256(";".join(items).encode("utf-8")).hexdigest()
+
     def plan(self) -> ProcessingPlan:
         """Compile a complete dry-run processing plan with planned operations and resource estimates."""
         preflight = self.validate_inputs()
         stages: list[dict[str, Any]] = []
+
+        # 0. SRA Retrieval if applicable
+        for s in self.samples:
+            if s.sra_accession and not s.r1_path:
+                stages.append({
+                    "stage_id": f"00_sra_{s.sample_id}",
+                    "name": f"SRA Extraction ({s.sample_id})",
+                    "sample_id": s.sample_id,
+                    "accession": s.sra_accession,
+                    "target_dir": str(self.sra_dir / s.sample_id),
+                })
 
         # 1. References setup
         star_idx_target = self.references.star_index_dir or (self.out_dir / "star_index")
@@ -867,7 +1025,7 @@ class UniversalFastqPipeline:
             "inferential_eligible": preflight.metadata_validation.get("integrity_is_valid", False),
         })
 
-        approval_token = hashlib.sha256(f"{self.config.study_id}_{time.time()}".encode()).hexdigest()[:12]
+        approval_token = self._compute_plan_signature([st["stage_id"] for st in stages])[:16]
 
         return ProcessingPlan(
             config=self.config,
@@ -910,6 +1068,8 @@ class UniversalFastqPipeline:
                 execution_record_path=None,
                 metrics={"planned_stages_count": len(plan.planned_stages)},
                 findings=plan.preflight.findings,
+                completed_stages=(),
+                failed_stage=None,
             )
 
         # Preflight validation gate
@@ -926,34 +1086,112 @@ class UniversalFastqPipeline:
                 counting_summary_path=None,
                 execution_record_path=None,
                 findings=plan.preflight.findings,
+                completed_stages=(),
+                failed_stage="preflight_validation",
             )
 
         # Explicit approval gate before expensive operations
-        if self.config.require_approval and approval_token != plan.approval_token:
-            approval_finding = PipelineFinding(
-                severity="WARNING",
-                code="AWAITING_USER_APPROVAL",
-                message=(
-                    f"Pipeline is configured to require explicit confirmation before execution. "
-                    f"To proceed, invoke run(approval_token='{plan.approval_token}')."
-                ),
-            )
-            return UniversalFastqResult(
-                status="BLOCKED_AWAITING_APPROVAL",
-                study_id=self.config.study_id,
-                sample_ids=tuple(s.sample_id for s in self.samples),
-                raw_counts_path=None,
-                canonical_metadata_path=None,
-                qc_reports_dir=None,
-                alignments_dir=None,
-                strandedness_evidence_path=None,
-                counting_summary_path=None,
-                execution_record_path=None,
-                findings=(approval_finding,),
-            )
+        if self.config.require_approval:
+            effective_token = approval_token or self._approved_token
+            if not effective_token:
+                approval_finding = PipelineFinding(
+                    severity="WARNING",
+                    code="AWAITING_USER_APPROVAL",
+                    message=(
+                        f"Pipeline is configured to require explicit confirmation before execution. "
+                        f"To proceed, invoke run(approval_token='{plan.approval_token}') or pipeline.approve('{plan.approval_token}')."
+                    ),
+                )
+                return UniversalFastqResult(
+                    status="BLOCKED_AWAITING_APPROVAL",
+                    study_id=self.config.study_id,
+                    sample_ids=tuple(s.sample_id for s in self.samples),
+                    raw_counts_path=None,
+                    canonical_metadata_path=None,
+                    qc_reports_dir=None,
+                    alignments_dir=None,
+                    strandedness_evidence_path=None,
+                    counting_summary_path=None,
+                    execution_record_path=None,
+                    findings=(approval_finding,),
+                    completed_stages=(),
+                    failed_stage="approval_gate",
+                )
+            if effective_token != plan.approval_token:
+                stale_finding = PipelineFinding(
+                    severity="FATAL",
+                    code="STALE_APPROVAL_TOKEN",
+                    message=(
+                        f"Approval token '{effective_token}' is stale or invalid for the current plan signature ('{plan.approval_token}'). "
+                        f"Pipeline inputs, references, or planned stages have changed since approval was obtained. "
+                        f"Generate a new plan with pipeline.plan() and approve the updated token."
+                    ),
+                    remediation=f"Re-run plan() and obtain a fresh approval token (expected: '{plan.approval_token}').",
+                )
+                return UniversalFastqResult(
+                    status="BLOCKED_STALE_APPROVAL",
+                    study_id=self.config.study_id,
+                    sample_ids=tuple(s.sample_id for s in self.samples),
+                    raw_counts_path=None,
+                    canonical_metadata_path=None,
+                    qc_reports_dir=None,
+                    alignments_dir=None,
+                    strandedness_evidence_path=None,
+                    counting_summary_path=None,
+                    execution_record_path=None,
+                    findings=(stale_finding,),
+                    completed_stages=(),
+                    failed_stage="approval_gate",
+                )
+
+        # Ensure output directories exist upon approved execution start
+        self._ensure_directories()
 
         t_start = time.time()
         sample_ids = tuple(s.sample_id for s in self.samples)
+        completed_stages: list[str] = []
+        failed_stage: str | None = None
+
+        # ---------------------------------------------------------------------
+        # Stage 0: SRA Retrieval if applicable
+        # ---------------------------------------------------------------------
+        resolved_fastqs: dict[str, tuple[Path, Path | None]] = {}
+        for s in self.samples:
+            if s.r1_path is not None:
+                resolved_fastqs[s.sample_id] = (s.r1_path, s.r2_path)
+            elif s.sra_accession:
+                sra_target = self.sra_dir / s.sample_id
+                sra_input_hash = self._compute_hash(s.sra_accession)
+                sra_config_hash = self._compute_hash(s.sample_id, str(self.config.threads))
+                if not self.checkpoint_manager.is_stage_completed(
+                    "sra_extract", s.sample_id, [sra_target], sra_input_hash, sra_config_hash
+                ):
+                    print(f"Retrieving SRA accession {s.sra_accession} for {s.sample_id}...")
+                    sra_res = extract_sra(
+                        sra_path=s.sra_accession,
+                        output_dir=sra_target,
+                        threads=self.config.threads,
+                    )
+                    resolved_fastqs[s.sample_id] = (sra_res.fastq_r1, sra_res.fastq_r2)
+                    outputs = [sra_res.fastq_r1] + ([sra_res.fastq_r2] if sra_res.fastq_r2 else [])
+                    self.checkpoint_manager.record_checkpoint(
+                        stage="sra_extract",
+                        identifier=s.sample_id,
+                        outputs=outputs,
+                        input_hash=sra_input_hash,
+                        config_hash=sra_config_hash,
+                        metrics=sra_res.to_dict(),
+                    )
+                else:
+                    print(f"[REUSE] SRA extraction checkpoint valid for {s.sample_id}")
+                    found = list(sra_target.glob(f"{s.sra_accession}*.fastq*"))
+                    f_r1 = next((f for f in found if "_1" in f.name), found[0] if found else None)
+                    f_r2 = next((f for f in found if "_2" in f.name), None)
+                    if not f_r1:
+                        raise FileNotFoundError(f"SRA outputs missing in {sra_target} for {s.sample_id}")
+                    resolved_fastqs[s.sample_id] = (f_r1, f_r2)
+        if any(s.sra_accession and not s.r1_path for s in self.samples):
+            completed_stages.append("sra_extraction")
 
         # ---------------------------------------------------------------------
         # Stage 1: STAR Reference Index
@@ -961,13 +1199,19 @@ class UniversalFastqPipeline:
         star_idx_dir = self.references.star_index_dir or (self.out_dir / "star_index")
         genome_file = star_idx_dir / "Genome"
         config_hash_ref = self._compute_hash(
-            str(self.references.genome_fasta),
-            str(self.references.gtf_annotation),
             str(self.references.sjdb_overhang),
             str(self.profile.genome_sa_sparse_d),
+            str(self.profile.genome_sa_index_nbases),
         )
+        input_hash_ref = self._compute_hash(
+            compute_file_content_hash(self.references.genome_fasta),
+            compute_file_content_hash(self.references.gtf_annotation),
+        )
+        expected_star_idx = [star_idx_dir, genome_file]
 
-        if not (star_idx_dir.is_dir() and genome_file.is_file()):
+        if not self.checkpoint_manager.is_stage_completed(
+            "star_index", "global", expected_star_idx, input_hash_ref, config_hash_ref
+        ):
             print(f"Generating STAR genome index in {star_idx_dir}...")
             build_star_index(
                 fasta_path=self.references.genome_fasta,
@@ -982,10 +1226,13 @@ class UniversalFastqPipeline:
             self.checkpoint_manager.record_checkpoint(
                 stage="star_index",
                 identifier="global",
-                outputs=[star_idx_dir],
-                input_hash=config_hash_ref,
+                outputs=expected_star_idx,
+                input_hash=input_hash_ref,
                 config_hash=config_hash_ref,
             )
+        else:
+            print(f"[REUSE] STAR index checkpoint valid in {star_idx_dir}")
+        completed_stages.append("star_index")
 
         # ---------------------------------------------------------------------
         # Stage 2 & 3: fastp Trimming and STAR Alignment per sample
@@ -1002,8 +1249,11 @@ class UniversalFastqPipeline:
             html_report = self.qc_dir / f"{sid}_fastp.html"
 
             # 2A. fastp Preprocessing
-            input_fastqs = [sample.r1_path] + ([sample.r2_path] if sample.r2_path else [])
-            input_hash_fastp = self._compute_hash(*[str(p) for p in input_fastqs if p])
+            raw_r1, raw_r2 = resolved_fastqs[sid]
+            input_hash_fastp = self._compute_hash(
+                compute_file_content_hash(raw_r1),
+                compute_file_content_hash(raw_r2) if raw_r2 else "",
+            )
             config_hash_fastp = self._compute_hash(sid, sample.read_layout, str(self.config.threads))
             expected_fastp = [trimmed_r1, json_report] + ([trimmed_r2] if trimmed_r2 else [])
 
@@ -1012,8 +1262,8 @@ class UniversalFastqPipeline:
             ):
                 print(f"Executing fastp for {sid}...")
                 fastp_res = run_fastp_preprocessing(
-                    raw_r1=sample.r1_path,
-                    raw_r2=sample.r2_path,
+                    raw_r1=raw_r1,
+                    raw_r2=raw_r2,
                     out_r1=trimmed_r1,
                     out_r2=trimmed_r2,
                     json_report=json_report,
@@ -1037,13 +1287,18 @@ class UniversalFastqPipeline:
                         fastp_summaries[sid] = json.loads(json_report.read_text(encoding="utf-8")).get("summary", {})
                     except Exception:
                         pass
+            completed_stages.append(f"fastp_{sid}")
 
             # 2B. STAR Alignment
             star_prefix = self.align_dir / f"{sid}_"
             final_bam = self.align_dir / f"{sid}_Aligned.sortedByCoord.out.bam"
             final_log = self.align_dir / f"{sid}_Log.final.out"
 
-            input_hash_align = self._compute_hash(str(trimmed_r1), str(trimmed_r2 or ""), config_hash_ref)
+            input_hash_align = self._compute_hash(
+                compute_file_content_hash(trimmed_r1),
+                compute_file_content_hash(trimmed_r2) if trimmed_r2 else "",
+                input_hash_ref,
+            )
             config_hash_align = self._compute_hash(
                 self.profile.bam_sort_mode,
                 str(self.profile.external_sort_enabled),
@@ -1086,6 +1341,7 @@ class UniversalFastqPipeline:
                     alignment_summaries[sid] = parse_star_final_log(final_log)
 
             bam_paths.append(final_bam)
+            completed_stages.append(f"star_align_{sid}")
 
         # ---------------------------------------------------------------------
         # Stage 4: RSeQC Strandedness Assessment
@@ -1125,6 +1381,7 @@ class UniversalFastqPipeline:
             "recorded_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         evidence_file.write_text(json.dumps(strandedness_evidence, indent=2), encoding="utf-8")
+        completed_stages.append("rseqc_strandedness")
 
         if decision.strandedness_flag == -1:
             return UniversalFastqResult(
@@ -1139,6 +1396,8 @@ class UniversalFastqPipeline:
                 counting_summary_path=None,
                 execution_record_path=None,
                 metrics={"rationale": decision.rationale},
+                completed_stages=tuple(completed_stages),
+                failed_stage="rseqc_strandedness",
             )
 
         # ---------------------------------------------------------------------
@@ -1168,12 +1427,14 @@ class UniversalFastqPipeline:
         counting_metrics = parse_featurecounts_summary(summary_fc_output)
         summary_json = self.counts_dir / "counting_summary.json"
         summary_json.write_text(json.dumps(counting_metrics, indent=2), encoding="utf-8")
+        completed_stages.append("featurecounts")
 
         # ---------------------------------------------------------------------
         # Stage 6: Canonical Metadata Serialization & Traceability
         # ---------------------------------------------------------------------
         meta_json = self.out_dir / "canonical_metadata.json"
         meta_json.write_text(json.dumps(self.canonical_metadata, indent=2), encoding="utf-8")
+        completed_stages.append("canonical_metadata")
 
         # ---------------------------------------------------------------------
         # Stage 7: Downstream Bridge Integration
@@ -1189,6 +1450,33 @@ class UniversalFastqPipeline:
             )
         except Exception as e:
             print(f"Downstream bridge execution error: {e}")
+
+        # Determine granular downstream status
+        failed_stage = None
+        if downstream_res is None:
+            final_status = "FAILED_DOWNSTREAM_EXCEPTION"
+            failed_stage = "downstream_bridge"
+        elif downstream_res.status in ("DOWNSTREAM_COMPLETED", "DOWNSTREAM_COMPLETED_REPLICATED"):
+            final_status = "COMPLETED"
+            completed_stages.append("downstream_bridge")
+        elif "METADATA" in downstream_res.status or getattr(downstream_res, "metadata_validation_status", "").upper() == "INVALID":
+            final_status = "FAILED_DOWNSTREAM_METADATA"
+            failed_stage = "downstream_bridge"
+        elif "QC" in downstream_res.status or not getattr(downstream_res, "qc_passed", True):
+            final_status = "FAILED_DOWNSTREAM_QC"
+            failed_stage = "downstream_bridge"
+        elif "HARMONIZATION" in downstream_res.status:
+            final_status = "FAILED_DOWNSTREAM_HARMONIZATION"
+            failed_stage = "downstream_bridge"
+        elif "NORMALIZATION" in downstream_res.status:
+            final_status = "FAILED_DOWNSTREAM_NORMALIZATION"
+            failed_stage = "downstream_bridge"
+        elif "GATED" in downstream_res.status or "BLOCKED" in downstream_res.status or getattr(downstream_res, "deseq2_status", "") == "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION":
+            final_status = "COMPLETED_QUANTIFICATION_INFERENTIAL_BLOCKED"
+            completed_stages.append("downstream_bridge_exploratory")
+        else:
+            final_status = "PARTIALLY_COMPLETED"
+            completed_stages.append("downstream_bridge_partial")
 
         # ---------------------------------------------------------------------
         # Stage 8: Execution Record Serialization
@@ -1206,15 +1494,10 @@ class UniversalFastqPipeline:
             "profile": self.profile.to_dict(),
             "references": self.references.to_dict(),
             "downstream_status": downstream_res.status if downstream_res else "NOT_RUN",
+            "completed_stages": completed_stages,
             "completed_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         exec_record_file.write_text(json.dumps(exec_record, indent=2), encoding="utf-8")
-
-        final_status = "COMPLETED"
-        if downstream_res and "GATED" in downstream_res.status:
-            final_status = "PARTIAL_BIOLOGICAL_REPLICATION_GATED"
-        elif downstream_res and "BLOCKED" in downstream_res.status:
-            final_status = "PARTIAL_BLOCKED"
 
         return UniversalFastqResult(
             status=final_status,
@@ -1228,6 +1511,8 @@ class UniversalFastqPipeline:
             counting_summary_path=summary_json,
             execution_record_path=exec_record_file,
             downstream_result=downstream_res,
+            completed_stages=tuple(completed_stages),
+            failed_stage=failed_stage,
             metrics={
                 "fastp": fastp_summaries,
                 "star_alignment": alignment_summaries,

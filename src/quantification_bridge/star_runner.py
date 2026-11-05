@@ -139,6 +139,11 @@ def align_reads_star(
 
     read_cmd_flag = "--readFilesCommand zcat " if str(r1_p).lower().endswith(".gz") else ""
 
+    # Ensure STAR FIFOs are created on Linux tmpfs to prevent NTFS/DrvFs FIFO failures
+    tmp_dir_name = f"STARtmp_{out_prefix_p.name}"
+    run_wsl(f"rm -rf /tmp/{tmp_dir_name}")
+    out_tmp_flag = f"--outTmpDir /tmp/{tmp_dir_name} "
+
     # Determine internal STAR sort mode
     star_sam_type = "BAM Unsorted" if external_sort else f"BAM {bam_sort_mode}"
 
@@ -147,6 +152,7 @@ def align_reads_star(
         f"--genomeDir {wsl_idx} "
         f"--readFilesIn {read_files_in} "
         f"{read_cmd_flag}"
+        f"{out_tmp_flag}"
         f"--outFileNamePrefix {wsl_out} "
         f"--outSAMtype {star_sam_type} "
         f"--outSAMunmapped Within "
