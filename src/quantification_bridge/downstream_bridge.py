@@ -281,6 +281,7 @@ def execute_downstream_pipeline(
     contrast_name: str = "Day28_VPA_250uM_vs_Control",
     output_dir: str | Path | None = None,
     verified_biological_replicates: dict[str, str] | None = None,
+    canonical_metadata: dict[str, Any] | None = None,
 ) -> DownstreamBridgeResult:
     """Execute validated count matrix through existing frozen scientific modules.
 
@@ -307,18 +308,22 @@ def execute_downstream_pipeline(
     from src.metadata.result import ValidationStatus
 
     # Build schema-conformant canonical metadata document for validator
-    schema_metadata = build_canonical_metadata_for_runs(
-        runs,
-        study_id=study_id,
-        strict_schema=True,
-        verified_biological_replicates=verified_biological_replicates,
-    )
-    metadata = build_canonical_metadata_for_runs(
-        runs,
-        study_id=study_id,
-        strict_schema=False,
-        verified_biological_replicates=verified_biological_replicates,
-    )
+    if canonical_metadata is not None:
+        schema_metadata = canonical_metadata
+        metadata = canonical_metadata
+    else:
+        schema_metadata = build_canonical_metadata_for_runs(
+            runs,
+            study_id=study_id,
+            strict_schema=True,
+            verified_biological_replicates=verified_biological_replicates,
+        )
+        metadata = build_canonical_metadata_for_runs(
+            runs,
+            study_id=study_id,
+            strict_schema=False,
+            verified_biological_replicates=verified_biological_replicates,
+        )
 
     validator = MetadataValidator()
     val_res = validator.validate(schema_metadata)
@@ -326,14 +331,17 @@ def execute_downstream_pipeline(
     checker = MetadataIntegrityChecker(min_biological_replicates=2)
     integrity_res = checker.check(schema_metadata)
 
+    val_is_valid = (val_res.status != ValidationStatus.INVALID)
     metadata_val_status = str(val_res.status.value)
     metadata_val_metrics = {
         "validator_status": str(val_res.status.value),
+        "validator_is_valid": val_is_valid,
         "validator_findings_count": len(val_res.findings),
         "integrity_status": str(integrity_res.status.value),
         "integrity_is_valid": integrity_res.is_valid,
         "integrity_findings_count": len(integrity_res.findings),
         "replicate_summary": integrity_res.replicate_summary,
+        "model_consistency_summary": integrity_res.model_consistency_summary,
     }
 
     assay_id = f"{study_id}_assay"
@@ -432,7 +440,27 @@ def execute_downstream_pipeline(
     replicate_warning = None
     final_status = "DOWNSTREAM_EVALUATION_COMPLETED"
 
-    if n_ctrl < 2 or n_trt < 2:
+    if not val_is_valid:
+        deseq2_status = "BLOCKED_INVALID_CANONICAL_METADATA"
+        pathway_status = "BLOCKED_INVALID_CANONICAL_METADATA"
+        err_findings = [f.message for f in val_res.findings if f.severity.value in ("ERROR", "CRITICAL")]
+        if not err_findings:
+            err_findings = [f.message for f in val_res.findings]
+        replicate_warning = (
+            f"Canonical metadata validation failed ({val_res.status.value}): "
+            + "; ".join(err_findings[:3])
+        )
+        deseq2_metrics = {
+            "status": deseq2_status,
+            "reason": replicate_warning,
+            "findings": [f.to_dict() for f in val_res.findings],
+        }
+        pathway_metrics = {
+            "status": pathway_status,
+            "reason": replicate_warning,
+        }
+        final_status = "DOWNSTREAM_BLOCKED_INVALID_METADATA"
+    elif n_ctrl < 2 or n_trt < 2:
         deseq2_status = "BLOCKED_INSUFFICIENT_BIOLOGICAL_REPLICATION"
         replicate_warning = (
             f"DESeq2 GLM dispersion estimation requires n >= 2 biological replicates per group. "
@@ -444,7 +472,9 @@ def execute_downstream_pipeline(
             "treated_count": n_trt,
             "reason": replicate_warning,
         }
-        final_status = "DOWNSTREAM_EVALUATION_COMPLETED"
+        pathway_status = "NOT_EVALUATED"
+        pathway_metrics = {"reason": replicate_warning}
+        final_status = "DOWNSTREAM_PARTIAL_INSUFFICIENT_REPLICATION"
     else:
         # Check whether biological replication has been verified
         has_unverified_replicates = (
@@ -503,6 +533,7 @@ def execute_downstream_pipeline(
                         "reasons": [f.message for f in contrast_ds.findings],
                     }
                     pathway_status = "NOT_EVALUATED"
+                    final_status = "DOWNSTREAM_BLOCKED_INFERENTIALLY"
                 elif primary_contrast.status != ContrastStatus.ELIGIBLE or not primary_contrast.is_inferentially_eligible:
                     deseq2_status = f"BLOCKED_{primary_contrast.status.value}"
                     deseq2_metrics = {
@@ -511,6 +542,7 @@ def execute_downstream_pipeline(
                         "reasons": [f.message for f in primary_contrast.findings],
                     }
                     pathway_status = "NOT_EVALUATED"
+                    final_status = "DOWNSTREAM_BLOCKED_INFERENTIALLY"
                 else:
                     # ---------------------------------------------------------
                     # Step 7B: Differential Expression (DESeq2 Wald Test)
@@ -542,16 +574,48 @@ def execute_downstream_pipeline(
 
                             try:
                                 path_res = run_pathway_enrichment_for_contrast(de_res)
-                                pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
-                                pathway_metrics = {
-                                    "status": "GSEA_SUCCESS",
-                                    "contrast_id": primary_contrast.contrast_id,
-                                    "ranked_genes_count": len(path_res.ranked_gene_set.genes) if hasattr(path_res, "ranked_gene_set") else 0,
-                                    "significant_pathways": getattr(path_res, "significant_pathways_count", 0),
-                                }
+                                ranked_count = len(path_res.ranked_genes.ranked_genes)
+                                go_count = len(path_res.go_results)
+                                kegg_count = len(path_res.kegg_results)
+                                sig_pathways = (
+                                    path_res.qc.go_significant_pathways_count
+                                    + path_res.qc.kegg_significant_pathways_count
+                                )
+
+                                if path_res.qc.qc_status in ("PASS", "WARNING"):
+                                    pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
+                                    pathway_metrics = {
+                                        "status": "GSEA_SUCCESS",
+                                        "contrast_id": primary_contrast.contrast_id,
+                                        "qc_status": path_res.qc.qc_status,
+                                        "qc_notes": list(path_res.qc.qc_notes),
+                                        "ranked_genes_count": ranked_count,
+                                        "total_eligible_genes": path_res.ranked_genes.total_eligible_genes,
+                                        "go_results_count": go_count,
+                                        "kegg_results_count": kegg_count,
+                                        "go_significant_pathways_count": path_res.qc.go_significant_pathways_count,
+                                        "kegg_significant_pathways_count": path_res.qc.kegg_significant_pathways_count,
+                                        "significant_pathways": sig_pathways,
+                                    }
+                                    final_status = "DOWNSTREAM_COMPLETED"
+                                else:
+                                    pathway_status = f"PATHWAY_ANALYSIS_QC_{path_res.qc.qc_status}"
+                                    pathway_metrics = {
+                                        "status": f"GSEA_{path_res.qc.qc_status}",
+                                        "contrast_id": primary_contrast.contrast_id,
+                                        "qc_status": path_res.qc.qc_status,
+                                        "qc_notes": list(path_res.qc.qc_notes),
+                                        "ranked_genes_count": ranked_count,
+                                        "total_eligible_genes": path_res.ranked_genes.total_eligible_genes,
+                                        "go_results_count": go_count,
+                                        "kegg_results_count": kegg_count,
+                                        "significant_pathways": sig_pathways,
+                                    }
+                                    final_status = "DOWNSTREAM_PARTIAL_PATHWAY_FAILED"
                             except Exception as e:
-                                pathway_status = f"PATHWAY_DEFERRED: {e}"
-                                pathway_metrics = {"reason": str(e)}
+                                pathway_status = f"PATHWAY_FAILED: {e}"
+                                pathway_metrics = {"reason": str(e), "error": str(e)}
+                                final_status = "DOWNSTREAM_PARTIAL_PATHWAY_FAILED"
                         else:
                             deseq2_status = f"DESEQ2_{de_res.status.value}"
                             deseq2_metrics = {
@@ -561,13 +625,16 @@ def execute_downstream_pipeline(
                             }
                             pathway_status = "PATHWAY_BLOCKED_BY_UPSTREAM_DE"
                             pathway_metrics = {"reason": f"DESeq2 status is {deseq2_status}"}
+                            final_status = "DOWNSTREAM_PARTIAL_DESEQ2_FAILED"
                     except Exception as e:
                         deseq2_status = f"DESEQ2_ERROR: {e}"
                         deseq2_metrics = {"error": str(e)}
                         pathway_status = "NOT_EVALUATED"
+                        final_status = "DOWNSTREAM_FAILED"
             else:
                 deseq2_status = "BLOCKED_MISSING_UPSTREAM_DATASETS"
                 pathway_status = "NOT_EVALUATED"
+                final_status = "DOWNSTREAM_BLOCKED_MISSING_UPSTREAM"
 
     return DownstreamBridgeResult(
         status=final_status,

@@ -160,7 +160,7 @@ def test_downstream_biological_replication_guard(tmp_path: Path):
     )
 
     # Harmonization and QC should have evaluated
-    assert result.status == "DOWNSTREAM_EVALUATION_COMPLETED"
+    assert result.status in ("DOWNSTREAM_PARTIAL_INSUFFICIENT_REPLICATION", "DOWNSTREAM_EVALUATION_COMPLETED")
     assert result.qc_passed is True
 
     # DESeq2 MUST be blocked by biological replicate guard
@@ -197,16 +197,141 @@ def test_downstream_bridge_metadata_validation_and_integrity_gates(tmp_path: Pat
     assert "replicate_summary" in result.metadata_validation_metrics
 
 
+def _generate_synthetic_eligible_count_matrix(matrix_path: Path, runs: tuple[str, ...], n_genes: int = 100) -> None:
+    """Helper to generate an independently replicated count matrix using real Ensembl/Entrez genes."""
+    import random
+    from src.features.pathway.mapping import EnsemblToEntrezAdapter
+    from src.quantification_bridge.manifest import RUN_TO_SAMPLE_MAP
+
+    adapter = EnsemblToEntrezAdapter()
+    gene_recs = [
+        r for r in adapter.gene_reference.records
+        if r.entrez_gene_id and "|" not in r.entrez_gene_id and r.gene_biotype == "protein_coding"
+    ][:n_genes]
+
+    rng = random.Random(42)
+    header = "gene_id\t" + "\t".join(runs)
+    lines = [header]
+    ctrl_runs = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r) and RUN_TO_SAMPLE_MAP[r].condition_group == "control"]
+    trt_runs = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r) and RUN_TO_SAMPLE_MAP[r].condition_group == "treatment"]
+
+    for i, r in enumerate(gene_recs):
+        base = 100 + (i * 15)
+        fold = 2.5 if i < 25 else (0.4 if i < 50 else 1.0)
+        row = [r.ensembl_gene_id]
+        for run_id in runs:
+            is_trt = run_id in trt_runs
+            m = fold if is_trt else 1.0
+            count = max(10, int(base * m * rng.uniform(0.9, 1.1)))
+            row.append(str(count))
+        lines.append("\t".join(row))
+
+    matrix_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def test_downstream_bridge_verified_biological_replicates_eligible_outcome(tmp_path: Path):
-    """Verify that an eligible cohort with verified biological replicates enters Step 7A/7B downstream analysis."""
+    """Verify that an eligible cohort with verified biological replicates completes DESeq2 and Pathway analysis."""
     matrix_file = tmp_path / "counts_verified.tsv"
-    # 4-sample matrix: 2 controls (SRR17834920, SRR17834908) and 2 treatments (SRR17834905, SRR17834904)
-    lines = [
-        "gene_id\tSRR17834920\tSRR17834908\tSRR17834905\tSRR17834904",
-        "ENSG00000000003\t100\t110\t120\t130",
-        "ENSG00000000419\t500\t520\t480\t490",
-        "ENSG00000000457\t250\t260\t300\t310",
-    ]
+    runs = ("SRR17834920", "SRR17834908", "SRR17834905", "SRR17834904")
+    _generate_synthetic_eligible_count_matrix(matrix_file, runs, n_genes=100)
+
+    verified_reps = {
+        "SRR17834920": "c_rep1",
+        "SRR17834908": "c_rep2",
+        "SRR17834905": "t_rep1",
+        "SRR17834904": "t_rep2",
+    }
+
+    result = execute_downstream_pipeline(
+        counts_matrix_path=matrix_file,
+        runs=runs,
+        output_dir=tmp_path / "downstream_verified",
+        verified_biological_replicates=verified_reps,
+    )
+
+    # 1. Exploratory QC and normalization pass
+    assert result.qc_passed is True
+    assert result.normalization_metrics["status"] in ("PASS", "Status.PASS")
+
+    # 2. Integrity checker verifies biological replication
+    assert result.metadata_validation_metrics["integrity_is_valid"] is True
+    assert result.metadata_validation_metrics["integrity_status"].lower() == "valid"
+
+    # 3. Explicitly verify DESEQ2_COMPLETED (strengthened check)
+    assert result.deseq2_status == "DESEQ2_COMPLETED"
+    assert result.deseq2_metrics["status"] == "DESEQ2_SUCCESS"
+    assert result.deseq2_metrics["tested_genes"] == 100
+    assert result.deseq2_metrics["significant_degs"] > 0
+    assert result.deseq2_metrics["design_formula"] == "~ condition"
+
+    # 4. Explicitly verify Stage 8C Pathway Analysis output contract
+    assert result.pathway_status == "PATHWAY_ANALYSIS_SUCCESS"
+    assert result.pathway_metrics["status"] == "GSEA_SUCCESS"
+    assert result.pathway_metrics["qc_status"] in ("PASS", "WARNING")
+    assert result.pathway_metrics["ranked_genes_count"] == 100
+    assert result.pathway_metrics["total_eligible_genes"] == 100
+    assert result.pathway_metrics["go_results_count"] > 0
+    assert "significant_pathways" in result.pathway_metrics
+
+    # 5. Full workflow status distinguishes completed analysis
+    assert result.status == "DOWNSTREAM_COMPLETED"
+
+
+def test_downstream_bridge_invalid_canonical_metadata_blocks_inferential_analysis(tmp_path: Path):
+    """Verify that invalid canonical metadata blocks inferential analysis while permitting exploratory QC/normalization."""
+    matrix_file = tmp_path / "counts_invalid_meta.tsv"
+    runs = ("SRR17834920", "SRR17834908", "SRR17834905", "SRR17834904")
+    _generate_synthetic_eligible_count_matrix(matrix_file, runs, n_genes=50)
+
+    # Construct invalid canonical metadata (empty studies list violates schema)
+    invalid_meta = build_canonical_metadata_for_runs(runs, strict_schema=True)
+    invalid_meta["studies"] = []
+
+    result = execute_downstream_pipeline(
+        counts_matrix_path=matrix_file,
+        runs=runs,
+        output_dir=tmp_path / "downstream_invalid_meta",
+        canonical_metadata=invalid_meta,
+    )
+
+    # Exploratory processing permitted on count matrix
+    assert result.qc_passed is True
+
+    # Metadata validator detects invalid metadata
+    assert result.metadata_validation_status.lower() == "invalid"
+    assert result.metadata_validation_metrics["validator_is_valid"] is False
+
+    # Inferential analysis is blocked and reasons recorded
+    assert result.status == "DOWNSTREAM_BLOCKED_INVALID_METADATA"
+    assert result.deseq2_status == "BLOCKED_INVALID_CANONICAL_METADATA"
+    assert result.pathway_status == "BLOCKED_INVALID_CANONICAL_METADATA"
+    assert result.biological_replicate_warning is not None
+    assert "Canonical metadata validation failed" in result.biological_replicate_warning
+    assert "findings" in result.deseq2_metrics
+    assert len(result.deseq2_metrics["findings"]) > 0
+
+
+def test_downstream_bridge_pathway_output_contract_on_qc_failure(tmp_path: Path):
+    """Verify pathway analysis output contract does not accept placeholder values or success when QC fails."""
+    matrix_file = tmp_path / "counts_nonentrez.tsv"
+    runs = ("SRR17834920", "SRR17834908", "SRR17834905", "SRR17834904")
+
+    # Generate 100 genuine Ensembl 112 genes that lack Entrez IDs (so 0 Entrez mappings exist)
+    from src.features.pathway.mapping import EnsemblToEntrezAdapter
+    adapter = EnsemblToEntrezAdapter()
+    gene_recs = [r for r in adapter.gene_reference.records if not r.entrez_gene_id][:100]
+
+    import random
+    rng = random.Random(99)
+    lines = ["gene_id\t" + "\t".join(runs)]
+    for i, r in enumerate(gene_recs):
+        base = 100 + i * 15
+        fold = 2.0 if i < 20 else (0.5 if i < 40 else 1.0)
+        c1 = max(10, int(base * rng.uniform(0.9, 1.1)))
+        c2 = max(10, int(base * rng.uniform(0.9, 1.1)))
+        t1 = max(10, int(base * fold * rng.uniform(0.9, 1.1)))
+        t2 = max(10, int(base * fold * rng.uniform(0.9, 1.1)))
+        lines.append(f"{r.ensembl_gene_id}\t{c1}\t{c2}\t{t1}\t{t2}")
     matrix_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     verified_reps = {
@@ -218,22 +343,26 @@ def test_downstream_bridge_verified_biological_replicates_eligible_outcome(tmp_p
 
     result = execute_downstream_pipeline(
         counts_matrix_path=matrix_file,
-        runs=("SRR17834920", "SRR17834908", "SRR17834905", "SRR17834904"),
-        output_dir=tmp_path / "downstream_verified",
+        runs=runs,
+        output_dir=tmp_path / "downstream_qc_fail",
         verified_biological_replicates=verified_reps,
     )
 
     # QC and normalization pass
     assert result.qc_passed is True
-    assert result.normalization_metrics["status"] in ("PASS", "Status.PASS")
 
-    # Integrity checker verifies biological replication
-    assert result.metadata_validation_metrics["integrity_is_valid"] is True
-    assert result.metadata_validation_metrics["integrity_status"].lower() == "valid"
+    # DESeq2 completes successfully
+    assert result.deseq2_status == "DESEQ2_COMPLETED"
 
-    # Biological replicate guard MUST NOT block (since n >= 2 verified replicates are present)
-    assert result.deseq2_status != "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION"
-    assert result.deseq2_status != "BLOCKED_INSUFFICIENT_BIOLOGICAL_REPLICATION"
+    # Pathway analysis evaluated: 0 genes mapped to Entrez, so QC must FAIL
+    # It must NOT return PATHWAY_ANALYSIS_SUCCESS or placeholders
+    assert result.pathway_status == "PATHWAY_ANALYSIS_QC_FAIL"
+    assert result.pathway_metrics["qc_status"] == "FAIL"
+    assert result.pathway_metrics["status"] == "GSEA_FAIL"
+    assert result.pathway_metrics["ranked_genes_count"] == 0
+    assert result.pathway_metrics["go_results_count"] == 0
+    assert result.pathway_metrics["kegg_results_count"] == 0
+    assert len(result.pathway_metrics["qc_notes"]) > 0
 
-    # Execution proceeded to Step 7A/7B: DESeq2 was evaluated using official pipeline
-    assert "DESEQ2" in result.deseq2_status
+    # Workflow status distinguishes partially completed analysis (DESeq2 ok, pathway failed)
+    assert result.status == "DOWNSTREAM_PARTIAL_PATHWAY_FAILED"
