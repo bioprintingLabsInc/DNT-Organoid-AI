@@ -149,10 +149,11 @@ class TestPhaseU2AcceptanceSuite:
         mapper = CanonicalMetadataMapper()
         doc, findings = mapper.map_study(ctx, recs)
 
-        # 3 distinct conditions: control, low dose (100 uM, 24h), high dose (500 uM, 48h)
+        # 3 distinct conditions: control (24h), low dose (100 uM, 24h), high dose (500 uM, 48h)
         assert len(doc["conditions"]) == 3
-        # Separate pairwise relationships formed
-        assert len(doc["treatment_control_relationships"]) == 2
+        # 24h treatment matches 24h control; 48h treatment duration conflicts with single 24h control so cannot automatically match
+        assert len(doc["treatment_control_relationships"]) == 1
+        assert any(f.rule == "unmatched_treatment_condition" for f in findings)
 
     # 9. Biological versus technical replicate identification
     def test_09_biological_vs_technical_replicate_identification(self):

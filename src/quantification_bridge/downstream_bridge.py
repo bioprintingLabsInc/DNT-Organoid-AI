@@ -38,6 +38,8 @@ class DownstreamBridgeResult:
     pathway_status: str
     pathway_metrics: dict[str, Any]
     biological_replicate_warning: str | None = None
+    metadata_validation_status: str | None = None
+    metadata_validation_metrics: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -111,6 +113,8 @@ def build_canonical_metadata_for_runs(
     runs: tuple[str, ...],
     study_id: str = TARGET_BIOPROJECT,
     platform: str = "Illumina NovaSeq 6000",
+    strict_schema: bool = False,
+    verified_biological_replicates: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Construct canonical ingestion metadata structure for approved PRJNA802072 runs."""
     sample_records = []
@@ -121,33 +125,65 @@ def build_canonical_metadata_for_runs(
         dose = meta.vpa_dose_um if meta else (0.0 if is_ctrl else 250.0)
         day = meta.developmental_day if meta else 28
 
-        sample_records.append({
+        # Biological replicate resolution
+        if verified_biological_replicates and r in verified_biological_replicates:
+            bio_rep = _reported(verified_biological_replicates[r])
+        else:
+            bio_rep = _missing("unknown")
+
+        s_rec: dict[str, Any] = {
             "sample_id": r,
             "experiment_id": f"{study_id}_exp1",
             "condition_id": cond_id,
             "biological_source_id": "line_1",
             "organoid_context_id": "cortical_1",
-            "sample_alias": meta.sample_title if meta else r,
-            "biosample_accession": meta.biosample_accession if meta else f"SAMN_{r}",
-            "species": _reported("Homo sapiens"),
-            "tissue_or_cell_type": _reported("Human Brain Cortical Organoid"),
-            "developmental_day": _reported(day),
-            "biological_replicate_id": _missing("unknown"),
+            "biological_replicate_id": bio_rep,
             "technical_replicate_id": _missing("not_applicable"),
-            "treatment_group": "control" if is_ctrl else "treatment",
-            "compound_name": _reported("Vehicle") if is_ctrl else _reported("Valproic Acid"),
-            "compound_concentration_um": _reported(dose),
-            "exposure_duration_hours": _reported(288.0),
+            "developmental_age_or_stage_at_collection": _reported("Day 28"),
+            "collection_time_relative_to_exposure": _reported("288.0 hour"),
             "metadata_validation_status": "not_validated",
-        })
+        }
+
+        # Include legacy/convenience non-schema fields when strict_schema is False
+        if not strict_schema:
+            s_rec.update({
+                "sample_alias": meta.sample_title if meta else r,
+                "biosample_accession": meta.biosample_accession if meta else f"SAMN_{r}",
+                "species": _reported("Homo sapiens"),
+                "tissue_or_cell_type": _reported("Human Brain Cortical Organoid"),
+                "developmental_day": _reported(day),
+                "treatment_group": "control" if is_ctrl else "treatment",
+                "compound_name": _reported("Vehicle") if is_ctrl else _reported("Valproic Acid"),
+                "compound_concentration_um": _reported(dose),
+                "exposure_duration_hours": _reported(288.0),
+            })
+
+        sample_records.append(s_rec)
 
     assay_id = f"{study_id}_assay"
     asset_id = f"{study_id}_counts"
+
+    assay_dict: dict[str, Any] = {
+        "assay_id": assay_id,
+        "sample_ids": list(runs),
+        "rna_seq_modality": _reported("bulk_rna_seq"),
+        "read_layout": _reported("paired_end"),
+        "strandedness": _reported("unstranded"),
+        "sequencing_platform": _reported(platform),
+        "metadata_validation_status": "not_validated",
+    }
+    if not strict_schema:
+        assay_dict["library_layout"] = _reported("paired_end")
 
     raw_doc = {
         "studies": [{
             "study_id": study_id,
             "source_type": "public",
+            "public_accessions": [{
+                "namespace": "BioProject",
+                "identifier": study_id,
+                "url": f"https://www.ncbi.nlm.nih.gov/bioproject/{study_id}",
+            }],
             "metadata_validation_status": "not_validated",
         }],
         "experiments": [{
@@ -222,15 +258,7 @@ def build_canonical_metadata_for_runs(
             "metadata_validation_status": "not_validated",
         }],
         "sample_comparison_exceptions": [],
-        "sequencing_assays": [{
-            "assay_id": assay_id,
-            "sample_ids": list(runs),
-            "rna_seq_modality": _reported("bulk_rna_seq"),
-            "library_layout": _reported("paired_end"),
-            "strandedness": _reported("unstranded"),
-            "sequencing_platform": _reported(platform),
-            "metadata_validation_status": "not_validated",
-        }],
+        "sequencing_assays": [assay_dict],
         "input_data_assets": [{
             "asset_id": asset_id,
             "assay_ids": [assay_id],
@@ -252,6 +280,7 @@ def execute_downstream_pipeline(
     study_id: str = TARGET_BIOPROJECT,
     contrast_name: str = "Day28_VPA_250uM_vs_Control",
     output_dir: str | Path | None = None,
+    verified_biological_replicates: dict[str, str] | None = None,
 ) -> DownstreamBridgeResult:
     """Execute validated count matrix through existing frozen scientific modules.
 
@@ -270,7 +299,43 @@ def execute_downstream_pipeline(
     out_p = Path(output_dir).resolve() if output_dir else matrix_p.parent / "downstream_analysis"
     out_p.mkdir(parents=True, exist_ok=True)
 
-    metadata = build_canonical_metadata_for_runs(runs, study_id=study_id)
+    # -------------------------------------------------------------------------
+    # Pre-Flight: Universal Metadata Validation and Experimental Integrity Gate
+    # -------------------------------------------------------------------------
+    from src.metadata.validator import MetadataValidator
+    from src.metadata.integrity import MetadataIntegrityChecker
+    from src.metadata.result import ValidationStatus
+
+    # Build schema-conformant canonical metadata document for validator
+    schema_metadata = build_canonical_metadata_for_runs(
+        runs,
+        study_id=study_id,
+        strict_schema=True,
+        verified_biological_replicates=verified_biological_replicates,
+    )
+    metadata = build_canonical_metadata_for_runs(
+        runs,
+        study_id=study_id,
+        strict_schema=False,
+        verified_biological_replicates=verified_biological_replicates,
+    )
+
+    validator = MetadataValidator()
+    val_res = validator.validate(schema_metadata)
+
+    checker = MetadataIntegrityChecker(min_biological_replicates=2)
+    integrity_res = checker.check(schema_metadata)
+
+    metadata_val_status = str(val_res.status.value)
+    metadata_val_metrics = {
+        "validator_status": str(val_res.status.value),
+        "validator_findings_count": len(val_res.findings),
+        "integrity_status": str(integrity_res.status.value),
+        "integrity_is_valid": integrity_res.is_valid,
+        "integrity_findings_count": len(integrity_res.findings),
+        "replicate_summary": integrity_res.replicate_summary,
+    }
+
     assay_id = f"{study_id}_assay"
     asset_id = f"{study_id}_counts"
 
@@ -382,12 +447,19 @@ def execute_downstream_pipeline(
         final_status = "DOWNSTREAM_EVALUATION_COMPLETED"
     else:
         # Check whether biological replication has been verified
-        has_unverified_replicates = any(
-            s.get("biological_replicate_id", {}).get("value_status") != "reported"
-            for s in metadata.get("samples", [])
-        ) or any(
-            getattr(RUN_TO_SAMPLE_MAP.get(r), "biological_replicate_unit", "") == "UNVERIFIED"
-            for r in runs
+        has_unverified_replicates = (
+            not integrity_res.is_valid
+            or any(
+                s.get("biological_replicate_id", {}).get("value_status") != "reported"
+                for s in schema_metadata.get("samples", [])
+            )
+            or (
+                verified_biological_replicates is None
+                and any(
+                    getattr(RUN_TO_SAMPLE_MAP.get(r), "biological_replicate_unit", "") == "UNVERIFIED"
+                    for r in runs
+                )
+            )
         )
 
         if has_unverified_replicates:
@@ -412,46 +484,90 @@ def execute_downstream_pipeline(
             final_status = "DOWNSTREAM_PARTIAL_BIOLOGICAL_REPLICATION_GATED"
         else:
             # Full cohort with verified biological replicates (n >= 2)
-            from src.differential_expression.pipeline import DESeq2DifferentialExpressionPipeline
-            from src.differential_expression.design import ContrastSpecification
+            # -------------------------------------------------------------
+            # Step 7A: Treatment-versus-Matched-Control Contrast Building
+            # -------------------------------------------------------------
+            from src.response_builder.builder import build_response_contrasts
+            from src.response_builder.models import ContrastStatus
 
-            diff_pipeline = DESeq2DifferentialExpressionPipeline()
-            spec = ContrastSpecification(
-                contrast_id=contrast_name,
-                test_condition="treatment",
-                baseline_condition="control",
-                design_formula="~ condition",
-            )
-            try:
-                diff_res = diff_pipeline.run_contrast(
-                    counts_path=matrix_p,
-                    metadata=metadata,
-                    contrast_spec=spec,
-                )
-                deseq2_status = "DESEQ2_COMPLETED"
-                deseq2_metrics = {
-                    "status": "DESEQ2_SUCCESS",
-                    "contrast_id": contrast_name,
-                    "tested_genes": getattr(diff_res, "total_tested_genes", 0),
-                    "significant_degs": getattr(diff_res, "significant_genes_count", 0),
-                }
+            if norm_res is not None and harm_res is not None:
+                contrast_ds = build_response_contrasts(norm_res, schema_metadata)
+                primary_contrast = next((c for c in contrast_ds.contrasts if c.contrast_id == contrast_name), None)
+                if primary_contrast is None and contrast_ds.contrasts:
+                    primary_contrast = contrast_ds.contrasts[0]
 
-                # -------------------------------------------------------------
-                # Stage 8C: Pathway & Signaling Analysis
-                # -------------------------------------------------------------
-                from src.features.pathway.pipeline import PathwayAnalysisPipeline
+                if primary_contrast is None:
+                    deseq2_status = "BLOCKED_NO_CONTRASTS_BUILT"
+                    deseq2_metrics = {
+                        "status": deseq2_status,
+                        "reasons": [f.message for f in contrast_ds.findings],
+                    }
+                    pathway_status = "NOT_EVALUATED"
+                elif primary_contrast.status != ContrastStatus.ELIGIBLE or not primary_contrast.is_inferentially_eligible:
+                    deseq2_status = f"BLOCKED_{primary_contrast.status.value}"
+                    deseq2_metrics = {
+                        "status": deseq2_status,
+                        "contrast_id": primary_contrast.contrast_id,
+                        "reasons": [f.message for f in primary_contrast.findings],
+                    }
+                    pathway_status = "NOT_EVALUATED"
+                else:
+                    # ---------------------------------------------------------
+                    # Step 7B: Differential Expression (DESeq2 Wald Test)
+                    # ---------------------------------------------------------
+                    from src.differential_expression.pipeline import run_contrast_differential_expression
 
-                path_pipeline = PathwayAnalysisPipeline()
-                path_res = path_pipeline.run_gsea(diff_res)
-                pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
-                pathway_metrics = {
-                    "status": "GSEA_SUCCESS",
-                    "go_bp_significant": getattr(path_res, "go_bp_significant_count", 0),
-                    "kegg_significant": getattr(path_res, "kegg_significant_count", 0),
-                }
-            except Exception as e:
-                deseq2_status = f"DESEQ2_ERROR: {e}"
-                deseq2_metrics = {"error": str(e)}
+                    try:
+                        de_res = run_contrast_differential_expression(
+                            contrast=primary_contrast,
+                            normalized_dataset=norm_res,
+                            harmonized_dataset=harm_res,
+                            sample_metadata=schema_metadata.get("samples", []),
+                        )
+                        if de_res.status == ContrastStatus.ELIGIBLE:
+                            deseq2_status = "DESEQ2_COMPLETED"
+                            sig_count = sum(1 for g in de_res.gene_results if g.adjusted_p_value_bh is not None and g.adjusted_p_value_bh < 0.05)
+                            deseq2_metrics = {
+                                "status": "DESEQ2_SUCCESS",
+                                "contrast_id": primary_contrast.contrast_id,
+                                "tested_genes": len(de_res.gene_results),
+                                "significant_degs": sig_count,
+                                "design_formula": de_res.design_formula,
+                            }
+
+                            # -----------------------------------------------------
+                            # Stage 8C: Pathway & Signaling Analysis
+                            # -----------------------------------------------------
+                            from src.features.pathway.pipeline import run_pathway_enrichment_for_contrast
+
+                            try:
+                                path_res = run_pathway_enrichment_for_contrast(de_res)
+                                pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
+                                pathway_metrics = {
+                                    "status": "GSEA_SUCCESS",
+                                    "contrast_id": primary_contrast.contrast_id,
+                                    "ranked_genes_count": len(path_res.ranked_gene_set.genes) if hasattr(path_res, "ranked_gene_set") else 0,
+                                    "significant_pathways": getattr(path_res, "significant_pathways_count", 0),
+                                }
+                            except Exception as e:
+                                pathway_status = f"PATHWAY_DEFERRED: {e}"
+                                pathway_metrics = {"reason": str(e)}
+                        else:
+                            deseq2_status = f"DESEQ2_{de_res.status.value}"
+                            deseq2_metrics = {
+                                "status": deseq2_status,
+                                "contrast_id": primary_contrast.contrast_id,
+                                "reasons": [f.message for f in de_res.findings],
+                            }
+                            pathway_status = "PATHWAY_BLOCKED_BY_UPSTREAM_DE"
+                            pathway_metrics = {"reason": f"DESeq2 status is {deseq2_status}"}
+                    except Exception as e:
+                        deseq2_status = f"DESEQ2_ERROR: {e}"
+                        deseq2_metrics = {"error": str(e)}
+                        pathway_status = "NOT_EVALUATED"
+            else:
+                deseq2_status = "BLOCKED_MISSING_UPSTREAM_DATASETS"
+                pathway_status = "NOT_EVALUATED"
 
     return DownstreamBridgeResult(
         status=final_status,
@@ -464,4 +580,6 @@ def execute_downstream_pipeline(
         pathway_status=pathway_status,
         pathway_metrics=pathway_metrics,
         biological_replicate_warning=replicate_warning,
+        metadata_validation_status=metadata_val_status,
+        metadata_validation_metrics=metadata_val_metrics,
     )

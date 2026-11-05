@@ -421,53 +421,56 @@ class CanonicalMetadataMapper:
             raw_gen_stage, gen_stage_key = _find_attribute_value(rec, self.rules.get("developmental_stage", ()))
             clean_gen_stage = _clean_str(raw_gen_stage) or self.defaults.get("developmental_stage")
 
-            if clean_exp_stage is None and clean_gen_stage is not None:
-                clean_exp_stage = clean_gen_stage
-                exp_stage_key = gen_stage_key
-
+            # When the source provides only an ambiguous developmental-stage field,
+            # map it to the sample's collection age (developmental_age_or_stage_at_collection).
+            # Do NOT copy it into exposure start age; exposure start age remains distinct and unknown
+            # unless explicitly specified as an exposure start attribute.
             if clean_col_stage is None and clean_gen_stage is not None:
                 clean_col_stage = clean_gen_stage
                 col_stage_key = gen_stage_key
 
-            # Resolve Biological Source / Cell Line / Material Type
+            # Resolve Biological Source / Cell Line / Material Type (no unsupported defaults)
             raw_species, sp_key = _find_attribute_value(rec, self.rules["species"])
-            species_str = _clean_str(raw_species) or self.defaults.get("species", "Homo sapiens")
+            clean_species = _clean_str(raw_species) or self.defaults.get("species")
 
             raw_cell_line, cl_key = _find_attribute_value(rec, self.rules["cell_line"])
-            cell_line_str = _clean_str(raw_cell_line) or self.defaults.get("cell_line")
+            clean_cell_line = _clean_str(raw_cell_line) or self.defaults.get("cell_line")
 
             raw_mat_type, mat_key = _find_attribute_value(rec, self.rules["source_material_type"])
-            mat_type_str = _clean_str(raw_mat_type) or self.defaults.get("source_material_type")
+            clean_mat_type = _clean_str(raw_mat_type) or self.defaults.get("source_material_type")
 
-            # Controlled vocabulary: biological_source_type in [iPSC, hESC, other]
-            if mat_type_str:
-                m_lower = mat_type_str.lower()
+            bio_source_id = f"source_{re.sub(r'[^a-zA-Z0-9_]', '_', clean_cell_line)}" if clean_cell_line else f"source_{exp_id}_unknown"
+
+            if clean_mat_type:
+                m_lower = clean_mat_type.lower()
                 if "ipsc" in m_lower or "induced pluripotent" in m_lower:
-                    mat_type_str = "iPSC"
+                    norm_mat = "iPSC"
                 elif "hesc" in m_lower or "embryonic" in m_lower:
-                    mat_type_str = "hESC"
-                elif mat_type_str in ["iPSC", "hESC", "other"]:
-                    pass
+                    norm_mat = "hESC"
+                elif clean_mat_type in ["iPSC", "hESC", "other"]:
+                    norm_mat = clean_mat_type
                 else:
-                    mat_type_str = "other"
-            elif cell_line_str:
-                cl_lower = cell_line_str.lower()
-                if any(k in cl_lower for k in ["ipsc", "wtc", "bioni"]):
-                    mat_type_str = "iPSC"
-                elif any(k in cl_lower for k in ["hesc", "h9", "h1"]):
-                    mat_type_str = "hESC"
-                else:
-                    mat_type_str = "other"
+                    norm_mat = "other"
+                mat_record = make_value_record(clean_mat_type, norm_mat, "biological_sources", bio_source_id, "source_material_type", mat_key, status="reported")
             else:
-                mat_type_str = "other"
+                mat_record = make_value_record(None, None, "biological_sources", bio_source_id, "source_material_type", None, status="unknown")
 
-            bio_source_id = f"source_{re.sub(r'[^a-zA-Z0-9_]', '_', cell_line_str)}" if cell_line_str else f"source_{exp_id}_unknown"
+            if clean_species is not None:
+                species_record = make_value_record(clean_species, clean_species, "biological_sources", bio_source_id, "species", sp_key, status="reported")
+            else:
+                species_record = make_value_record(None, None, "biological_sources", bio_source_id, "species", None, status="unknown")
+
+            if clean_cell_line is not None:
+                cell_line_record = make_value_record(clean_cell_line, clean_cell_line, "biological_sources", bio_source_id, "cell_line_or_source_identifier", cl_key, status="reported")
+            else:
+                cell_line_record = make_value_record(None, None, "biological_sources", bio_source_id, "cell_line_or_source_identifier", None, status="unknown")
+
             if bio_source_id not in bio_sources_map:
                 bio_sources_map[bio_source_id] = {
                     "biological_source_id": bio_source_id,
-                    "species": make_value_record(species_str, species_str, "biological_sources", bio_source_id, "species", sp_key, status="reported" if species_str else "unknown"),
-                    "source_material_type": make_value_record(mat_type_str, mat_type_str, "biological_sources", bio_source_id, "source_material_type", mat_key, status="reported"),
-                    "cell_line_or_source_identifier": make_value_record(cell_line_str, cell_line_str, "biological_sources", bio_source_id, "cell_line_or_source_identifier", cl_key, status="reported" if cell_line_str else "unknown"),
+                    "species": species_record,
+                    "source_material_type": mat_record,
+                    "cell_line_or_source_identifier": cell_line_record,
                     "metadata_validation_status": "not_validated",
                 }
 
@@ -517,8 +520,9 @@ class CanonicalMetadataMapper:
                 quals = []
                 if has_multiple_durations and norm_dur is not None and norm_dur.normalized_value is not None:
                     quals.append(f"{norm_dur.normalized_value}{norm_dur.normalized_unit}")
-                if has_multiple_stages and clean_exp_stage:
-                    quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", clean_exp_stage.lower()))
+                st_slug = clean_exp_stage or clean_col_stage
+                if has_multiple_stages and st_slug:
+                    quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", st_slug.lower()))
                 if has_multiple_cell_lines and cell_line_str:
                     quals.append(re.sub(r"[^a-zA-Z0-9_]", "_", cell_line_str.lower()))
                 if has_multiple_organoids and org_type_str:
@@ -708,12 +712,18 @@ class CanonicalMetadataMapper:
                     stages.add(str(exp_st).strip().lower())
 
                 durs: set[str] = set()
+                dur_nums: set[float] = set()
                 for s in c_samples:
                     dur_val = s.get("collection_time_relative_to_exposure", {}).get("normalized_value")
                     if dur_val:
                         durs.add(str(dur_val).strip().lower())
                 exp_dur_val = c_exp.get("exposure_duration", {}).get("normalized_value") or c_exp.get("exposure_duration", {}).get("original_value")
                 exp_dur_u = c_exp.get("exposure_duration_unit", {}).get("normalized_value") or c_exp.get("exposure_duration_unit", {}).get("original_value")
+                if exp_dur_val is not None:
+                    try:
+                        dur_nums.add(float(exp_dur_val))
+                    except (ValueError, TypeError):
+                        pass
                 if exp_dur_val is not None and exp_dur_u is not None:
                     durs.add(f"{exp_dur_val} {exp_dur_u}".strip().lower())
 
@@ -728,6 +738,7 @@ class CanonicalMetadataMapper:
                     "org_contexts": org_ctxs,
                     "stages": stages,
                     "durations": durs,
+                    "duration_numbers": dur_nums,
                     "vehicles": vehs,
                 }
 
@@ -752,6 +763,19 @@ class CanonicalMetadataMapper:
                     # Developmental stage check
                     if t_prof["stages"] and c_prof["stages"]:
                         if not (t_prof["stages"] & c_prof["stages"]):
+                            continue
+
+                    # Exposure duration check: prevent automatic matching when known durations conflict
+                    if t_prof["duration_numbers"] and c_prof["duration_numbers"]:
+                        if not (t_prof["duration_numbers"] & c_prof["duration_numbers"]):
+                            continue
+                    elif t_prof["durations"] and c_prof["durations"]:
+                        if not (t_prof["durations"] & c_prof["durations"]):
+                            continue
+
+                    # Vehicle check: prevent matching when known vehicles conflict
+                    if t_prof["vehicles"] and c_prof["vehicles"]:
+                        if not (t_prof["vehicles"] & c_prof["vehicles"]):
                             continue
 
                     compatible_controls.append(c_cid)

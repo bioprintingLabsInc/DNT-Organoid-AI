@@ -155,8 +155,11 @@ class MetadataValidator:
             return
         allowed = self.vocabularies.get(reference) or self.conventions.get(reference, {}).get("allowed")
         candidate = value
-        if spec.get("type") == "value_record" and isinstance(value, dict) and value.get("value_status") == "reported":
-            candidate = value.get("normalized_value") if value.get("normalized_value") is not None else value.get("original_value")
+        if spec.get("type") == "value_record" and isinstance(value, dict):
+            if value.get("value_status") == "reported":
+                candidate = value.get("normalized_value") if value.get("normalized_value") is not None else value.get("original_value")
+            else:
+                candidate = None
         if candidate is not None and candidate not in allowed:
             self._add(Severity.ERROR, entity, identifier, path, "controlled_vocabulary", f"Value {candidate!r} is not in controlled vocabulary '{reference}'.")
 

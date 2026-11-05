@@ -168,3 +168,72 @@ def test_downstream_biological_replication_guard(tmp_path: Path):
     assert result.biological_replicate_warning is not None
     assert "n >= 2 biological replicates" in result.biological_replicate_warning
     assert result.pathway_status == "NOT_EVALUATED"
+
+
+def test_downstream_bridge_metadata_validation_and_integrity_gates(tmp_path: Path):
+    """Verify that MetadataValidator and MetadataIntegrityChecker run during downstream bridge execution."""
+    matrix_file = tmp_path / "counts_pilot.tsv"
+    lines = [
+        "gene_id\tSRR17834920\tSRR17834905",
+        "ENSG00000000003\t100\t120",
+        "ENSG00000000419\t500\t480",
+        "ENSG00000000457\t250\t300",
+    ]
+    matrix_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    result = execute_downstream_pipeline(
+        counts_matrix_path=matrix_file,
+        runs=("SRR17834920", "SRR17834905"),
+        output_dir=tmp_path / "downstream",
+    )
+
+    # Metadata validator must have executed
+    assert result.metadata_validation_status.lower() in ("valid_with_warnings", "valid")
+    assert result.metadata_validation_metrics is not None
+    assert result.metadata_validation_metrics["validator_status"].lower() in ("valid_with_warnings", "valid")
+    assert result.metadata_validation_metrics["integrity_is_valid"] is False
+    assert result.metadata_validation_metrics["integrity_status"].lower() == "invalid"
+    assert result.metadata_validation_metrics["integrity_findings_count"] > 0
+    assert "replicate_summary" in result.metadata_validation_metrics
+
+
+def test_downstream_bridge_verified_biological_replicates_eligible_outcome(tmp_path: Path):
+    """Verify that an eligible cohort with verified biological replicates enters Step 7A/7B downstream analysis."""
+    matrix_file = tmp_path / "counts_verified.tsv"
+    # 4-sample matrix: 2 controls (SRR17834920, SRR17834908) and 2 treatments (SRR17834905, SRR17834904)
+    lines = [
+        "gene_id\tSRR17834920\tSRR17834908\tSRR17834905\tSRR17834904",
+        "ENSG00000000003\t100\t110\t120\t130",
+        "ENSG00000000419\t500\t520\t480\t490",
+        "ENSG00000000457\t250\t260\t300\t310",
+    ]
+    matrix_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    verified_reps = {
+        "SRR17834920": "c_rep1",
+        "SRR17834908": "c_rep2",
+        "SRR17834905": "t_rep1",
+        "SRR17834904": "t_rep2",
+    }
+
+    result = execute_downstream_pipeline(
+        counts_matrix_path=matrix_file,
+        runs=("SRR17834920", "SRR17834908", "SRR17834905", "SRR17834904"),
+        output_dir=tmp_path / "downstream_verified",
+        verified_biological_replicates=verified_reps,
+    )
+
+    # QC and normalization pass
+    assert result.qc_passed is True
+    assert result.normalization_metrics["status"] in ("PASS", "Status.PASS")
+
+    # Integrity checker verifies biological replication
+    assert result.metadata_validation_metrics["integrity_is_valid"] is True
+    assert result.metadata_validation_metrics["integrity_status"].lower() == "valid"
+
+    # Biological replicate guard MUST NOT block (since n >= 2 verified replicates are present)
+    assert result.deseq2_status != "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION"
+    assert result.deseq2_status != "BLOCKED_INSUFFICIENT_BIOLOGICAL_REPLICATION"
+
+    # Execution proceeded to Step 7A/7B: DESeq2 was evaluated using official pipeline
+    assert "DESEQ2" in result.deseq2_status

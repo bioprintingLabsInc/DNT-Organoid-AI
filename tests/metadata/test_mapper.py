@@ -572,3 +572,67 @@ class TestCanonicalMetadataMapper:
                 assert "24.0h" in c_id
             elif "48.0h" in t_id:
                 assert "48.0h" in c_id
+
+    def test_unsupported_species_and_source_material_not_reported_as_assumed(self):
+        """Species and source material must not be defaulted to Homo sapiens or other with reported status."""
+        ctx = StudyContext(study_id="study_missing_bio", source_type="public", experiment_id="exp_01")
+        recs = [
+            RawSampleRecord("s_ctrl", {"condition": "control", "dose": 0, "rep": "r1"}, "f", "1"),
+            RawSampleRecord("s_trt", {"condition": "treatment", "compound": "VPA", "dose": 100, "rep": "r1"}, "f", "2"),
+        ]
+        mapper = CanonicalMetadataMapper()
+        doc, findings = mapper.map_study(ctx, recs, source_reference="meta.csv")
+
+        bio_src = doc["biological_sources"][0]
+        # Species: must be unknown, not assumed 'Homo sapiens'
+        assert bio_src["species"]["value_status"] == "unknown"
+        assert bio_src["species"]["original_value"] is None
+        assert bio_src["species"]["normalized_value"] is None
+
+        # Source material: must be unknown, not assumed 'other' or 'iPSC'
+        assert bio_src["source_material_type"]["value_status"] == "unknown"
+        assert bio_src["source_material_type"]["original_value"] is None
+        assert bio_src["source_material_type"]["normalized_value"] is None
+
+        # Must cleanly pass MetadataValidator without controlled_vocabulary error
+        v = MetadataValidator()
+        val_res = v.validate(doc)
+        assert not any(f.rule == "controlled_vocabulary" for f in val_res.findings)
+
+    def test_ambiguous_stage_maps_to_collection_not_exposure_start(self):
+        """Ambiguous stage must map to collection age, leaving exposure start age separate and unknown."""
+        ctx = StudyContext(study_id="study_ambig_stage", source_type="public", experiment_id="exp_01")
+        recs = [
+            RawSampleRecord("s_ctrl", {"condition": "control", "dose": 0, "stage": "Day 45", "rep": "r1"}, "f", "1"),
+            RawSampleRecord("s_trt", {"condition": "treatment", "compound": "VPA", "dose": 100, "stage": "Day 45", "duration": 48, "rep": "r1"}, "f", "2"),
+        ]
+        mapper = CanonicalMetadataMapper()
+        doc, findings = mapper.map_study(ctx, recs, source_reference="meta.csv")
+
+        # Collection stage on sample: reported as Day 45
+        trt_sample = next(s for s in doc["samples"] if s["sample_id"] == "s_trt")
+        assert trt_sample["developmental_age_or_stage_at_collection"]["value_status"] == "reported"
+        assert trt_sample["developmental_age_or_stage_at_collection"]["original_value"] == "Day 45"
+
+        # Exposure start age on exposure: must remain unknown (not conflated with collection age)
+        trt_exp = next(e for e in doc["exposures"] if "vpa" in e["condition_id"])
+        assert trt_exp["developmental_age_or_stage_at_exposure"]["value_status"] == "unknown"
+        assert trt_exp["developmental_age_or_stage_at_exposure"]["original_value"] is None
+
+    def test_conflicting_duration_prevents_matching_even_with_single_control(self):
+        """A 48h treatment must not automatically match a 24h control, even when it is the only control."""
+        ctx = StudyContext(study_id="study_conflicting_duration", source_type="public", experiment_id="exp_01")
+        recs = [
+            RawSampleRecord("c1", {"condition": "control", "dose": 0, "duration": 24, "rep": "r1"}, "f", "1"),
+            RawSampleRecord("c2", {"condition": "control", "dose": 0, "duration": 24, "rep": "r2"}, "f", "2"),
+            RawSampleRecord("t1", {"condition": "treatment", "compound": "VPA", "dose": 100, "duration": 48, "rep": "r1"}, "f", "3"),
+            RawSampleRecord("t2", {"condition": "treatment", "compound": "VPA", "dose": 100, "duration": 48, "rep": "r2"}, "f", "4"),
+        ]
+        mapper = CanonicalMetadataMapper()
+        doc, findings = mapper.map_study(ctx, recs, source_reference="meta.csv")
+
+        # Exactly 2 conditions (1 control 24h, 1 treatment 48h)
+        assert len(doc["conditions"]) == 2
+        # No relationship formed because durations conflict (48h != 24h)
+        assert len(doc["treatment_control_relationships"]) == 0
+        assert any(f.rule == "unmatched_treatment_condition" for f in findings)
