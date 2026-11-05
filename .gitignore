@@ -27,6 +27,7 @@ scratch/
 # Reference genomes and indices
 references/*
 !references/.gitkeep
+!references/*.json
 
 # Raw sequencing data and generated datasets
 data/raw/*

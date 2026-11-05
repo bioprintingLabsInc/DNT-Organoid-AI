@@ -52,7 +52,7 @@ from .profiles import (
     resolve_pipeline_paths,
     run_profile_preflight_checks,
 )
-from .rseqc_runner import run_infer_experiment
+from .rseqc_runner import StrandednessDecision, infer_strandedness_decision, run_infer_experiment
 from .star_runner import align_reads_star, build_star_index
 from .validator import validate_paired_fastqs
 
@@ -635,6 +635,13 @@ class QuantificationBridgePipeline:
         """Execute RSeQC infer_experiment.py across all 12 aligned BAMs."""
         return self.run_rseqc_strandedness_pairs(self.pairs_from_approved_pilot_runs())
 
+    def evaluate_strandedness_decision(
+        self,
+        metrics_or_summary: dict[str, Any],
+    ) -> StrandednessDecision:
+        """Evaluate empirical RSeQC evidence and return authoritative StrandednessDecision."""
+        return infer_strandedness_decision(metrics_or_summary)
+
     def serialize_strandedness_evidence_pairs(
         self,
         pairs: tuple[FastqPair, ...] | list[FastqPair],
@@ -653,34 +660,24 @@ class QuantificationBridgePipeline:
         clean_study = re.sub(r"[^A-Za-z0-9_-]", "_", study_id).lower()
         out_file = self.bridge_out_dir / f"{clean_study}_strandedness_evidence.json"
 
-        # Determine dominant strand across all runs
-        forward_fracs = [m.get("forward_fraction", 0.0) for m in strandedness_metrics.values() if m.get("forward_fraction") is not None]
-        reverse_fracs = [m.get("reverse_fraction", 0.0) for m in strandedness_metrics.values() if m.get("reverse_fraction") is not None]
-        unexplained_fracs = [m.get("unexplained_fraction", 0.0) for m in strandedness_metrics.values() if m.get("unexplained_fraction") is not None]
-
-        mean_fwd = sum(forward_fracs) / len(forward_fracs) if forward_fracs else 0.0
-        mean_rev = sum(reverse_fracs) / len(reverse_fracs) if reverse_fracs else 0.0
-        mean_unexp = sum(unexplained_fracs) / len(unexplained_fracs) if unexplained_fracs else 0.0
-
-        if mean_rev >= 0.70 and mean_fwd <= 0.15:
-            consensus = "REVERSE_STRANDED (featureCounts -s 2)"
-        elif mean_fwd >= 0.70 and mean_rev <= 0.15:
-            consensus = "FORWARD_STRANDED (featureCounts -s 1)"
-        elif abs(mean_fwd - mean_rev) <= 0.15:
-            consensus = "UNSTRANDED (featureCounts -s 0)"
-        else:
-            consensus = "AMBIGUOUS_EVIDENCE_REQUIRES_REVIEW"
+        # Evaluate authoritative evidence-based strandedness decision
+        decision = infer_strandedness_decision(strandedness_metrics)
 
         evidence_payload = {
             "execution_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
             "study_accession": study_id,
             "total_samples": len(pairs),
             "generated_timestamp_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "strandedness_decision": decision.to_dict(),
             "strandedness_summary": {
-                "mean_forward_fraction": round(mean_fwd, 4),
-                "mean_reverse_fraction": round(mean_rev, 4),
-                "mean_unexplained_fraction": round(mean_unexp, 4),
-                "rseqc_consensus_indication": consensus,
+                "mean_forward_fraction": round(decision.mean_forward, 4),
+                "mean_reverse_fraction": round(decision.mean_reverse, 4),
+                "mean_unexplained_fraction": round(decision.mean_unexplained, 4),
+                "rseqc_consensus_indication": decision.consensus_indication,
+                "strandedness_flag": decision.strandedness_flag,
+                "strand_mode": decision.strand_mode,
+                "confidence": decision.confidence,
+                "rationale": decision.rationale,
             },
             "environment_metrics": env_metrics,
             "preflight_metrics": preflight_metrics,

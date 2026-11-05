@@ -119,6 +119,8 @@ def test_json_manifest_synchronization():
     assert data["total_samples"] == 12
     assert data["control_samples_count"] == 6
     assert data["treatment_samples_count"] == 6
+    assert data.get("strandedness") == "unstranded"
+    assert data.get("featurecounts_strandedness_flag") == 0
 
     json_runs = {s["run_accession"]: s for s in data["samples"]}
     assert set(json_runs.keys()) == EXPECTED_EXPLICIT_RUN_SET
@@ -134,6 +136,8 @@ def test_json_manifest_synchronization():
         assert jr["fastq_1_md5"] == r.fastq_1_md5
         assert jr["fastq_2_md5"] == r.fastq_2_md5
         assert jr["biological_replicate_unit"] == "UNVERIFIED"
+        assert jr.get("strandedness") == r.strandedness
+        assert jr.get("featurecounts_strandedness_flag") == r.featurecounts_strandedness_flag
 
 
 def test_metadata_reconciliation_rejection():

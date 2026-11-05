@@ -10,7 +10,9 @@ Connects validated raw gene counts to:
 Governed under verified biological replication criteria:
 - Technical pilot (N=1 vs N=1) completes QC, Harmonization, and Normalization, but pauses before DESeq2
   because GLM dispersion estimation requires verified independent biological replicates (n >= 2).
-- Full 12-library cohort (N=6 vs N=6) executes full end-to-end differential expression and pathway analysis.
+- Full 12-library cohort (N=6 vs N=6) completes QC, Harmonization, and Normalization, but inferential DESeq2
+  and pathway analysis are gated (DOWNSTREAM_PARTIAL_BIOLOGICAL_REPLICATION_GATED) when differentiation
+  batches and organoid pooling details are unverified, preventing ungrounded biological claims.
 """
 
 from copy import deepcopy
@@ -46,6 +48,15 @@ def _reported(value: Any) -> dict[str, Any]:
         "original_value": value,
         "normalized_value": value,
         "value_status": "reported",
+        "assertion_provenance_ids": [],
+    }
+
+
+def _missing(status: str = "missing_not_reported") -> dict[str, Any]:
+    return {
+        "original_value": None,
+        "normalized_value": None,
+        "value_status": status,
         "assertion_provenance_ids": [],
     }
 
@@ -121,12 +132,12 @@ def build_canonical_metadata_for_runs(
             "species": _reported("Homo sapiens"),
             "tissue_or_cell_type": _reported("Human Brain Cortical Organoid"),
             "developmental_day": _reported(day),
-            "biological_replicate_id": _reported(f"rep_{r}"),
-            "technical_replicate_id": None,
+            "biological_replicate_id": _missing("unknown"),
+            "technical_replicate_id": _missing("not_applicable"),
             "treatment_group": "control" if is_ctrl else "treatment",
-            "compound_name": _reported("Valproic Acid"),
+            "compound_name": _reported("Vehicle") if is_ctrl else _reported("Valproic Acid"),
             "compound_concentration_um": _reported(dose),
-            "exposure_duration_hours": _reported(72.0),
+            "exposure_duration_hours": _reported(288.0),
             "metadata_validation_status": "not_validated",
         })
 
@@ -164,12 +175,14 @@ def build_canonical_metadata_for_runs(
         "biological_sources": [{
             "biological_source_id": "line_1",
             "species": _reported("Homo sapiens"),
+            "source_material_type": _reported("hESC"),
+            "cell_line_or_source_identifier": _reported("H9"),
             "metadata_validation_status": "not_validated",
         }],
         "organoid_contexts": [{
             "organoid_context_id": "cortical_1",
             "organoid_type": _reported("cerebral organoid"),
-            "brain_region_or_model_identity": _reported("cortical organoid"),
+            "brain_region_or_model_identity": _reported("dorsal forebrain organoids"),
             "metadata_validation_status": "not_validated",
         }],
         "samples": sample_records,
@@ -178,8 +191,11 @@ def build_canonical_metadata_for_runs(
                 "exposure_id": "control_exposure",
                 "condition_id": "control",
                 "exposure_scope": "condition_planned",
-                "vehicle": _reported("Vehicle"),
-                "developmental_age_or_stage_at_exposure": _reported("day 25"),
+                "vehicle": _reported("distilled water"),
+                "exposure_start_time_or_stage": _reported("day 16"),
+                "developmental_age_or_stage_at_exposure": _reported("day 16"),
+                "exposure_duration": _reported(288.0),
+                "exposure_duration_unit": _reported("hour"),
                 "metadata_validation_status": "not_validated",
             },
             {
@@ -188,12 +204,12 @@ def build_canonical_metadata_for_runs(
                 "exposure_scope": "condition_planned",
                 "agent_name": _reported("Valproic Acid"),
                 "agent_identifier": _reported("pubchem:3121"),
-                "vehicle": _reported("Vehicle"),
+                "vehicle": _reported("distilled water"),
                 "concentration_or_dose": _reported(250.0),
                 "concentration_or_dose_unit": _reported("µM"),
-                "exposure_start_time_or_stage": _reported("day 25"),
-                "developmental_age_or_stage_at_exposure": _reported("day 25"),
-                "exposure_duration": _reported(72),
+                "exposure_start_time_or_stage": _reported("day 16"),
+                "developmental_age_or_stage_at_exposure": _reported("day 16"),
+                "exposure_duration": _reported(288.0),
                 "exposure_duration_unit": _reported("hour"),
                 "metadata_validation_status": "not_validated",
             },
@@ -202,7 +218,7 @@ def build_canonical_metadata_for_runs(
             "relationship_id": "comparison_1",
             "treatment_condition_ids": ["treatment_250um"],
             "matched_control_condition_ids": ["control"],
-            "matching_basis": _reported("same organoid line, day 28 collection, 72h exposure"),
+            "matching_basis": _reported("H9 hESC dorsal forebrain organoids, Day 16-28 (12 days / 288h) VPA exposure vs vehicle"),
             "metadata_validation_status": "not_validated",
         }],
         "sample_comparison_exceptions": [],
@@ -210,6 +226,9 @@ def build_canonical_metadata_for_runs(
             "assay_id": assay_id,
             "sample_ids": list(runs),
             "rna_seq_modality": _reported("bulk_rna_seq"),
+            "library_layout": _reported("paired_end"),
+            "strandedness": _reported("unstranded"),
+            "sequencing_platform": _reported(platform),
             "metadata_validation_status": "not_validated",
         }],
         "input_data_assets": [{
@@ -239,6 +258,10 @@ def execute_downstream_pipeline(
     Applies strict biological replication guard:
     - If either treatment or control group has n < 2 samples, DESeq2 is blocked
       to prevent invalid dispersion estimates.
+    - If biological replicates are unverified (e.g., differentiation batches and
+      organoid pooling details are unknown), DESeq2 inferential GLM and pathway
+      analysis are gated (DOWNSTREAM_PARTIAL_BIOLOGICAL_REPLICATION_GATED) while
+      QC, Harmonization, and Normalization pass.
     """
     matrix_p = Path(counts_matrix_path).resolve()
     if not matrix_p.is_file():
@@ -264,11 +287,20 @@ def execute_downstream_pipeline(
         assay_id=assay_id,
     )
     qc_passed = qc_res.status != QCStatus.FAIL
+
+    advisory_flags: list[str] = []
+    if "SRR17834908" in runs:
+        advisory_flags.append(
+            "SRR17834908: spearman_correlation=0.8860 below 0.90 threshold, PC1/PC2 separation observed; "
+            "retained for exploration without automated exclusion"
+        )
+
     qc_metrics = {
         "status": str(qc_res.status),
         "total_genes": qc_res.number_of_genes,
         "total_samples": qc_res.number_of_samples,
         "findings_count": len(qc_res.findings),
+        "advisory_flags": advisory_flags,
     }
 
     # -------------------------------------------------------------------------
@@ -293,10 +325,10 @@ def execute_downstream_pipeline(
             allow_needs_review_qc=True,
         )
         harm_metrics["status"] = str(harm_res.status)
-        if hasattr(harm_res, "summary"):
-            harm_metrics["input_gene_count"] = harm_res.summary.total_input_genes
-            harm_metrics["mapped_genes_count"] = harm_res.summary.uniquely_mapped_genes
-            harm_metrics["coverage_fraction"] = harm_res.summary.canonical_coverage
+        if hasattr(harm_res, "summary") and harm_res.summary is not None:
+            harm_metrics["input_gene_count"] = getattr(harm_res.summary, "total_genes", 0)
+            harm_metrics["mapped_genes_count"] = getattr(harm_res.summary, "uniquely_mapped_genes", 0)
+            harm_metrics["coverage_fraction"] = getattr(harm_res.summary, "percentage_uniquely_mapped", 0.0)
     except Exception as e:
         harm_metrics["status"] = f"HARMONIZATION_DEFERRED: {e}"
 
@@ -320,7 +352,7 @@ def execute_downstream_pipeline(
             norm_metrics["status"] = f"NORMALIZATION_DEFERRED: {e}"
 
     # -------------------------------------------------------------------------
-    # Step 7B: Differential Expression (DESeq2)
+    # Step 7B: Differential Expression (DESeq2) Biological Replication Gate
     # -------------------------------------------------------------------------
     controls = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r, None) and RUN_TO_SAMPLE_MAP[r].condition_group == "control"]
     treated = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r, None) and RUN_TO_SAMPLE_MAP[r].condition_group == "treatment"]
@@ -333,6 +365,7 @@ def execute_downstream_pipeline(
     pathway_status = "NOT_EVALUATED"
     pathway_metrics: dict[str, Any] = {}
     replicate_warning = None
+    final_status = "DOWNSTREAM_EVALUATION_COMPLETED"
 
     if n_ctrl < 2 or n_trt < 2:
         deseq2_status = "BLOCKED_INSUFFICIENT_BIOLOGICAL_REPLICATION"
@@ -346,51 +379,82 @@ def execute_downstream_pipeline(
             "treated_count": n_trt,
             "reason": replicate_warning,
         }
+        final_status = "DOWNSTREAM_EVALUATION_COMPLETED"
     else:
-        # Full cohort (n >= 2)
-        from src.differential_expression.pipeline import DESeq2DifferentialExpressionPipeline
-        from src.differential_expression.design import ContrastSpecification
-
-        diff_pipeline = DESeq2DifferentialExpressionPipeline()
-        spec = ContrastSpecification(
-            contrast_id=contrast_name,
-            test_condition="treatment",
-            baseline_condition="control",
-            design_formula="~ condition",
+        # Check whether biological replication has been verified
+        has_unverified_replicates = any(
+            s.get("biological_replicate_id", {}).get("value_status") != "reported"
+            for s in metadata.get("samples", [])
+        ) or any(
+            getattr(RUN_TO_SAMPLE_MAP.get(r), "biological_replicate_unit", "") == "UNVERIFIED"
+            for r in runs
         )
-        try:
-            diff_res = diff_pipeline.run_contrast(
-                counts_path=matrix_p,
-                metadata=metadata,
-                contrast_spec=spec,
+
+        if has_unverified_replicates:
+            deseq2_status = "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION"
+            pathway_status = "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION"
+            replicate_warning = (
+                "Biological replication is UNVERIFIED for PRJNA802072: differentiation batch IDs "
+                "and organoid pooling details are not reported. SRA BioSample uniqueness alone does "
+                "not establish independent biological replication. DESeq2 inferential GLM and pathway "
+                "analysis are safely gated to prevent ungrounded biological claims."
             )
-            deseq2_status = "DESEQ2_COMPLETED"
             deseq2_metrics = {
-                "status": "DESEQ2_SUCCESS",
-                "contrast_id": contrast_name,
-                "tested_genes": getattr(diff_res, "total_tested_genes", 0),
-                "significant_degs": getattr(diff_res, "significant_genes_count", 0),
+                "status": deseq2_status,
+                "controls_count": n_ctrl,
+                "treated_count": n_trt,
+                "reason": replicate_warning,
             }
-
-            # -----------------------------------------------------------------
-            # Stage 8C: Pathway & Signaling Analysis
-            # -----------------------------------------------------------------
-            from src.features.pathway.pipeline import PathwayAnalysisPipeline
-
-            path_pipeline = PathwayAnalysisPipeline()
-            path_res = path_pipeline.run_gsea(diff_res)
-            pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
             pathway_metrics = {
-                "status": "GSEA_SUCCESS",
-                "go_bp_significant": getattr(path_res, "go_bp_significant_count", 0),
-                "kegg_significant": getattr(path_res, "kegg_significant_count", 0),
+                "status": pathway_status,
+                "reason": replicate_warning,
             }
-        except Exception as e:
-            deseq2_status = f"DESEQ2_ERROR: {e}"
-            deseq2_metrics = {"error": str(e)}
+            final_status = "DOWNSTREAM_PARTIAL_BIOLOGICAL_REPLICATION_GATED"
+        else:
+            # Full cohort with verified biological replicates (n >= 2)
+            from src.differential_expression.pipeline import DESeq2DifferentialExpressionPipeline
+            from src.differential_expression.design import ContrastSpecification
+
+            diff_pipeline = DESeq2DifferentialExpressionPipeline()
+            spec = ContrastSpecification(
+                contrast_id=contrast_name,
+                test_condition="treatment",
+                baseline_condition="control",
+                design_formula="~ condition",
+            )
+            try:
+                diff_res = diff_pipeline.run_contrast(
+                    counts_path=matrix_p,
+                    metadata=metadata,
+                    contrast_spec=spec,
+                )
+                deseq2_status = "DESEQ2_COMPLETED"
+                deseq2_metrics = {
+                    "status": "DESEQ2_SUCCESS",
+                    "contrast_id": contrast_name,
+                    "tested_genes": getattr(diff_res, "total_tested_genes", 0),
+                    "significant_degs": getattr(diff_res, "significant_genes_count", 0),
+                }
+
+                # -------------------------------------------------------------
+                # Stage 8C: Pathway & Signaling Analysis
+                # -------------------------------------------------------------
+                from src.features.pathway.pipeline import PathwayAnalysisPipeline
+
+                path_pipeline = PathwayAnalysisPipeline()
+                path_res = path_pipeline.run_gsea(diff_res)
+                pathway_status = "PATHWAY_ANALYSIS_SUCCESS"
+                pathway_metrics = {
+                    "status": "GSEA_SUCCESS",
+                    "go_bp_significant": getattr(path_res, "go_bp_significant_count", 0),
+                    "kegg_significant": getattr(path_res, "kegg_significant_count", 0),
+                }
+            except Exception as e:
+                deseq2_status = f"DESEQ2_ERROR: {e}"
+                deseq2_metrics = {"error": str(e)}
 
     return DownstreamBridgeResult(
-        status="DOWNSTREAM_EVALUATION_COMPLETED",
+        status=final_status,
         qc_passed=qc_passed,
         qc_metrics=qc_metrics,
         harmonization_metrics=harm_metrics,

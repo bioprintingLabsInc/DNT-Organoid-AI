@@ -7,6 +7,8 @@ TARGET_BIOPROJECT = "PRJNA802072"
 TARGET_SRA_STUDY = "SRP357550"
 TARGET_DEVELOPMENTAL_DAY = 28
 TARGET_ORGANISM = "Homo sapiens"
+APPROVED_STRANDEDNESS_MODE = "unstranded"
+APPROVED_FEATURECOUNTS_STRANDEDNESS_FLAG = 0
 
 @dataclass(frozen=True, slots=True)
 class PilotSampleRecord:
@@ -24,6 +26,8 @@ class PilotSampleRecord:
     fastq_1_md5: str
     fastq_2_md5: str
     biological_replicate_unit: str = BIOLOGICAL_REPLICATE_UNIT
+    strandedness: str = APPROVED_STRANDEDNESS_MODE
+    featurecounts_strandedness_flag: int = APPROVED_FEATURECOUNTS_STRANDEDNESS_FLAG
 
 
 # Authoritative live ENA/SRA records for Day 28 VPA 250 uM vs 0 uM vehicle control

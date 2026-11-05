@@ -1,0 +1,392 @@
+{
+  "execution_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
+  "study_accession": "PRJNA802072",
+  "total_samples": 12,
+  "generated_timestamp_utc": "2026-11-05 08:16:00 UTC",
+  "strandedness_decision": {
+    "strandedness_flag": 0,
+    "strand_mode": "unstranded",
+    "confidence": "HIGH",
+    "mean_forward": 0.4019,
+    "mean_reverse": 0.4025,
+    "mean_unexplained": 0.1956,
+    "consensus_indication": "UNSTRANDED (featureCounts -s 0)",
+    "rationale": "Balanced forward (40.2%) and reverse (40.3%) orientations (diff = 0.06%) confirm standard unstranded RNA-seq library preparation."
+  },
+  "strandedness_summary": {
+    "mean_forward_fraction": 0.4019,
+    "mean_reverse_fraction": 0.4025,
+    "mean_unexplained_fraction": 0.1956,
+    "rseqc_consensus_indication": "UNSTRANDED (featureCounts -s 0)",
+    "strandedness_flag": 0,
+    "strand_mode": "unstranded",
+    "confidence": "HIGH",
+    "rationale": "Balanced forward (40.2%) and reverse (40.3%) orientations (diff = 0.06%) confirm standard unstranded RNA-seq library preparation."
+  },
+  "environment_metrics": {
+    "kernel": "Linux de441b66e2cb 6.6.159+ #1 SMP Thu Oct 22 03:07:54 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+    "uname": "Linux de441b66e2cb 6.6.159+ #1 SMP Thu Oct 22 03:07:54 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+    "python_executable": "/usr/bin/python3",
+    "python_version": "3.13.16",
+    "cpu_cores": 12,
+    "physical_ram_gb": 83.47,
+    "scratch_disk_total_gb": 235.68,
+    "scratch_disk_free_gb": 159.51,
+    "tool_paths": {
+      "fastp": "/content/dnt_env/bin/fastp",
+      "STAR": "/content/dnt_env/bin/STAR",
+      "featureCounts": "/content/dnt_env/bin/featureCounts",
+      "samtools": "/content/dnt_env/bin/samtools",
+      "infer_experiment.py": "/content/dnt_env/bin/infer_experiment.py"
+    },
+    "tool_versions": {
+      "fastp": "fastp 0.23.4",
+      "STAR": "2.7.11b",
+      "featureCounts": "featureCounts v2.0.6",
+      "samtools": "samtools 1.19.2",
+      "infer_experiment.py": "infer_experiment.py 5.0.2"
+    },
+    "recorded_timestamp_utc": "2026-11-05 04:47:07 UTC"
+  },
+  "preflight_metrics": {
+    "status": "PREFLIGHT_PASSED",
+    "test_file": "/content/DNT-Organoid-AI/tests/quantification_bridge/test_preflight_suite.py",
+    "raw_output": "============================= test session starts ==============================\nplatform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /content/dnt_env/bin/python3.12\ncachedir: .pytest_cache\nrootdir: /content/DNT-Organoid-AI\ncollecting ... collected 5 items\n\ntests/quantification_bridge/test_preflight_suite.py::test_a_b_c_featurecounts_synthetic_bam PASSED [ 20%]\ntests/quantification_bridge/test_preflight_suite.py::test_d_adapter_numerical_conservation PASSED [ 40%]\ntests/quantification_bridge/test_preflight_suite.py::test_e_sample_header_mapping PASSED [ 60%]\ntests/quantification_bridge/test_preflight_suite.py::test_f_bed12_reproducibility PASSED [ 80%]\ntests/quantification_bridge/test_preflight_suite.py::test_g_frozen_pipeline_immutability PASSED [100%]\n\n============================== 5 passed in 1.11s ==============================="
+  },
+  "reference_metrics": {
+    "status": "REFERENCES_VERIFIED",
+    "fasta_sha256": "d8c3af0094a7bba6125763bad779ec18a81483c739c6ed122094bdf86c187b92",
+    "gtf_sha256": "8c87436bab973c871447743c2f5cbb2b557be0523fe6efe3ff33307a4c836002",
+    "bed12_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06"
+  },
+  "fastp_metrics": {
+    "SRR17834903": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834903_fastp.json",
+      "total_reads_before": 42147930,
+      "total_reads_after": 42134512,
+      "q30_rate_after": 0.922418,
+      "duplication_rate": 0.291541
+    },
+    "SRR17834920": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834920_fastp.json",
+      "total_reads_before": 43799042,
+      "total_reads_after": 43786986,
+      "q30_rate_after": 0.922011,
+      "duplication_rate": 0.194974
+    },
+    "SRR17834905": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834905_fastp.json",
+      "total_reads_before": 45269490,
+      "total_reads_after": 45257842,
+      "q30_rate_after": 0.92325,
+      "duplication_rate": 0.220062
+    },
+    "SRR17834904": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834904_fastp.json",
+      "total_reads_before": 41566148,
+      "total_reads_after": 41555040,
+      "q30_rate_after": 0.920821,
+      "duplication_rate": 0.183037
+    },
+    "SRR17834901": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834901_fastp.json",
+      "total_reads_before": 41211908,
+      "total_reads_after": 41205814,
+      "q30_rate_after": 0.926949,
+      "duplication_rate": 0.13316
+    },
+    "SRR17834900": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834900_fastp.json",
+      "total_reads_before": 45757796,
+      "total_reads_after": 45743348,
+      "q30_rate_after": 0.920878,
+      "duplication_rate": 0.14727
+    },
+    "SRR17834908": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834908_fastp.json",
+      "total_reads_before": 46304210,
+      "total_reads_after": 46293540,
+      "q30_rate_after": 0.925821,
+      "duplication_rate": 0.182209
+    },
+    "SRR17834919": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834919_fastp.json",
+      "total_reads_before": 46171662,
+      "total_reads_after": 46159990,
+      "q30_rate_after": 0.925883,
+      "duplication_rate": 0.14993
+    },
+    "SRR17834875": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834875_fastp.json",
+      "total_reads_before": 44105916,
+      "total_reads_after": 44098972,
+      "q30_rate_after": 0.929206,
+      "duplication_rate": 0.157093
+    },
+    "SRR17834897": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834897_fastp.json",
+      "total_reads_before": 44475788,
+      "total_reads_after": 44468394,
+      "q30_rate_after": 0.930624,
+      "duplication_rate": 0.179619
+    },
+    "SRR17834886": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834886_fastp.json",
+      "total_reads_before": 45201394,
+      "total_reads_after": 45193088,
+      "q30_rate_after": 0.930591,
+      "duplication_rate": 0.207516
+    },
+    "SRR17834902": {
+      "json_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\qc_reports\\SRR17834902_fastp.json",
+      "total_reads_before": 42220752,
+      "total_reads_after": 42214918,
+      "q30_rate_after": 0.934111,
+      "duplication_rate": 0.285895
+    }
+  },
+  "alignment_metrics": {
+    "SRR17834897": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834897_Log.final.out",
+      "input_reads": 22234197,
+      "uniquely_mapped_reads": 21045745,
+      "uniquely_mapped_percent": 94.65,
+      "multimapping_percent": 3.09
+    },
+    "SRR17834886": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834886_Log.final.out",
+      "input_reads": 22596544,
+      "uniquely_mapped_reads": 21315454,
+      "uniquely_mapped_percent": 94.33,
+      "multimapping_percent": 3.43
+    },
+    "SRR17834919": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834919_Log.final.out",
+      "input_reads": 23079995,
+      "uniquely_mapped_reads": 21836397,
+      "uniquely_mapped_percent": 94.61,
+      "multimapping_percent": 2.95
+    },
+    "SRR17834875": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834875_Log.final.out",
+      "input_reads": 22049486,
+      "uniquely_mapped_reads": 20945287,
+      "uniquely_mapped_percent": 94.99,
+      "multimapping_percent": 2.96
+    },
+    "SRR17834904": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834904_Log.final.out",
+      "input_reads": 20777520,
+      "uniquely_mapped_reads": 19351941,
+      "uniquely_mapped_percent": 93.14,
+      "multimapping_percent": 3.17
+    },
+    "SRR17834900": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834900_Log.final.out",
+      "input_reads": 22871674,
+      "uniquely_mapped_reads": 21566534,
+      "uniquely_mapped_percent": 94.29,
+      "multimapping_percent": 2.98
+    },
+    "SRR17834901": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834901_Log.final.out",
+      "input_reads": 20602907,
+      "uniquely_mapped_reads": 19570822,
+      "uniquely_mapped_percent": 94.99,
+      "multimapping_percent": 2.9
+    },
+    "SRR17834920": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834920_Log.final.out",
+      "input_reads": 21893493,
+      "uniquely_mapped_reads": 20671111,
+      "uniquely_mapped_percent": 94.42,
+      "multimapping_percent": 3.05
+    },
+    "SRR17834903": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834903_Log.final.out",
+      "input_reads": 21067256,
+      "uniquely_mapped_reads": 19738398,
+      "uniquely_mapped_percent": 93.69,
+      "multimapping_percent": 3.9
+    },
+    "SRR17834905": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834905_Log.final.out",
+      "input_reads": 22628921,
+      "uniquely_mapped_reads": 21135969,
+      "uniquely_mapped_percent": 93.4,
+      "multimapping_percent": 3.5
+    },
+    "SRR17834902": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834902_Log.final.out",
+      "input_reads": 21107459,
+      "uniquely_mapped_reads": 19807997,
+      "uniquely_mapped_percent": 93.84,
+      "multimapping_percent": 3.88
+    },
+    "SRR17834908": {
+      "log_path": "G:\\My Drive\\DNT_Organoid_AI_Persistence\\stage18_full_cohort\\star_logs\\SRR17834908_Log.final.out",
+      "input_reads": 23146770,
+      "uniquely_mapped_reads": 21821478,
+      "uniquely_mapped_percent": 94.27,
+      "multimapping_percent": 3.37
+    }
+  },
+  "per_sample_strandedness": {
+    "SRR17834920": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834920_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "06d1acb424013be5494d23cc1359d3080721459d343386bbf8675d0af8816d9b",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1273\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4407\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4320",
+      "forward_fraction": 0.4407,
+      "reverse_fraction": 0.432,
+      "unexplained_fraction": 0.1273
+    },
+    "SRR17834908": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834908_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "9b4dadfd64b993bef6c7771e8e42bbb879c7d2e70aa712e55301b7e1309b50cd",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1218\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4397\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4385",
+      "forward_fraction": 0.4397,
+      "reverse_fraction": 0.4385,
+      "unexplained_fraction": 0.1218
+    },
+    "SRR17834897": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834897_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "a960c279998881bcd1c29b8b2de9060981b0ed04c42a913bad06e41ab6c6947f",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1978\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3998\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4024",
+      "forward_fraction": 0.3998,
+      "reverse_fraction": 0.4024,
+      "unexplained_fraction": 0.1978
+    },
+    "SRR17834886": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834886_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "26902714dfce28e6afa23ba8f47db32c8b6023de8b20e08b60cfa6c56b274dae",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.2283\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3840\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.3877",
+      "forward_fraction": 0.384,
+      "reverse_fraction": 0.3877,
+      "unexplained_fraction": 0.2283
+    },
+    "SRR17834875": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834875_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "e8a99c1081d5598a82b1ec6274643e39ea6903a37b652c8afdf4786f39f276ff",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1452\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4273\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4275",
+      "forward_fraction": 0.4273,
+      "reverse_fraction": 0.4275,
+      "unexplained_fraction": 0.1452
+    },
+    "SRR17834919": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834919_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "9a3debce4ef61435bde6dde4cdf83ae0d092ea3f207762da00485cda1d726c84",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1556\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4231\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4214",
+      "forward_fraction": 0.4231,
+      "reverse_fraction": 0.4214,
+      "unexplained_fraction": 0.1556
+    },
+    "SRR17834905": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834905_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "a48f54ae79e18636718232bda75e88c1054a1a559b66132bbfb51e36c9685659",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.2683\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3674\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.3643",
+      "forward_fraction": 0.3674,
+      "reverse_fraction": 0.3643,
+      "unexplained_fraction": 0.2683
+    },
+    "SRR17834904": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834904_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "03608164310017154ef6d382f2dde18798856f11544dd17d71c58c1705b7b7be",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.2098\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3905\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.3997",
+      "forward_fraction": 0.3905,
+      "reverse_fraction": 0.3997,
+      "unexplained_fraction": 0.2098
+    },
+    "SRR17834903": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834903_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "3756a9bc1371101f2ee8ab3befb6fe59274f53f788a185c36fe2bd98aac3647f",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.2752\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3615\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.3633",
+      "forward_fraction": 0.3615,
+      "reverse_fraction": 0.3633,
+      "unexplained_fraction": 0.2752
+    },
+    "SRR17834902": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834902_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "78bae99b8de1baeb33d4ecf2201295651e256c9b7aa48b4a1a271706a4f48906",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.3606\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.3184\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.3210",
+      "forward_fraction": 0.3184,
+      "reverse_fraction": 0.321,
+      "unexplained_fraction": 0.3606
+    },
+    "SRR17834901": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834901_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "624744ad6c23199cc9056f43aa357c104e8f2056cdab80877e5e37f00b99a2fd",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1264\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4324\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4413",
+      "forward_fraction": 0.4324,
+      "reverse_fraction": 0.4413,
+      "unexplained_fraction": 0.1264
+    },
+    "SRR17834900": {
+      "status": "INFER_EXPERIMENT_SUCCESS",
+      "bam_path": "/content/DNT-Organoid-AI/data/interim/prjna802072_alignments/SRR17834900_Aligned.sortedByCoord.out.bam",
+      "bam_sha256": "868d8f00df3dbb4dfea31dadeca7504262ad3cf7f8fa453d798395b20466dc17",
+      "bed_path": "/content/DNT-Organoid-AI/references/ensembl_112/Homo_sapiens.GRCh38.112.bed",
+      "bed_sha256": "4d1231bb5fcb25731dac508592dfbf78ef04db041034b006d15a53209c309a06",
+      "sample_size": 200000,
+      "mapq_min": 10,
+      "raw_output": "This is PairEnd Data\nFraction of reads failed to determine: 0.1305\nFraction of reads explained by \"1++,1--,2+-,2-+\": 0.4381\nFraction of reads explained by \"1+-,1-+,2++,2--\": 0.4314",
+      "forward_fraction": 0.4381,
+      "reverse_fraction": 0.4314,
+      "unexplained_fraction": 0.1305
+    }
+  }
+}
