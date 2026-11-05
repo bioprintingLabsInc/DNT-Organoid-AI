@@ -32,6 +32,8 @@ from .adapter import sha256_file
 from .bed_generator import generate_bed12_from_gtf
 from .env_exec import run_wsl, to_wsl_path
 from .fastp_runner import run_fastp_preprocessing
+from .downstream_bridge import build_canonical_metadata_for_runs, execute_downstream_pipeline
+from .featurecounts_runner import execute_featurecounts_and_adapter, run_featurecounts
 from .manifest import (
     APPROVED_2_SAMPLE_TECHNICAL_PILOT,
     APPROVED_PILOT_RUNS,
@@ -828,3 +830,113 @@ class QuantificationBridgePipeline:
         print("HALTING EXECUTION. Do NOT proceed to featureCounts until authorized by Owner.")
         print("================================================================================")
         return "AWAITING_OWNER_STRANDEDNESS_DECISION"
+
+    def run_featurecounts_pairs(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        strandedness_flag: int,
+        threads: int | None = None,
+    ) -> dict[str, Any]:
+        """Execute governed featureCounts across aligned BAMs for given pairs and generate CountMatrix."""
+        eff_threads = threads if threads is not None else self.profile.threads
+        bam_paths = [self.alignments_dir / f"{pair.sample_id}_Aligned.sortedByCoord.out.bam" for pair in pairs]
+        run_ids = tuple(pair.sample_id for pair in pairs)
+
+        suffix = "pilot_2_samples" if len(pairs) == 2 else "cohort_12_samples"
+        raw_counts_path = self.bridge_out_dir / f"featureCounts_{suffix}_raw.txt"
+        matrix_path = self.bridge_out_dir / f"prjna802072_{suffix}_count_matrix.tsv"
+        universe_path = self.bridge_out_dir / f"prjna802072_{suffix}_gene_universe.json"
+
+        print(
+            f"Executing governed featureCounts (strandedness={strandedness_flag}, threads={eff_threads}) "
+            f"for {len(pairs)} BAM files..."
+        )
+        return execute_featurecounts_and_adapter(
+            bam_paths=bam_paths,
+            gtf_path=self.gtf_path,
+            raw_featurecounts_path=raw_counts_path,
+            output_matrix_path=matrix_path,
+            output_universe_path=universe_path,
+            approved_runs=run_ids,
+            strandedness=strandedness_flag,
+            threads=eff_threads,
+        )
+
+    def run_technical_pilot_through_strandedness_gate(self, threads: int | None = None) -> str:
+        """Run 2-sample technical pilot (SRR17834920 & SRR17834905) through the strandedness evidence gate and STOP."""
+        eff_threads = threads if threads is not None else self.profile.threads
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 1: ENVIRONMENT AUDIT ===")
+        env_metrics = self.record_environment_metrics()
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 2: PREFLIGHT VALIDATION ===")
+        preflight_metrics = self.run_preflight_checks()
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 3: REFERENCE VERIFICATION ===")
+        ref_metrics = self.acquire_and_verify_references()
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 4: ACQUISITION DIRECT FROM ENA ===")
+        download_metrics = self.acquire_and_verify_libraries(technical_pilot_only=True)
+
+        pairs = self.pairs_from_approved_technical_pilot_runs()
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 5: FASTQ STRUCTURAL VALIDATION ===")
+        pairing_metrics = self.validate_paired_fastqs_pairs(pairs)
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 6: TREATMENT-BLIND FASTP PREPROCESSING ===")
+        fastp_metrics = self.run_fastp_pairs(pairs, threads=eff_threads)
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 7: STAR GENOME INDEXING ===")
+        star_index_metrics = self.build_star_index(threads=eff_threads)
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 8: STAR ALIGNMENT & BAM INDEXING ===")
+        alignment_metrics = self.align_libraries_star_pairs(pairs, threads=eff_threads)
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 9: RSeQC STRANDEDNESS INFERENCE ===")
+        strandedness_metrics = self.run_rseqc_strandedness_pairs(pairs)
+
+        print("=== 2-SAMPLE TECHNICAL PILOT: STAGE 10: SERIALIZE STRANDEDNESS EVIDENCE ===")
+        evidence_path = self.serialize_strandedness_evidence_pairs(
+            pairs=pairs,
+            study_id=f"{self.study_id}_technical_pilot",
+            env_metrics=env_metrics,
+            preflight_metrics=preflight_metrics,
+            ref_metrics=ref_metrics,
+            download_metrics=download_metrics,
+            pairing_metrics=pairing_metrics,
+            fastp_metrics=fastp_metrics,
+            star_index_metrics=star_index_metrics,
+            alignment_metrics=alignment_metrics,
+            strandedness_metrics=strandedness_metrics,
+        )
+
+        print("================================================================================")
+        print("GATE REACHED: AWAITING_OWNER_STRANDEDNESS_DECISION")
+        print(f"Technical pilot strandedness evidence artifact: {evidence_path}")
+        print("HALTING EXECUTION. Do NOT proceed to featureCounts until authorized by Owner.")
+        print("================================================================================")
+        return "AWAITING_OWNER_STRANDEDNESS_DECISION"
+
+    def run_featurecounts_and_downstream(
+        self,
+        pairs: tuple[FastqPair, ...] | list[FastqPair],
+        strandedness_flag: int,
+        threads: int | None = None,
+    ) -> dict[str, Any]:
+        """Execute featureCounts, convert to count matrix, and connect to downstream analysis modules."""
+        fc_result = self.run_featurecounts_pairs(pairs=pairs, strandedness_flag=strandedness_flag, threads=threads)
+        matrix_path = fc_result["output_matrix_path"]
+        run_ids = tuple(pair.sample_id for pair in pairs)
+
+        print(f"Executing downstream pipeline for count matrix: {matrix_path}...")
+        downstream_result = execute_downstream_pipeline(
+            counts_matrix_path=matrix_path,
+            runs=run_ids,
+            study_id=self.study_id,
+            output_dir=self.bridge_out_dir / "downstream_analysis",
+        )
+
+        return {
+            "status": "PIPELINE_COMPLETE",
+            "featurecounts_result": fc_result,
+            "downstream_result": downstream_result.to_dict(),
+        }
