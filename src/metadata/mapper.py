@@ -134,6 +134,9 @@ def _find_attribute_value(
 
 def _is_control_record(record: RawSampleRecord, rules: dict[str, tuple[str, ...]], defaults: dict[str, Any]) -> bool:
     """Determine whether a raw record represents a control condition."""
+    raw_ctrl_type, _ = _find_attribute_value(record, rules.get("control_type", ("control_type", "vehicle", "control")))
+    if raw_ctrl_type and str(raw_ctrl_type).lower() in ["vehicle", "control", "untreated", "negative_reference"]:
+        return True
     raw_cond_status, _ = _find_attribute_value(record, rules["condition_status"])
     cond_str = _clean_str(raw_cond_status) or defaults.get("condition_status")
     status_lower = cond_str.lower() if cond_str else ""
@@ -352,7 +355,10 @@ class CanonicalMetadataMapper:
             status_lower = cond_str.lower() if cond_str else ""
 
             is_control = False
-            if any(k in status_lower for k in ["control", "ctrl", "baseline", "untreated", "vehicle", "none", "dmso"]):
+            raw_ctrl_type, ctrl_type_key = _find_attribute_value(rec, self.rules.get("control_type", ("control_type", "vehicle", "control")))
+            if raw_ctrl_type and str(raw_ctrl_type).lower() in ["vehicle", "control", "untreated", "negative_reference"]:
+                is_control = True
+            elif any(k in status_lower for k in ["control", "ctrl", "baseline", "untreated", "vehicle", "none", "dmso"]):
                 is_control = True
             elif "treat" in status_lower or "exposed" in status_lower or "vpa" in status_lower:
                 is_control = False

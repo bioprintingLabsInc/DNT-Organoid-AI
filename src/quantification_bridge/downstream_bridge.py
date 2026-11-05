@@ -344,8 +344,26 @@ def execute_downstream_pipeline(
         "model_consistency_summary": integrity_res.model_consistency_summary,
     }
 
-    assay_id = f"{study_id}_assay"
-    asset_id = f"{study_id}_counts"
+    if "sequencing_assays" in metadata and metadata["sequencing_assays"]:
+        assay_id = metadata["sequencing_assays"][0].get("assay_id", f"{study_id}_assay")
+        if "sample_ids" not in metadata["sequencing_assays"][0] or not metadata["sequencing_assays"][0]["sample_ids"]:
+            metadata["sequencing_assays"][0]["sample_ids"] = list(runs)
+    else:
+        assay_id = f"{study_id}_assay"
+        metadata["sequencing_assays"] = [{
+            "assay_id": assay_id,
+            "sample_ids": list(runs),
+        }]
+
+    if "input_data_assets" in metadata and metadata["input_data_assets"]:
+        asset_id = metadata["input_data_assets"][0].get("asset_id", f"{study_id}_counts")
+    else:
+        asset_id = f"{study_id}_counts"
+        metadata["input_data_assets"] = [{
+            "asset_id": asset_id,
+            "assay_ids": [assay_id],
+            "input_data_format": "raw_counts",
+        }]
 
     # -------------------------------------------------------------------------
     # Step 6A: Quality Control & Matrix Integrity Check
@@ -427,8 +445,61 @@ def execute_downstream_pipeline(
     # -------------------------------------------------------------------------
     # Step 7B: Differential Expression (DESeq2) Biological Replication Gate
     # -------------------------------------------------------------------------
-    controls = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r, None) and RUN_TO_SAMPLE_MAP[r].condition_group == "control"]
-    treated = [r for r in runs if RUN_TO_SAMPLE_MAP.get(r, None) and RUN_TO_SAMPLE_MAP[r].condition_group == "treatment"]
+    controls = []
+    treated = []
+    for r in runs:
+        meta = RUN_TO_SAMPLE_MAP.get(r, None)
+        if meta:
+            if meta.condition_group == "control":
+                controls.append(r)
+            elif meta.condition_group == "treatment":
+                treated.append(r)
+        elif schema_metadata and "samples" in schema_metadata:
+            s_rec = next(
+                (
+                    s for s in schema_metadata["samples"]
+                    if s.get("sample_id") == r
+                    or s.get("run_accession", {}).get("value") == r
+                    or s.get("attributes", {}).get("sample_id") == r
+                ),
+                None,
+            )
+            if s_rec:
+                cond_id = s_rec.get("condition_id")
+                cond_rec = next(
+                    (c for c in schema_metadata.get("conditions", []) if c.get("condition_id") == cond_id),
+                    None,
+                )
+                cond_status = None
+                if cond_rec:
+                    tc_rec = cond_rec.get("treatment_control_status", {})
+                    cond_status = (
+                        tc_rec.get("normalized_value")
+                        or tc_rec.get("original_value")
+                        or tc_rec.get("value")
+                        if isinstance(tc_rec, dict)
+                        else tc_rec
+                    )
+                ctrl_rec = s_rec.get("control_type", {})
+                ctrl_val = (
+                    ctrl_rec.get("normalized_value")
+                    or ctrl_rec.get("original_value")
+                    or ctrl_rec.get("value")
+                    if isinstance(ctrl_rec, dict)
+                    else ctrl_rec
+                )
+                is_ctrl_rec = s_rec.get("is_control", {})
+                is_ctrl = (
+                    is_ctrl_rec.get("normalized_value")
+                    or is_ctrl_rec.get("original_value")
+                    or is_ctrl_rec.get("value")
+                    if isinstance(is_ctrl_rec, dict)
+                    else is_ctrl_rec
+                )
+                if cond_status == "control" or is_ctrl is True or ctrl_val in ("vehicle", "untreated", "vehicle_control", "negative_reference"):
+                    controls.append(r)
+                else:
+                    treated.append(r)
 
     n_ctrl = len(controls)
     n_trt = len(treated)
@@ -488,6 +559,7 @@ def execute_downstream_pipeline(
                 and any(
                     getattr(RUN_TO_SAMPLE_MAP.get(r), "biological_replicate_unit", "") == "UNVERIFIED"
                     for r in runs
+                    if RUN_TO_SAMPLE_MAP.get(r) is not None
                 )
             )
         )

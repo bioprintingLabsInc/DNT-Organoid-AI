@@ -17,6 +17,26 @@ class FastqPairingError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class FastqSingle:
+    """Immutable record of a validated single-end FASTQ library for a single sample."""
+
+    sample_id: str
+    r1_path: Path
+    assay_id: str | None = None
+    r1_asset_id: str | None = None
+    extra_metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sample_id": self.sample_id,
+            "r1_path": str(self.r1_path),
+            "assay_id": self.assay_id,
+            "r1_asset_id": self.r1_asset_id,
+            "extra_metadata": self.extra_metadata,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class FastqPair:
     """Immutable record of a validated paired-end FASTQ library for a single sample."""
 

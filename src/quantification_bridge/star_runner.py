@@ -111,26 +111,33 @@ def parse_star_final_log(log_path: str | Path) -> dict[str, Any]:
 
 def align_reads_star(
     trimmed_r1: str | Path,
-    trimmed_r2: str | Path,
-    index_dir: str | Path,
-    output_prefix: str | Path,
+    trimmed_r2: str | Path | None = None,
+    index_dir: str | Path = "star_index",
+    output_prefix: str | Path = "star_output/",
     threads: int = 8,
     bam_sort_mode: str = "SortedByCoordinate",
     limit_bam_sort_ram: int = 0,
     external_sort: bool = False,
     samtools_sort_mem: str = "1G",
 ) -> dict[str, Any]:
-    """Execute governed STAR paired-end alignment with configurable sorting."""
+    """Execute governed STAR alignment (paired-end or single-end) with configurable sorting."""
     r1_p = Path(trimmed_r1).resolve()
-    r2_p = Path(trimmed_r2).resolve()
+    r2_p = Path(trimmed_r2).resolve() if trimmed_r2 is not None else None
     idx_p = Path(index_dir).resolve()
     out_prefix_p = Path(output_prefix).resolve()
     out_prefix_p.parent.mkdir(parents=True, exist_ok=True)
 
     wsl_r1 = to_wsl_path(r1_p)
-    wsl_r2 = to_wsl_path(r2_p)
     wsl_idx = to_wsl_path(idx_p)
     wsl_out = to_wsl_path(out_prefix_p)
+
+    if r2_p is not None:
+        wsl_r2 = to_wsl_path(r2_p)
+        read_files_in = f"{wsl_r1} {wsl_r2}"
+    else:
+        read_files_in = f"{wsl_r1}"
+
+    read_cmd_flag = "--readFilesCommand zcat " if str(r1_p).lower().endswith(".gz") else ""
 
     # Determine internal STAR sort mode
     star_sam_type = "BAM Unsorted" if external_sort else f"BAM {bam_sort_mode}"
@@ -138,8 +145,8 @@ def align_reads_star(
     cmd = (
         f"STAR --runMode alignReads "
         f"--genomeDir {wsl_idx} "
-        f"--readFilesIn {wsl_r1} {wsl_r2} "
-        f"--readFilesCommand zcat "
+        f"--readFilesIn {read_files_in} "
+        f"{read_cmd_flag}"
         f"--outFileNamePrefix {wsl_out} "
         f"--outSAMtype {star_sam_type} "
         f"--outSAMunmapped Within "
