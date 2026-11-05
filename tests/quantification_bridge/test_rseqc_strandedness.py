@@ -95,6 +95,17 @@ def test_authoritative_prjna802072_evidence_artifact():
     assert summary["mean_unexplained_fraction"] == 0.1956
     assert abs(summary["mean_forward_fraction"] - summary["mean_reverse_fraction"]) < 0.001
 
+    # Assert recorded owner decision and preserved gate state
+    assert data["execution_state"] == "STRANDEDNESS_DECISION_ACCEPTED"
+    assert data["checkpoint_gate_state"] == "AWAITING_OWNER_STRANDEDNESS_DECISION"
+    assert "accepted_decision" in data
+    assert data["accepted_decision"]["status"] == "APPROVED"
+    assert data["accepted_decision"]["featurecounts_flag"] == 0
+    assert data["accepted_decision"]["strand_mode"] == "unstranded"
+    assert data["accepted_decision"]["featurecounts_parameter"] == "-s 0"
+    assert data["accepted_decision"]["supporting_rseqc_findings"]["cohort_size"] == 12
+    assert data["accepted_decision"]["supporting_rseqc_findings"]["absolute_orientation_difference"] == 0.0006
+
     # Evaluate summary
     decision_summary = infer_strandedness_decision(summary)
     assert decision_summary.strandedness_flag == 0
@@ -202,3 +213,31 @@ def test_downstream_biological_replication_gate_real_12_sample_matrix(tmp_path: 
     assert result.pathway_status == "BLOCKED_UNVERIFIED_BIOLOGICAL_REPLICATION"
     assert result.biological_replicate_warning is not None
     assert "Biological replication is UNVERIFIED" in result.biological_replicate_warning
+
+
+def test_pipeline_record_accepted_strandedness_decision(tmp_path: Path):
+    """Verify record_accepted_strandedness_decision transitions state and records findings."""
+    pipeline = QuantificationBridgePipeline()
+    ev_file = tmp_path / "test_evidence.json"
+    dummy_payload = {
+        "execution_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
+        "study_accession": "TEST_STUDY",
+        "total_samples": 2,
+        "strandedness_summary": {
+            "mean_forward_fraction": 0.405,
+            "mean_reverse_fraction": 0.401,
+            "mean_unexplained_fraction": 0.194,
+            "rseqc_consensus_indication": "UNSTRANDED (featureCounts -s 0)",
+        },
+    }
+    import json
+    ev_file.write_text(json.dumps(dummy_payload), encoding="utf-8")
+
+    pipeline.record_accepted_strandedness_decision(ev_file, strandedness_flag=0, strand_mode="unstranded")
+
+    updated = json.loads(ev_file.read_text(encoding="utf-8"))
+    assert updated["execution_state"] == "STRANDEDNESS_DECISION_ACCEPTED"
+    assert updated["checkpoint_gate_state"] == "AWAITING_OWNER_STRANDEDNESS_DECISION"
+    assert updated["accepted_decision"]["status"] == "APPROVED"
+    assert updated["accepted_decision"]["featurecounts_flag"] == 0
+    assert updated["accepted_decision"]["supporting_rseqc_findings"]["absolute_orientation_difference"] == 0.004

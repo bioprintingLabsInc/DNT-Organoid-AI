@@ -36,8 +36,10 @@ from .downstream_bridge import build_canonical_metadata_for_runs, execute_downst
 from .featurecounts_runner import execute_featurecounts_and_adapter, run_featurecounts
 from .manifest import (
     APPROVED_2_SAMPLE_TECHNICAL_PILOT,
+    APPROVED_FEATURECOUNTS_STRANDEDNESS_FLAG,
     APPROVED_PILOT_RUNS,
     APPROVED_RUN_ACCESSIONS,
+    APPROVED_STRANDEDNESS_MODE,
     BIOLOGICAL_REPLICATE_UNIT,
     TARGET_BIOPROJECT,
     TARGET_DEVELOPMENTAL_DAY,
@@ -718,6 +720,53 @@ class QuantificationBridgePipeline:
             alignment_metrics=alignment_metrics,
             strandedness_metrics=strandedness_metrics,
         )
+
+    def record_accepted_strandedness_decision(
+        self,
+        evidence_path: str | Path,
+        strandedness_flag: int = APPROVED_FEATURECOUNTS_STRANDEDNESS_FLAG,
+        strand_mode: str = APPROVED_STRANDEDNESS_MODE,
+        reviewer_name: str = "Project Owner / Scientific Review",
+        rationale: str | None = None,
+    ) -> Path:
+        """Record accepted strandedness decision into an evidence artifact, transitioning out of gate."""
+        ev_p = Path(evidence_path).resolve()
+        if not ev_p.exists():
+            raise FileNotFoundError(f"Evidence artifact not found: {ev_p}")
+        data = json.loads(ev_p.read_text(encoding="utf-8"))
+        data["execution_state"] = "STRANDEDNESS_DECISION_ACCEPTED"
+        data["checkpoint_gate_state"] = "AWAITING_OWNER_STRANDEDNESS_DECISION"
+        summary = data.get("strandedness_summary", {})
+        fwd = summary.get("mean_forward_fraction", 0.0)
+        rev = summary.get("mean_reverse_fraction", 0.0)
+        unexp = summary.get("mean_unexplained_fraction", 0.0)
+        diff = round(abs(fwd - rev), 4)
+        default_rat = (
+            f"Empirical RSeQC strand distribution across all {data.get('total_samples', 0)} libraries demonstrates "
+            f"balanced forward ({fwd*100:.2f}%) and reverse ({rev*100:.2f}%) mapping with |delta| = {diff}, "
+            f"confirming unstranded library preparation. Quantification proceeds with featureCounts flag -s {strandedness_flag}."
+        )
+        data["accepted_decision"] = {
+            "status": "APPROVED",
+            "featurecounts_flag": strandedness_flag,
+            "strand_mode": strand_mode,
+            "featurecounts_parameter": f"-s {strandedness_flag}",
+            "approval_timestamp_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "approved_by": reviewer_name,
+            "cohort_scope": f"{data.get('study_accession', 'generic_study')} ({data.get('total_samples', 0)} libraries)",
+            "supporting_rseqc_findings": {
+                "cohort_size": data.get("total_samples", 0),
+                "mean_forward_fraction": fwd,
+                "mean_reverse_fraction": rev,
+                "mean_unexplained_fraction": unexp,
+                "absolute_orientation_difference": diff,
+                "consensus_indication": summary.get("rseqc_consensus_indication", f"Mode: {strand_mode}"),
+                "rationale": rationale or default_rat,
+            },
+        }
+        ev_p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        print(f"Recorded accepted strandedness decision (-s {strandedness_flag}) into {ev_p}")
+        return ev_p
 
     def execute_raw_read_route(
         self,

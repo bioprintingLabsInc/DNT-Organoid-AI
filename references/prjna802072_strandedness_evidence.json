@@ -1,8 +1,27 @@
 {
-  "execution_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
+  "execution_state": "STRANDEDNESS_DECISION_ACCEPTED",
+  "checkpoint_gate_state": "AWAITING_OWNER_STRANDEDNESS_DECISION",
   "study_accession": "PRJNA802072",
   "total_samples": 12,
   "generated_timestamp_utc": "2026-11-05 08:16:00 UTC",
+  "accepted_decision": {
+    "status": "APPROVED",
+    "featurecounts_flag": 0,
+    "strand_mode": "unstranded",
+    "featurecounts_parameter": "-s 0",
+    "approval_timestamp_utc": "2026-11-05 10:30:00 UTC",
+    "approved_by": "Project Owner / Scientific Review",
+    "cohort_scope": "PRJNA802072 (12 libraries)",
+    "supporting_rseqc_findings": {
+      "cohort_size": 12,
+      "mean_forward_fraction": 0.4019,
+      "mean_reverse_fraction": 0.4025,
+      "mean_unexplained_fraction": 0.1956,
+      "absolute_orientation_difference": 0.0006,
+      "consensus_indication": "UNSTRANDED (featureCounts -s 0)",
+      "rationale": "Empirical RSeQC strand distribution across all 12 libraries demonstrates balanced forward (40.19%) and reverse (40.25%) mapping with |delta| = 0.0006, conclusively ruling out strand-specific library preparation. Quantification proceeds with featureCounts flag -s 0."
+    }
+  },
   "strandedness_decision": {
     "strandedness_flag": 0,
     "strand_mode": "unstranded",
