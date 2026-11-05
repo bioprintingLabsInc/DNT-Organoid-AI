@@ -35,6 +35,7 @@ across researcher-provided datasets, without Google Colab dependencies:
 
 from dataclasses import asdict, dataclass, field
 import datetime
+import gzip
 import hashlib
 import json
 import os
@@ -434,6 +435,25 @@ def compute_file_content_hash(path: Path | str) -> str:
     return hasher.hexdigest()
 
 
+def compute_full_file_sha256(path: Path | str, chunk_size: int = 65536) -> str:
+    """Compute full-file SHA-256 cryptographic checksum by streaming entire file contents in chunks.
+
+    Unlike sampled hashing, this reads every byte from beginning to end, guaranteeing
+    that any alteration in the beginning, middle, or end of large FASTQ files is detected.
+    """
+    p = Path(path).resolve()
+    if not p.is_file():
+        raise FileNotFoundError(f"File not found for full checksum computation: {p}")
+    hasher = hashlib.sha256()
+    with p.open("rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 def _verify_output_integrity(out: Path | str) -> bool:
     """Verify physical output existence, non-emptiness, and format validity."""
     out_p = Path(out).resolve()
@@ -507,6 +527,22 @@ def _verify_output_integrity(out: Path | str) -> bool:
     return True
 
 
+@dataclass(frozen=True)
+class SraCheckpointVerification:
+    """Result of SRA extraction checkpoint and exact FASTQ file verification."""
+
+    is_valid: bool
+    reason: str
+    fastq_r1: Path | None = None
+    fastq_r2: Path | None = None
+
+    def __bool__(self) -> bool:
+        return self.is_valid
+
+    def __iter__(self):
+        return iter((self.is_valid, self.reason, (self.fastq_r1, self.fastq_r2) if self.is_valid else None))
+
+
 class CheckpointManager:
     """Atomic file-based checkpoint store ensuring safe resumption and preventing invalid reuse."""
 
@@ -538,6 +574,18 @@ class CheckpointManager:
             data = json.loads(chk_p.read_text(encoding="utf-8"))
         except Exception:
             return False
+
+        if stage == "sra_extract":
+            rec_acc = data.get("sra_accession", "")
+            rec_layout = data.get("read_layout", "paired_end")
+            ver = self.verify_sra_checkpoint(
+                sample_id=data.get("sample_id") or identifier,
+                sra_accession=rec_acc,
+                read_layout=rec_layout,
+                input_hash=input_hash,
+                config_hash=config_hash,
+            )
+            return ver.is_valid
 
         if data.get("status") != "COMPLETED":
             return False
@@ -587,6 +635,302 @@ class CheckpointManager:
             "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         chk_p.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+    def record_sra_checkpoint(
+        self,
+        sample_id: str,
+        sra_accession: str,
+        read_layout: str,
+        fastq_r1: Path | str,
+        fastq_r2: Path | str | None,
+        input_hash: str,
+        config_hash: str,
+        metrics: dict[str, Any] | None = None,
+    ) -> Path:
+        """Write an atomic, cryptographically verified SRA checkpoint record to disk."""
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        chk_p = self._get_path("sra_extract", sample_id)
+
+        r1_p = Path(fastq_r1).resolve()
+        if not r1_p.is_file():
+            raise FileNotFoundError(f"Cannot record SRA checkpoint; R1 FASTQ does not exist: {r1_p}")
+        r1_size = r1_p.stat().st_size
+        r1_sha256 = compute_full_file_sha256(r1_p)
+
+        r2_p = Path(fastq_r2).resolve() if fastq_r2 is not None else None
+        if r2_p is not None:
+            if not r2_p.is_file():
+                raise FileNotFoundError(f"Cannot record SRA checkpoint; R2 FASTQ does not exist: {r2_p}")
+            r2_size = r2_p.stat().st_size
+            r2_sha256 = compute_full_file_sha256(r2_p)
+        else:
+            r2_size = None
+            r2_sha256 = None
+
+        expected_count = 2 if (read_layout == "paired_end" or r2_p is not None) else 1
+
+        files_dict = {
+            "r1": {
+                "path": str(r1_p),
+                "size": r1_size,
+                "sha256": r1_sha256,
+            },
+            "r2": {
+                "path": str(r2_p),
+                "size": r2_size,
+                "sha256": r2_sha256,
+            } if r2_p is not None else None,
+        }
+
+        outputs = [str(r1_p)] + ([str(r2_p)] if r2_p is not None else [])
+        output_hashes = {str(r1_p): r1_sha256}
+        if r2_p is not None and r2_sha256 is not None:
+            output_hashes[str(r2_p)] = r2_sha256
+
+        record = {
+            "stage": "sra_extract",
+            "identifier": sample_id,
+            "sample_id": sample_id,
+            "sra_accession": sra_accession,
+            "read_layout": read_layout,
+            "expected_file_count": expected_count,
+            "status": "COMPLETED",
+            "input_hash": input_hash,
+            "config_hash": config_hash,
+            "outputs": outputs,
+            "output_hashes": output_hashes,
+            "files": files_dict,
+            "metrics": metrics or {},
+            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+
+        chk_p.write_text(json.dumps(record, indent=2), encoding="utf-8")
+        return chk_p
+
+    def verify_sra_checkpoint(
+        self,
+        sample_id: str,
+        sra_accession: str,
+        read_layout: str,
+        input_hash: str | None = None,
+        config_hash: str | None = None,
+    ) -> SraCheckpointVerification:
+        """Verify whether an SRA extraction checkpoint is intact, unaltered, and safe to resume."""
+        if not self.checkpoint_dir.is_dir():
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Checkpoint directory does not exist: {self.checkpoint_dir}",
+            )
+
+        chk_p = self._get_path("sra_extract", sample_id)
+        if not chk_p.is_file():
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA checkpoint file not found: {chk_p}",
+            )
+
+        try:
+            content = chk_p.read_text(encoding="utf-8")
+            if not content.strip():
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"SRA checkpoint file is empty: {chk_p}",
+                )
+            data = json.loads(content)
+        except Exception as e:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA checkpoint file is malformed or invalid JSON: {e}",
+            )
+
+        if not isinstance(data, dict):
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA checkpoint JSON root must be an object, got {type(data).__name__}",
+            )
+
+        if data.get("status") != "COMPLETED":
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA checkpoint status is '{data.get('status')}', expected 'COMPLETED'",
+            )
+
+        if input_hash is not None and data.get("input_hash") != input_hash:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA input hash mismatch (recorded: '{data.get('input_hash')}', expected: '{input_hash}')",
+            )
+
+        if config_hash is not None and data.get("config_hash") != config_hash:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA config hash mismatch (recorded: '{data.get('config_hash')}', expected: '{config_hash}')",
+            )
+
+        # Accession and sample matching
+        rec_acc = data.get("sra_accession")
+        if rec_acc != sra_accession:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"SRA accession mismatch: checkpoint has '{rec_acc}', expected '{sra_accession}'",
+            )
+
+        rec_sid = data.get("sample_id") or data.get("identifier")
+        if rec_sid != sample_id:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Sample ID mismatch: checkpoint has '{rec_sid}', expected '{sample_id}'",
+            )
+
+        # Layout matching
+        rec_layout = data.get("read_layout")
+        if rec_layout != read_layout:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Read layout mismatch: checkpoint has '{rec_layout}', expected '{read_layout}'",
+            )
+
+        # Legacy checkpoint check: require 'files' dict, 'expected_file_count', and per-file 'sha256'
+        files_info = data.get("files")
+        if not isinstance(files_info, dict):
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason="Legacy or incomplete SRA checkpoint missing 'files' integrity dictionary",
+            )
+
+        expected_count = data.get("expected_file_count")
+        if read_layout == "paired_end" and expected_count != 2:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Paired-end layout requires expected_file_count=2, found {expected_count}",
+            )
+        if read_layout == "single_end" and expected_count != 1:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Single-end layout requires expected_file_count=1, found {expected_count}",
+            )
+
+        r1_entry = files_info.get("r1")
+        if not isinstance(r1_entry, dict) or not r1_entry.get("path") or "sha256" not in r1_entry or "size" not in r1_entry:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason="Legacy or incomplete SRA checkpoint: missing 'r1' integrity metadata (path, size, sha256)",
+            )
+
+        r1_path = Path(r1_entry["path"]).resolve()
+        if not r1_path.is_file():
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Recorded R1 FASTQ does not exist: {r1_path}",
+            )
+
+        r1_st = r1_path.stat()
+        if r1_st.st_size == 0:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"Recorded R1 FASTQ is empty (0 bytes): {r1_path}",
+            )
+
+        if r1_st.st_size != r1_entry["size"]:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"R1 FASTQ file size mismatch: on disk {r1_st.st_size} bytes, recorded {r1_entry['size']} bytes",
+            )
+
+        if not _verify_output_integrity(r1_path):
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"R1 FASTQ failed structural format integrity check: {r1_path}",
+            )
+
+        r1_sha256 = compute_full_file_sha256(r1_path)
+        if r1_sha256 != r1_entry["sha256"]:
+            return SraCheckpointVerification(
+                is_valid=False,
+                reason=f"R1 FASTQ full cryptographic checksum mismatch: computed {r1_sha256}, recorded {r1_entry['sha256']}",
+            )
+
+        # Paired-end R2 verification
+        r2_path: Path | None = None
+        if read_layout == "paired_end":
+            r2_entry = files_info.get("r2")
+            if not isinstance(r2_entry, dict) or not r2_entry.get("path") or "sha256" not in r2_entry or "size" not in r2_entry:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason="Legacy or incomplete SRA checkpoint: paired-end layout requires 'r2' integrity metadata (path, size, sha256)",
+                )
+
+            r2_path = Path(r2_entry["path"]).resolve()
+            if not r2_path.is_file():
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"Recorded R2 FASTQ does not exist: {r2_path}",
+                )
+
+            r2_st = r2_path.stat()
+            if r2_st.st_size == 0:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"Recorded R2 FASTQ is empty (0 bytes): {r2_path}",
+                )
+
+            if r2_st.st_size != r2_entry["size"]:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"R2 FASTQ file size mismatch: on disk {r2_st.st_size} bytes, recorded {r2_entry['size']} bytes",
+                )
+
+            if not _verify_output_integrity(r2_path):
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"R2 FASTQ failed structural format integrity check: {r2_path}",
+                )
+
+            r2_sha256 = compute_full_file_sha256(r2_path)
+            if r2_sha256 != r2_entry["sha256"]:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"R2 FASTQ full cryptographic checksum mismatch: computed {r2_sha256}, recorded {r2_entry['sha256']}",
+                )
+
+            # Check for identical / swapped files
+            if r1_path == r2_path:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"R1 and R2 recorded paths are identical: {r1_path}",
+                )
+
+            r1_name = r1_path.name
+            r2_name = r2_path.name
+            if (("_2." in r1_name or "_R2" in r1_name or r1_name.endswith("_2.fastq.gz") or r1_name.endswith("_2.fastq")) and
+                ("_1." in r2_name or "_R1" in r2_name or r2_name.endswith("_1.fastq.gz") or r2_name.endswith("_1.fastq"))):
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason=f"R1 and R2 mate files appear exchanged: R1={r1_name}, R2={r2_name}",
+                )
+        else:
+            # Single end: ensure r2 is None
+            if files_info.get("r2") is not None:
+                return SraCheckpointVerification(
+                    is_valid=False,
+                    reason="Single-end layout must not have an 'r2' file recorded",
+                )
+
+        # Check association: ensure file names match accession or sample_id
+        for p, label in ((r1_path, "R1"), (r2_path, "R2")):
+            if p is not None:
+                if sra_accession not in p.name and sample_id not in p.name and sra_accession not in str(p) and sample_id not in str(p):
+                    return SraCheckpointVerification(
+                        is_valid=False,
+                        reason=f"Recorded {label} FASTQ '{p.name}' is not associated with sample '{sample_id}' or accession '{sra_accession}'",
+                    )
+
+        return SraCheckpointVerification(
+            is_valid=True,
+            reason="SRA checkpoint and exact FASTQ outputs verified successfully",
+            fastq_r1=r1_path,
+            fastq_r2=r2_path,
+        )
 
 
 PipelineCheckpointManager = CheckpointManager
@@ -1021,12 +1365,22 @@ class UniversalFastqPipeline:
         # 0. SRA Retrieval if applicable
         for s in self.samples:
             if s.sra_accession and not s.r1_path:
+                sra_input_hash = self._compute_hash(s.sra_accession)
+                sra_config_hash = self._compute_hash(s.sample_id, str(self.config.threads))
+                ver = self.checkpoint_manager.verify_sra_checkpoint(
+                    sample_id=s.sample_id,
+                    sra_accession=s.sra_accession,
+                    read_layout=s.read_layout,
+                    input_hash=sra_input_hash,
+                    config_hash=sra_config_hash,
+                )
                 stages.append({
                     "stage_id": f"00_sra_{s.sample_id}",
                     "name": f"SRA Extraction ({s.sample_id})",
                     "sample_id": s.sample_id,
                     "accession": s.sra_accession,
                     "target_dir": str(self.sra_dir / s.sample_id),
+                    "can_reuse": ver.is_valid,
                 })
 
         # 1. References setup
@@ -1223,9 +1577,53 @@ class UniversalFastqPipeline:
                 sra_target = self.sra_dir / s.sample_id
                 sra_input_hash = self._compute_hash(s.sra_accession)
                 sra_config_hash = self._compute_hash(s.sample_id, str(self.config.threads))
-                if not self.checkpoint_manager.is_stage_completed(
-                    "sra_extract", s.sample_id, [sra_target], sra_input_hash, sra_config_hash
-                ):
+
+                chk_path = self.checkpoint_manager._get_path("sra_extract", s.sample_id)
+                has_prior_checkpoint = chk_path.is_file()
+                has_existing_outputs = sra_target.is_dir() and any(sra_target.iterdir())
+
+                if has_prior_checkpoint or has_existing_outputs:
+                    # An existing run was recorded or attempted: verify exact checkpoint and FASTQs
+                    ver = self.checkpoint_manager.verify_sra_checkpoint(
+                        sample_id=s.sample_id,
+                        sra_accession=s.sra_accession,
+                        read_layout=s.read_layout,
+                        input_hash=sra_input_hash,
+                        config_hash=sra_config_hash,
+                    )
+                    if ver.is_valid and ver.fastq_r1 is not None:
+                        r2_desc = f", {ver.fastq_r2.name}" if ver.fastq_r2 else ""
+                        print(f"[REUSE] SRA extraction checkpoint valid for {s.sample_id}: {ver.fastq_r1.name}{r2_desc}")
+                        resolved_fastqs[s.sample_id] = (ver.fastq_r1, ver.fastq_r2)
+                    else:
+                        print(f"[REJECT] SRA extraction checkpoint invalid for {s.sample_id}: {ver.reason}")
+                        finding = PipelineFinding(
+                            severity="FATAL",
+                            code="INVALID_SRA_CHECKPOINT",
+                            message=(
+                                f"SRA checkpoint verification failed for sample '{s.sample_id}' "
+                                f"(accession {s.sra_accession}): {ver.reason}. Safe reprocessing requires "
+                                f"fresh planning and explicit user approval before downloading or re-extracting."
+                            ),
+                            remediation="Inspect FASTQ files or checkpoint in output directory, generate a fresh plan with plan(), and re-run with approval.",
+                        )
+                        return UniversalFastqResult(
+                            status="BLOCKED_INVALID_SRA_CHECKPOINT",
+                            study_id=self.config.study_id,
+                            sample_ids=sample_ids,
+                            raw_counts_path=None,
+                            canonical_metadata_path=None,
+                            qc_reports_dir=None,
+                            alignments_dir=None,
+                            strandedness_evidence_path=None,
+                            counting_summary_path=None,
+                            execution_record_path=None,
+                            findings=(finding,),
+                            completed_stages=tuple(completed_stages),
+                            failed_stage="sra_extraction",
+                        )
+                else:
+                    # Clean first run: perform SRA extraction
                     print(f"Retrieving SRA accession {s.sra_accession} for {s.sample_id}...")
                     sra_res = extract_sra(
                         sra_path=s.sra_accession,
@@ -1233,23 +1631,16 @@ class UniversalFastqPipeline:
                         threads=self.config.threads,
                     )
                     resolved_fastqs[s.sample_id] = (sra_res.fastq_r1, sra_res.fastq_r2)
-                    outputs = [sra_res.fastq_r1] + ([sra_res.fastq_r2] if sra_res.fastq_r2 else [])
-                    self.checkpoint_manager.record_checkpoint(
-                        stage="sra_extract",
-                        identifier=s.sample_id,
-                        outputs=outputs,
+                    self.checkpoint_manager.record_sra_checkpoint(
+                        sample_id=s.sample_id,
+                        sra_accession=s.sra_accession,
+                        read_layout=s.read_layout,
+                        fastq_r1=sra_res.fastq_r1,
+                        fastq_r2=sra_res.fastq_r2,
                         input_hash=sra_input_hash,
                         config_hash=sra_config_hash,
                         metrics=sra_res.to_dict(),
                     )
-                else:
-                    print(f"[REUSE] SRA extraction checkpoint valid for {s.sample_id}")
-                    found = list(sra_target.glob(f"{s.sra_accession}*.fastq*"))
-                    f_r1 = next((f for f in found if "_1" in f.name), found[0] if found else None)
-                    f_r2 = next((f for f in found if "_2" in f.name), None)
-                    if not f_r1:
-                        raise FileNotFoundError(f"SRA outputs missing in {sra_target} for {s.sample_id}")
-                    resolved_fastqs[s.sample_id] = (f_r1, f_r2)
         if any(s.sra_accession and not s.r1_path for s in self.samples):
             completed_stages.append("sra_extraction")
 
@@ -1637,6 +2028,19 @@ class UniversalFastqPipeline:
 
     def _detect_reusable_stages(self) -> list[str]:
         stages = []
+        for s in self.samples:
+            if s.sra_accession and not s.r1_path:
+                sra_input_hash = self._compute_hash(s.sra_accession)
+                sra_config_hash = self._compute_hash(s.sample_id, str(self.config.threads))
+                ver = self.checkpoint_manager.verify_sra_checkpoint(
+                    sample_id=s.sample_id,
+                    sra_accession=s.sra_accession,
+                    read_layout=s.read_layout,
+                    input_hash=sra_input_hash,
+                    config_hash=sra_config_hash,
+                )
+                if ver.is_valid:
+                    stages.append(f"sra_extraction_{s.sample_id}")
         star_idx = self.references.star_index_dir or (self.out_dir / "star_index")
         if star_idx.is_dir() and (star_idx / "Genome").is_file():
             stages.append("star_index")

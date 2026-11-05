@@ -50,9 +50,11 @@ from .universal_pipeline import (
     ProcessingPlan,
     ReferenceConfig,
     SampleInput,
+    SraCheckpointVerification,
     UniversalFastqPipeline,
     UniversalFastqResult,
     UniversalPipelineConfig,
+    compute_full_file_sha256,
     load_sample_metadata,
 )
 from .validator import validate_paired_fastqs, validate_single_fastq
@@ -79,6 +81,7 @@ __all__ = [
     "QuantificationBridgePipeline",
     "ReferenceConfig",
     "SampleInput",
+    "SraCheckpointVerification",
     "ToolInventory",
     "UniversalCheckpointManager",
     "UniversalFastqPipeline",
@@ -87,6 +90,7 @@ __all__ = [
     "UnverifiedStorageQuotaError",
     "archive_and_sync_directory",
     "check_storage_capacity",
+    "compute_full_file_sha256",
     "determine_read_mate",
     "evaluate_qc_metric",
     "extract_sample_stem",
