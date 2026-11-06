@@ -208,22 +208,23 @@ modules:
     first_troubleshooting_location: "docs/project/pipeline/gene_coresponse_and_network_features/README.md#1-scientific-objective--methodological-requirements"
     leakage_constraints: "Fixed external networks (Case A) may be evaluated as pre-split annotations. Data-adaptive co-response modules (Case B) must be learned strictly on the training partition after compound/study-safe dataset splitting, or within CV training folds. Calibration and test compounds must never participate in adaptive module or network learning."
 
-  - canonical_scientific_name: "Compound-Gene and Compound-Pathway Relationships"
+- canonical_scientific_name: "Compound-Gene and Compound-Pathway Relationships"
     historical_identifier: "Stage 8D"
-    status: "PLANNED"
-    implementation_status: "NOT_IMPLEMENTED"
-    primary_code_paths: []
-    test_paths: []
+    status: "VALIDATED"
+    implementation_status: "IMPLEMENTED"
+    primary_code_paths:
+      - "src/features/compound_pathway/"
+    test_paths:
+      - "tests/features/compound_pathway/"
     config_paths: []
-    principal_input: "Differential Molecular Response results (compound-gene) and Pathway & Signaling Feature results (compound-pathway)"
-    principal_output: "Structured experimental compound-gene and compound-pathway perturbation mappings preserving full experimental context (dose, duration, stage, study)"
+    principal_input: "Stage 8A.1 ConditionGeneResponseRegistry records (chemical-gene) and Stage 8C PathwayEnrichmentResult records (chemical-pathway)"
+    principal_output: "Structured ChemicalGenePathwayEvidenceDataset with deterministic CSV serialization preserving complete chemical exposure context, exact differential statistics, and pathway enrichment metrics"
     upstream_module: "Differential Molecular Response & Pathway and Signaling Features"
     downstream_module: "Compound/Study-Safe Dataset Splitting"
     governed_commit_or_tag: null
-    key_qc_invariant: "External toxicology resources remain separate annotation and post-hoc validation sources and are not automatically v1 predictive features."
+    key_qc_invariant: "Law of Conservation of the Gene Universe strictly enforced (0 genes dropped); explicit preservation of exact differential expression statistics and empirical pathway enrichment metrics; decoupled gene perturbation direction from pathway direction; direct physical binding or causality never claimed without direct assay proof; graceful handling of contrasts with unavailable pathway evidence (PathwayEvidenceStatus.NOT_AVAILABLE); zero leakage of DNT outcome labels or circular toxicological annotations."
     first_troubleshooting_location: "docs/project/pipeline/compound_gene_and_pathway_relationships/README.md#2-external-toxicological-knowledge--circularity-safeguards"
-    leakage_constraints: "Circularity prevention: external chemical-neurotoxicity annotations and known literature mechanisms must not leak into input features."
-
+    leakage_constraints: "Zero DNT label leakage (strictly 0 outcome labels); circularity prevention: external chemical-neurotoxicity annotations and known literature mechanisms must not leak into input features."
   - canonical_scientific_name: "Developmental Neurotoxicity Reference Label Curation"
     historical_identifier: "Stage 9"
     status: "PLANNED"

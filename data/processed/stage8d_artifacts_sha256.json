@@ -1,0 +1,29 @@
+{
+  "GSE232218_VPA_200uM": {
+    "output_csv": "data\\processed\\GSE232218_VPA_200uM_chemical_gene_pathway_evidence.csv",
+    "sha256": "03f916ba39338f68d8b16e934d3c1aa992e1fb8839938103e24a3e99be81406f",
+    "total_records": 176555,
+    "unique_genes": 60207,
+    "pathway_annotated_records": 123911,
+    "unannotated_records": 52644,
+    "is_valid": true
+  },
+  "GSE187006_U1M_VPA_1mM": {
+    "output_csv": "data\\processed\\GSE187006_U1M_VPA_1mM_chemical_gene_pathway_evidence.csv",
+    "sha256": "57be587cf66e2b32bf42ac007e4f0695d943aefd3514e2493096fe82bd319edb",
+    "total_records": 15561,
+    "unique_genes": 15561,
+    "pathway_annotated_records": 0,
+    "unannotated_records": 15561,
+    "is_valid": true
+  },
+  "GSE187006_U2F_VPA_1mM": {
+    "output_csv": "data\\processed\\GSE187006_U2F_VPA_1mM_chemical_gene_pathway_evidence.csv",
+    "sha256": "159d759854a8998d3f174e2b1068795d182b2a9027d3d53a78dca5d11709375f",
+    "total_records": 15561,
+    "unique_genes": 15561,
+    "pathway_annotated_records": 0,
+    "unannotated_records": 15561,
+    "is_valid": true
+  }
+}
