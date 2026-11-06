@@ -1,7 +1,6 @@
 """Stage 8D: Serialization and Export for Chemical–Gene–Pathway Evidence Relationships."""
 
 from pathlib import Path
-from typing import Any
 import pandas as pd
 
 from src.features.compound_pathway.models import ChemicalGenePathwayEvidenceDataset
@@ -9,11 +8,13 @@ from src.features.compound_pathway.models import ChemicalGenePathwayEvidenceData
 
 CANONICAL_EVIDENCE_COLUMNS = [
     "evidence_id",
-    "contrast_id",
     "study_id",
+    "contrast_id",
     "independent_study_id",
     "compound_id",
     "compound_name",
+    "treatment_condition_id",
+    "matched_control_condition_ids",
     "dose_value",
     "dose_unit",
     "exposure_duration",
@@ -22,6 +23,7 @@ CANONICAL_EVIDENCE_COLUMNS = [
     "model_type",
     "canonical_ensembl_gene_id",
     "gene_symbol",
+    "base_mean",
     "log2_fold_change",
     "log2_fold_change_se",
     "wald_statistic",
@@ -34,15 +36,18 @@ CANONICAL_EVIDENCE_COLUMNS = [
     "pathway_name",
     "source_database",
     "database_version",
+    "enrichment_score",
     "pathway_normalized_enrichment_score",
     "pathway_p_value",
     "pathway_adjusted_p_value",
+    "pathway_size",
     "pathway_direction",
     "is_pathway_significant",
     "gene_membership_type",
     "is_leading_edge",
     "evidence_type",
     "is_direct_target_interaction",
+    "causality_claim",
     "scientific_limitations",
     "provenance_notes",
 ]
@@ -53,9 +58,9 @@ def export_evidence_to_dataframe(dataset: ChemicalGenePathwayEvidenceDataset) ->
     rows = [r.to_dict() for r in dataset.records]
     df = pd.DataFrame(rows, columns=CANONICAL_EVIDENCE_COLUMNS)
     if not df.empty:
-        # Deterministic sorting by contrast, gene, and pathway
+        # Deterministic sorting by study, contrast, gene, and pathway
         df = df.sort_values(
-            by=["contrast_id", "canonical_ensembl_gene_id", "pathway_id"],
+            by=["study_id", "contrast_id", "canonical_ensembl_gene_id", "pathway_id"],
             ascending=True,
             na_position="last",
         ).reset_index(drop=True)

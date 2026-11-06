@@ -104,8 +104,6 @@ def run_stage8d_evidence_generation() -> dict:
     reg_u1m = load_registry_from_csv(
         reg_csv_u1m,
         registry_id="reg_GSE187006_U1M",
-        default_treatment_condition="U1M_VPA",
-        default_control_condition="U1M_NC",
     )
     out_csv_u1m = artifacts_dir / "GSE187006_U1M_VPA_1mM_chemical_gene_pathway_evidence.csv"
     ds_u1m, qc_u1m = build_stage8d_evidence_pipeline(
@@ -148,8 +146,6 @@ def run_stage8d_evidence_generation() -> dict:
     reg_u2f = load_registry_from_csv(
         reg_csv_u2f,
         registry_id="reg_GSE187006_U2F",
-        default_treatment_condition="U2F_VPA",
-        default_control_condition="U2F_NC",
     )
     out_csv_u2f = artifacts_dir / "GSE187006_U2F_VPA_1mM_chemical_gene_pathway_evidence.csv"
     ds_u2f, qc_u2f = build_stage8d_evidence_pipeline(

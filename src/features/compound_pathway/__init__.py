@@ -9,6 +9,7 @@ from src.features.compound_pathway.builder import (
     build_chemical_exposure_context,
     build_chemical_gene_records,
     build_chemical_pathway_records,
+    determine_gene_pathway_membership,
     link_chemical_gene_pathway_evidence,
 )
 from src.features.compound_pathway.models import (
@@ -29,6 +30,7 @@ from src.features.compound_pathway.runner import (
     build_stage8d_evidence_pipeline,
     load_pathway_results_from_csv,
     load_registry_from_csv,
+    parse_bool_safely,
 )
 from src.features.compound_pathway.serialization import (
     CANONICAL_EVIDENCE_COLUMNS,
@@ -52,9 +54,11 @@ __all__ = [
     "build_chemical_gene_records",
     "build_chemical_pathway_records",
     "build_stage8d_evidence_pipeline",
+    "determine_gene_pathway_membership",
     "export_evidence_to_csv",
     "export_evidence_to_dataframe",
     "link_chemical_gene_pathway_evidence",
     "load_pathway_results_from_csv",
     "load_registry_from_csv",
+    "parse_bool_safely",
 ]

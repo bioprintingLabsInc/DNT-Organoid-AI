@@ -1,21 +1,13 @@
-"""Stage 8D: Chemical–Gene–Pathway Evidence Relationships — Data Models.
+"""Stage 8D: Data Models for Chemical–Gene–Pathway Evidence Relationships.
 
-Governed Scientific Invariants:
-1. Tripartite Traceability: Connects:
-       Chemical Exposure Context -> Observed Gene Response -> Associated Pathway Membership
-   while preserving the exact upstream statistics and experimental parameters.
-2. No Causality Assumption: Distinguishes observed transcriptomic perturbation from
-   experimentally proven direct chemical-target binding or receptor interaction.
-3. No Direction Transference: A gene's individual log2FC sign does NOT infer overall pathway
-   activation or inhibition without formal pathway-level scoring.
-4. Universal Modality Independence: Agnostic to chemical, dose, duration, organoid age,
-   or RNA-seq platform. Zero hardcoded validation dataset constants.
-5. Strict Leakage Prevention: Contains zero Stage 9 DNT outcome labels or supervisory signals.
+Defines immutable, typed dataclasses and controlled vocabularies connecting:
+    Chemical Exposure -> Observed Gene Perturbation -> Pathway Context
+maintaining exact upstream statistics, clear membership boundaries, and strict
+safeguards against unverified physical binding or causality claims.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
-import math
 from typing import Any
 
 from src.features.cross_study.models import (
@@ -25,29 +17,37 @@ from src.features.cross_study.models import (
 
 
 class EvidenceType(StrEnum):
-    """Scientific nature of the observed evidence connection."""
+    """Governed taxonomy of experimental evidence relationships."""
 
     OBSERVED_TRANSCRIPTOMIC_PERTURBATION = "OBSERVED_TRANSCRIPTOMIC_PERTURBATION"
-    PATHWAY_ENRICHMENT = "PATHWAY_ENRICHMENT"
-    DIRECT_TARGET_INTERACTION = "DIRECT_TARGET_INTERACTION"
-    PREDICTED_ASSOCIATION = "PREDICTED_ASSOCIATION"
+    PATHWAY_COLLECTIVE_PERTURBATION = "PATHWAY_COLLECTIVE_PERTURBATION"
+    INACTIVE_OR_UNANNOTATED_PERTURBATION = "INACTIVE_OR_UNANNOTATED_PERTURBATION"
 
 
 class PathwayEvidenceStatus(StrEnum):
-    """Availability and qualification status of pathway enrichment data for a contrast."""
+    """Qualification status of biological pathway evidence for a contrast."""
 
     AVAILABLE = "AVAILABLE"
+    NOT_ANNOTATED = "NOT_ANNOTATED"
     NOT_AVAILABLE = "NOT_AVAILABLE"
     EVALUATION_INELIGIBLE = "EVALUATION_INELIGIBLE"
     INSUFFICIENT_GENES = "INSUFFICIENT_GENES"
 
 
 class GenePathwayMembershipType(StrEnum):
-    """Nature of gene participation in a biological pathway."""
+    """Nature of gene participation in a biological pathway.
+
+    Distinguishes:
+    1. LEADING_EDGE_MEMBER: Verified core driving member in preranked GSEA.
+    2. NON_LEADING_EDGE_MEMBER: Verified member of the pathway gene set outside the leading edge.
+    3. CONFIRMED_NON_MEMBER: Verified complete gene set reference confirms gene is NOT a member.
+    4. UNKNOWN_OR_UNAVAILABLE: Complete gene set reference was unavailable, or pathway was not evaluated.
+    """
 
     LEADING_EDGE_MEMBER = "LEADING_EDGE_MEMBER"
-    PATHWAY_ANNOTATED_MEMBER = "PATHWAY_ANNOTATED_MEMBER"
-    UNANNOTATED = "UNANNOTATED"
+    NON_LEADING_EDGE_MEMBER = "NON_LEADING_EDGE_MEMBER"
+    CONFIRMED_NON_MEMBER = "CONFIRMED_NON_MEMBER"
+    UNKNOWN_OR_UNAVAILABLE = "UNKNOWN_OR_UNAVAILABLE"
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,19 +63,21 @@ class ChemicalExposureContext:
     exposure_duration_unit: str | None
     developmental_stage: str | None
     model_type: str | None
-    biological_source_ids: tuple[str, ...]
-    organoid_context_ids: tuple[str, ...]
-    study_id: str
-    study_family_id: str
-    independent_study_id: str
-    experiment_id: str
-    contrast_id: str
-    treatment_condition_id: str
-    matched_control_condition_ids: tuple[str, ...]
-    treatment_sample_ids: tuple[str, ...]
-    control_sample_ids: tuple[str, ...]
-    treatment_replicate_count: int
-    control_replicate_count: int
+    biological_source_ids: tuple[str, ...] = ()
+    organoid_context_ids: tuple[str, ...] = ()
+    study_id: str = ""
+    study_family_id: str = ""
+    independent_study_id: str = ""
+    experiment_id: str = ""
+    contrast_id: str = ""
+    treatment_condition_id: str = ""
+    matched_control_condition_ids: tuple[str, ...] = ()
+    treatment_sample_ids: tuple[str, ...] = ()
+    control_sample_ids: tuple[str, ...] = ()
+    treatment_biological_replicate_ids: tuple[str, ...] = ()
+    control_biological_replicate_ids: tuple[str, ...] = ()
+    treatment_replicate_count: int | None = None
+    control_replicate_count: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,6 +101,8 @@ class ChemicalExposureContext:
             "matched_control_condition_ids": list(self.matched_control_condition_ids),
             "treatment_sample_ids": list(self.treatment_sample_ids),
             "control_sample_ids": list(self.control_sample_ids),
+            "treatment_biological_replicate_ids": list(self.treatment_biological_replicate_ids),
+            "control_biological_replicate_ids": list(self.control_biological_replicate_ids),
             "treatment_replicate_count": self.treatment_replicate_count,
             "control_replicate_count": self.control_replicate_count,
         }
@@ -122,6 +126,7 @@ class ChemicalGeneRecord:
     estimate_status: EstimateStatus
     evidence_type: EvidenceType = EvidenceType.OBSERVED_TRANSCRIPTOMIC_PERTURBATION
     is_direct_target_interaction: bool = False
+    causality_claim: str = "OBSERVED_TRANSCRIPTOMIC_RESPONSE"
     scientific_limitation: str = (
         "Observed transcriptomic perturbation following chemical exposure. "
         "Does NOT constitute verified direct binding or direct biochemical target interaction."
@@ -155,8 +160,10 @@ class ChemicalPathwayRecord:
     is_significant: bool
     leading_edge_gene_ids: tuple[str, ...]
     leading_edge_symbols: tuple[str, ...]
-    ranking_metric: str
-    analysis_version: str
+    all_member_gene_ids: tuple[str, ...] = ()
+    all_member_symbols: tuple[str, ...] = ()
+    ranking_metric: str = "wald_statistic"
+    analysis_version: str = "1.0.0"
     scientific_limitation: str = (
         "Statistically evaluated pathway enrichment from preranked GSEA. "
         "Reflects coordinated transcriptional modulation across the gene set."
@@ -167,6 +174,8 @@ class ChemicalPathwayRecord:
         d["exposure"] = self.exposure.to_dict()
         d["leading_edge_gene_ids"] = list(self.leading_edge_gene_ids)
         d["leading_edge_symbols"] = list(self.leading_edge_symbols)
+        d["all_member_gene_ids"] = list(self.all_member_gene_ids)
+        d["all_member_symbols"] = list(self.all_member_symbols)
         return d
 
 
@@ -179,11 +188,13 @@ class ChemicalGenePathwayEvidenceRecord:
     """
 
     evidence_id: str
-    contrast_id: str
     study_id: str
+    contrast_id: str
     independent_study_id: str
     compound_id: str
     compound_name: str
+    treatment_condition_id: str
+    matched_control_condition_ids: tuple[str, ...]
     dose_value: float | None
     dose_unit: str | None
     exposure_duration: float | None
@@ -194,6 +205,7 @@ class ChemicalGenePathwayEvidenceRecord:
     # Gene Evidence
     canonical_ensembl_gene_id: str
     gene_symbol: str | None
+    base_mean: float
     log2_fold_change: float | None
     log2_fold_change_se: float | None
     wald_statistic: float | None
@@ -208,28 +220,34 @@ class ChemicalGenePathwayEvidenceRecord:
     pathway_name: str | None
     source_database: str | None
     database_version: str | None
-    pathway_normalized_enrichment_score: float | None
-    pathway_p_value: float | None
-    pathway_adjusted_p_value: float | None
-    pathway_direction: str | None
-    is_pathway_significant: bool | None
+    enrichment_score: float | None = None
+    pathway_normalized_enrichment_score: float | None = None
+    pathway_p_value: float | None = None
+    pathway_adjusted_p_value: float | None = None
+    pathway_size: int | None = None
+    pathway_direction: str | None = None
+    is_pathway_significant: bool | None = None
 
     # Relationship Context
-    gene_membership_type: GenePathwayMembershipType
-    is_leading_edge: bool
-    evidence_type: EvidenceType
-    is_direct_target_interaction: bool
-    scientific_limitations: str
+    gene_membership_type: GenePathwayMembershipType = GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE
+    is_leading_edge: bool = False
+    evidence_type: EvidenceType = EvidenceType.OBSERVED_TRANSCRIPTOMIC_PERTURBATION
+    is_direct_target_interaction: bool = False
+    causality_claim: str = "OBSERVED_TRANSCRIPTOMIC_RESPONSE"
+    scientific_limitations: str = ""
     provenance_notes: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        ctrl_str = ";".join(self.matched_control_condition_ids) if self.matched_control_condition_ids else ""
         return {
             "evidence_id": self.evidence_id,
-            "contrast_id": self.contrast_id,
             "study_id": self.study_id,
+            "contrast_id": self.contrast_id,
             "independent_study_id": self.independent_study_id,
             "compound_id": self.compound_id,
             "compound_name": self.compound_name,
+            "treatment_condition_id": self.treatment_condition_id,
+            "matched_control_condition_ids": ctrl_str,
             "dose_value": self.dose_value,
             "dose_unit": self.dose_unit,
             "exposure_duration": self.exposure_duration,
@@ -238,6 +256,7 @@ class ChemicalGenePathwayEvidenceRecord:
             "model_type": self.model_type,
             "canonical_ensembl_gene_id": self.canonical_ensembl_gene_id,
             "gene_symbol": self.gene_symbol,
+            "base_mean": self.base_mean,
             "log2_fold_change": self.log2_fold_change,
             "log2_fold_change_se": self.log2_fold_change_se,
             "wald_statistic": self.wald_statistic,
@@ -250,15 +269,18 @@ class ChemicalGenePathwayEvidenceRecord:
             "pathway_name": self.pathway_name,
             "source_database": self.source_database,
             "database_version": self.database_version,
+            "enrichment_score": self.enrichment_score,
             "pathway_normalized_enrichment_score": self.pathway_normalized_enrichment_score,
             "pathway_p_value": self.pathway_p_value,
             "pathway_adjusted_p_value": self.pathway_adjusted_p_value,
+            "pathway_size": self.pathway_size,
             "pathway_direction": self.pathway_direction,
             "is_pathway_significant": self.is_pathway_significant,
             "gene_membership_type": str(self.gene_membership_type),
             "is_leading_edge": self.is_leading_edge,
             "evidence_type": str(self.evidence_type),
             "is_direct_target_interaction": self.is_direct_target_interaction,
+            "causality_claim": self.causality_claim,
             "scientific_limitations": self.scientific_limitations,
             "provenance_notes": self.provenance_notes,
         }
