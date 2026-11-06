@@ -268,10 +268,15 @@ class ProcessedMatrixQCTests(unittest.TestCase):
         self.assertTrue(any(f.rule_id == "zero_only_genes" and f.entity_id == "SILENT_GENE" for f in qc_res.findings))
         self.assertTrue(any(f.rule_id == "zero_only_samples" and f.entity_id == "blank_sample" for f in qc_res.findings))
 
-    def test_real_gse232218_human_brain_organoid_tpm_qc(self):
-        """Validate real human GSE232218 brain organoid TPM matrix against canonical metadata."""
+    def test_synthetic_gse232218_benchmark_tpm_qc(self):
+        """Validate synthetic human GSE232218 benchmark brain organoid TPM matrix against canonical metadata.
+
+        Scientific note: The official GEO submission for GSE232218 provides only RSEM expected counts
+        (GSE232218_gene_expected_count.txt.gz). This fixture is a synthetic benchmark TPM matrix modeling
+        continuous expression across GSM7321024, GSM7321026, and GSM7321027 for QC and provenance validation.
+        """
         fixture_path = Path("tests/fixtures/gse232218_human_brain_organoid_tpm.tsv")
-        self.assertTrue(fixture_path.exists(), "GSE232218 TPM fixture missing")
+        self.assertTrue(fixture_path.exists(), "GSE232218 TPM benchmark fixture missing")
 
         meta = _make_metadata(
             samples=[
@@ -296,6 +301,9 @@ class ProcessedMatrixQCTests(unittest.TestCase):
         self.assertAlmostEqual(933.5086, s1.total_expression, places=3)
         self.assertEqual(15, s1.detected_genes)
         self.assertEqual(0, s1.zero_expression_genes)
+
+    # Alias for backward compatibility
+    test_real_gse232218_human_brain_organoid_tpm_qc = test_synthetic_gse232218_benchmark_tpm_qc
 
 
 if __name__ == "__main__":

@@ -98,8 +98,13 @@ class PhaseU32ProcessedExpressionGateAcceptanceTests(unittest.TestCase):
         dataset = ingest_processed_expression_matrix(fixture_path, meta)
 
         self.assertEqual(QCStatus.PASS, dataset.status)
-        self.assertTrue(dataset.is_inferentially_eligible)
-        self.assertEqual("limma_trend", dataset.target_analysis_engine)
+        self.assertTrue(dataset.is_valid_intake)
+        self.assertTrue(dataset.is_provenance_valid)
+        self.assertTrue(dataset.is_u3_3_evaluable)
+        # GSE232218 has n=1 per condition; statistical differential inference is safely blocked
+        self.assertFalse(dataset.is_statistically_eligible)
+        self.assertFalse(dataset.is_inferentially_eligible)
+        self.assertIsNone(dataset.target_analysis_engine)
         self.assertEqual(("DESeq2",), dataset.blocked_analysis_engines)
 
         # Numerical preservation
@@ -109,6 +114,36 @@ class PhaseU32ProcessedExpressionGateAcceptanceTests(unittest.TestCase):
 
         # Gene conservation law
         self.assertTrue(dataset.is_gene_universe_conserved)
+
+    def test_u3_2_replicated_matrix_is_statistically_eligible_for_limma_trend(self):
+        """When conditions have >= 2 biological replicates, dataset is statistically and inferentially eligible."""
+        fixture_path = Path("tests/fixtures/gse232218_human_brain_organoid_tpm.tsv")
+        meta = routing_metadata(fixture_path, "processed_expression_matrix")
+        meta["samples"] = [
+            {"sample_id": "GSM7321024", "condition_id": "cond_vehicle", "biological_replicate_id": "rep1"},
+            {"sample_id": "GSM7321026", "condition_id": "cond_vehicle", "biological_replicate_id": "rep2"},
+            {"sample_id": "GSM7321027", "condition_id": "cond_treated", "biological_replicate_id": "rep1"},
+        ]
+        meta["sequencing_assays"][0]["sample_ids"] = ["GSM7321024", "GSM7321026", "GSM7321027"]
+        meta["processing_provenance"] = {
+            "expression_unit": "TPM",
+            "transformation_scale": "linear",
+            "normalization_method": "tpm",
+            "software_pipeline": "Kallisto v0.48.0",
+            "reference_annotation": "Ensembl Release 112",
+        }
+        # First: cond_treated has n=1 -> ineligible
+        ds1 = ingest_processed_expression_matrix(fixture_path, meta)
+        self.assertFalse(ds1.is_statistically_eligible)
+        self.assertFalse(ds1.is_inferentially_eligible)
+
+        # Second: all samples in cond_vehicle (n=3) -> eligible
+        meta["samples"][2]["condition_id"] = "cond_vehicle"
+        meta["samples"][2]["biological_replicate_id"] = "rep3"
+        ds2 = ingest_processed_expression_matrix(fixture_path, meta)
+        self.assertTrue(ds2.is_statistically_eligible)
+        self.assertTrue(ds2.is_inferentially_eligible)
+        self.assertEqual("limma_trend", ds2.target_analysis_engine)
 
     def test_u3_2_blocks_inferential_processing_when_provenance_is_undocumented(self):
         """If unit or transformation scale is undocumented, inferential processing is blocked."""

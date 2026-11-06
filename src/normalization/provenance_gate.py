@@ -102,6 +102,11 @@ class ProvenanceGateResult:
     status: Status
     findings: tuple[Finding, ...]
     provenance: ProcessingProvenance
+    is_valid_intake: bool
+    is_provenance_valid: bool
+    is_u3_3_evaluable: bool
+    is_statistically_eligible: bool
+    statistical_eligibility_reason: str | None
     is_inferentially_eligible: bool
     deseq2_eligible: bool
     deseq2_ineligibility_reason: str
@@ -119,6 +124,11 @@ class ProvenanceGateResult:
             "status": str(self.status),
             "findings": [asdict(f) for f in self.findings],
             "provenance": self.provenance.to_dict(),
+            "is_valid_intake": self.is_valid_intake,
+            "is_provenance_valid": self.is_provenance_valid,
+            "is_u3_3_evaluable": self.is_u3_3_evaluable,
+            "is_statistically_eligible": self.is_statistically_eligible,
+            "statistical_eligibility_reason": self.statistical_eligibility_reason,
             "is_inferentially_eligible": self.is_inferentially_eligible,
             "deseq2_eligible": self.deseq2_eligible,
             "deseq2_ineligibility_reason": self.deseq2_ineligibility_reason,
@@ -143,6 +153,11 @@ class ProcessedExpressionDataset:
     excluded_genes_count: int
     total_input_genes_count: int
     status: Status
+    is_valid_intake: bool
+    is_provenance_valid: bool
+    is_u3_3_evaluable: bool
+    is_statistically_eligible: bool
+    statistical_eligibility_reason: str | None
     is_inferentially_eligible: bool
     target_analysis_engine: str | None
     blocked_analysis_engines: tuple[str, ...] = ("DESeq2",)
@@ -156,6 +171,11 @@ class ProcessedExpressionDataset:
         return {
             "dataset_id": self.dataset_id,
             "status": str(self.status),
+            "is_valid_intake": self.is_valid_intake,
+            "is_provenance_valid": self.is_provenance_valid,
+            "is_u3_3_evaluable": self.is_u3_3_evaluable,
+            "is_statistically_eligible": self.is_statistically_eligible,
+            "statistical_eligibility_reason": self.statistical_eligibility_reason,
             "is_inferentially_eligible": self.is_inferentially_eligible,
             "target_analysis_engine": self.target_analysis_engine,
             "blocked_analysis_engines": list(self.blocked_analysis_engines),
@@ -309,6 +329,75 @@ def parse_processing_provenance(
     )
 
 
+def evaluate_statistical_design_eligibility(
+    matrix: ProcessedExpressionMatrix | None,
+    metadata: dict[str, Any] | None,
+    qc_result: ProcessedMatrixQCResult | None = None,
+) -> tuple[bool, str | None]:
+    """Evaluate whether experimental sample metadata satisfies statistical design requirements.
+
+    Requirements:
+    - At least two conditions or sample groups for differential inference.
+    - Specifically, no condition can have fewer than 2 biological replicates (n < 2).
+    - If any condition has fewer than 2 biological replicates, statistical differential inference is blocked.
+    """
+    if matrix is None or matrix.number_of_samples == 0:
+        return False, "Expression matrix is empty or missing samples."
+
+    # If qc_result is available, use its condition results
+    if qc_result is not None and qc_result.conditions:
+        under_replicated: list[str] = []
+        for cond in qc_result.conditions:
+            if cond.biological_replicate_count < 2:
+                under_replicated.append(f"'{cond.condition_id}' (n={cond.biological_replicate_count})")
+        if under_replicated:
+            return (
+                False,
+                f"Fewer than 2 biological replicates in condition(s): {', '.join(under_replicated)}. "
+                "Minimum 2 biological replicates per condition required for statistical differential inference.",
+            )
+        return True, None
+
+    # Fallback to metadata inspection
+    if not metadata:
+        return False, "Metadata missing or empty."
+
+    samples = metadata.get("samples", [])
+    if not samples:
+        return False, "No samples defined in metadata."
+
+    matrix_sids = set(matrix.sample_ids)
+    active_samples = [s for s in samples if s.get("sample_id") in matrix_sids]
+    if not active_samples:
+        return False, "No metadata samples match matrix sample IDs."
+
+    by_cond: dict[str, set[str]] = {}
+    for s in active_samples:
+        cid = s.get("condition_id") or "unspecified_condition"
+        rep_val = s.get("biological_replicate_id")
+        if isinstance(rep_val, dict):
+            rep_id = str(rep_val.get("reported") or rep_val.get("value") or s.get("sample_id"))
+        elif rep_val is not None:
+            rep_id = str(rep_val)
+        else:
+            rep_id = str(s.get("sample_id"))
+        by_cond.setdefault(cid, set()).add(rep_id)
+
+    under_replicated = []
+    for cid, reps in sorted(by_cond.items()):
+        if len(reps) < 2:
+            under_replicated.append(f"'{cid}' (n={len(reps)})")
+
+    if under_replicated:
+        return (
+            False,
+            f"Fewer than 2 biological replicates in condition(s): {', '.join(under_replicated)}. "
+            "Minimum 2 biological replicates per condition required for statistical differential inference.",
+        )
+
+    return True, None
+
+
 def evaluate_provenance_gate(
     matrix: ProcessedExpressionMatrix | None,
     metadata: dict[str, Any],
@@ -459,17 +548,27 @@ def evaluate_provenance_gate(
 
     ordered_findings_tuple = ordered(findings)
     overall_status = status_for(ordered_findings_tuple)
-    is_eligible = overall_status != Status.FAIL
+    is_valid_intake = matrix is not None and matrix.number_of_genes > 0 and matrix.number_of_samples > 0
+    is_provenance_valid = overall_status != Status.FAIL and provenance.expression_unit != ExpressionUnit.UNKNOWN and provenance.transformation_scale != TransformationScale.UNKNOWN
+    is_u3_3_evaluable = is_valid_intake and is_provenance_valid
+
+    stat_eligible, stat_reason = evaluate_statistical_design_eligibility(matrix, metadata, qc_result)
+    is_inferentially_eligible = is_u3_3_evaluable and stat_eligible
 
     return ProvenanceGateResult(
         status=overall_status,
         findings=ordered_findings_tuple,
         provenance=provenance,
-        is_inferentially_eligible=is_eligible,
+        is_valid_intake=is_valid_intake,
+        is_provenance_valid=is_provenance_valid,
+        is_u3_3_evaluable=is_u3_3_evaluable,
+        is_statistically_eligible=stat_eligible,
+        statistical_eligibility_reason=stat_reason,
+        is_inferentially_eligible=is_inferentially_eligible,
         deseq2_eligible=False,
         deseq2_ineligibility_reason="DESeq2 GLM requires raw unnormalized integer counts. Continuous processed expression matrices cannot be converted to integer counts or fed into DESeq2.",
-        limma_trend_eligible=is_eligible,
-        target_analysis_engine="limma_trend" if is_eligible else None,
+        limma_trend_eligible=is_inferentially_eligible,
+        target_analysis_engine="limma_trend" if is_inferentially_eligible else None,
         blocked_analysis_engines=("DESeq2",),
     )
 
@@ -478,27 +577,17 @@ def _load_reference(
     reference: GeneReference | None = None,
     config: dict[str, Any] | None = None,
 ) -> GeneReference:
-    """Load canonical human gene reference catalog."""
+    """Load canonical human gene reference catalog.
+
+    Requires either an explicitly provided GeneReference instance or a valid
+    configuration pointing to the production reference file.
+    Does NOT silently fallback to test fixtures.
+    """
     if reference is not None:
         return reference
-    try:
-        from src.gene_harmonization.config import load_config
-        cfg = config or load_config()
-        return GeneReference.load_from_config(cfg)
-    except Exception:
-        fixture_path = Path("tests/fixtures/ensembl_human_genes_test_fixture.tsv")
-        if fixture_path.exists():
-            cfg = {
-                "reference": {
-                    "file_path": str(fixture_path),
-                    "reference_id": "ensembl_human_genes_test_fixture",
-                    "reference_version": "112_fixture",
-                    "genome_build": "GRCh38.p14",
-                    "source_authority": "Ensembl / EMBL-EBI",
-                }
-            }
-            return GeneReference.load_from_config(cfg)
-        raise
+    from src.gene_harmonization.config import load_config
+    cfg = config or load_config()
+    return GeneReference.load_from_config(cfg)
 
 
 def ingest_processed_expression_matrix(
@@ -543,9 +632,12 @@ def ingest_processed_expression_matrix(
 
     # 4. Gene Harmonization
     harmonized_list: list[HarmonizedGene] = []
+    ref_findings: list[Finding] = []
+    ref_loaded = False
     if matrix is not None:
         try:
             ref = _load_reference(reference=gene_reference, config=config)
+            ref_loaded = True
             for idx, g_id in enumerate(matrix.gene_ids, start=1):
                 raw_id = g_id.strip()
                 if raw_id.startswith("ENSG"):
@@ -574,8 +666,21 @@ def ingest_processed_expression_matrix(
                         source_asset_id=asset_id or path_p.name,
                     )
                 )
-        except Exception:
-            # Fallback if gene reference cannot be loaded: preserve original identifiers as unmapped
+        except Exception as exc:
+            # Fallback if gene reference cannot be loaded: preserve original identifiers as unmapped and record review finding
+            ref_findings.append(
+                Finding(
+                    severity=Severity.REVIEW,
+                    rule_id="gene_reference_unavailable",
+                    entity_type="gene_reference",
+                    entity_id="ensembl_human_genes",
+                    path="gene_harmonization.reference",
+                    message=(
+                        f"Production gene reference catalog was unavailable ({exc}). "
+                        "Preserving unmapped original gene IDs and requiring controlled review before downstream canonical harmonization."
+                    ),
+                )
+            )
             for idx, g_id in enumerate(matrix.gene_ids, start=1):
                 harmonized_list.append(
                     HarmonizedGene(
@@ -599,9 +704,46 @@ def ingest_processed_expression_matrix(
     excluded_genes = total_genes - eligible_genes
 
     # Combined status
+    if ref_findings:
+        all_gate_findings = tuple(ordered(list(gate_res.findings) + ref_findings))
+        gate_res = ProvenanceGateResult(
+            status=status_for(all_gate_findings),
+            findings=all_gate_findings,
+            provenance=gate_res.provenance,
+            is_valid_intake=gate_res.is_valid_intake,
+            is_provenance_valid=gate_res.is_provenance_valid,
+            is_u3_3_evaluable=gate_res.is_u3_3_evaluable,
+            is_statistically_eligible=gate_res.is_statistically_eligible,
+            statistical_eligibility_reason=gate_res.statistical_eligibility_reason,
+            is_inferentially_eligible=False,
+            deseq2_eligible=gate_res.deseq2_eligible,
+            deseq2_ineligibility_reason=gate_res.deseq2_ineligibility_reason,
+            limma_trend_eligible=False,
+            target_analysis_engine=None,
+            blocked_analysis_engines=gate_res.blocked_analysis_engines,
+            evaluated_at=gate_res.evaluated_at,
+        )
+
     combined_findings = list(qc_res.findings) + list(gate_res.findings)
     overall_status = status_for(ordered(combined_findings))
-    is_inferentially_eligible = qc_res.is_valid and gate_res.is_inferentially_eligible
+
+    is_valid_intake = gate_res.is_valid_intake
+    is_provenance_valid = gate_res.is_provenance_valid
+    is_u3_3_evaluable = gate_res.is_u3_3_evaluable and (qc_res.status != Status.FAIL)
+    is_statistically_eligible = gate_res.is_statistically_eligible
+    stat_reason = gate_res.statistical_eligibility_reason
+
+    # For differential inference to be eligible:
+    # 1. Intake and QC are valid (not FAIL)
+    # 2. Provenance is valid (not FAIL)
+    # 3. Statistical design is eligible (n >= 2 replicates per condition)
+    # 4. Gene reference was successfully loaded
+    is_inferentially_eligible = (
+        qc_res.is_valid
+        and gate_res.is_inferentially_eligible
+        and ref_loaded
+        and is_statistically_eligible
+    )
 
     study_id = metadata.get("studies", [{}])[0].get("study_id") or metadata.get("study_id") or "processed_study"
 
@@ -616,7 +758,12 @@ def ingest_processed_expression_matrix(
         excluded_genes_count=excluded_genes,
         total_input_genes_count=total_genes,
         status=overall_status,
+        is_valid_intake=is_valid_intake,
+        is_provenance_valid=is_provenance_valid,
+        is_u3_3_evaluable=is_u3_3_evaluable,
+        is_statistically_eligible=is_statistically_eligible,
+        statistical_eligibility_reason=stat_reason,
         is_inferentially_eligible=is_inferentially_eligible,
-        target_analysis_engine=gate_res.target_analysis_engine if is_inferentially_eligible else None,
+        target_analysis_engine="limma_trend" if is_inferentially_eligible else None,
         blocked_analysis_engines=("DESeq2",),
     )

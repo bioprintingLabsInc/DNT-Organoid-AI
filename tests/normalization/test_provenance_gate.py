@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from tests.metadata.fixtures import canonical_bulk_study, reported, with_provenance
+from src.gene_harmonization.models import GeneMappingStatus
 from src.ingestion.processed_matrix_reader import ProcessedExpressionMatrix
 from src.normalization.provenance_gate import (
     ExpressionUnit,
@@ -362,8 +363,15 @@ class ProcessingProvenanceGateTests(unittest.TestCase):
         dataset = ingest_processed_expression_matrix(fixture_path, meta)
 
         self.assertEqual(Status.PASS, dataset.status)
-        self.assertTrue(dataset.is_inferentially_eligible)
-        self.assertEqual("limma_trend", dataset.target_analysis_engine)
+        self.assertTrue(dataset.is_valid_intake)
+        self.assertTrue(dataset.is_provenance_valid)
+        self.assertTrue(dataset.is_u3_3_evaluable)
+        # Disentangled eligibility: GSE232218 has n=1 per condition, so statistical differential inference is blocked
+        self.assertFalse(dataset.is_statistically_eligible)
+        self.assertFalse(dataset.is_inferentially_eligible)
+        self.assertIsNotNone(dataset.statistical_eligibility_reason)
+        self.assertIn("fewer than 2 biological replicates", dataset.statistical_eligibility_reason.lower())
+        self.assertIsNone(dataset.target_analysis_engine)
         self.assertIn("DESeq2", dataset.blocked_analysis_engines)
 
         # Matrix dimensions
@@ -386,6 +394,84 @@ class ProcessingProvenanceGateTests(unittest.TestCase):
             dataset.total_input_genes_count,
             dataset.eligible_canonical_genes_count + dataset.excluded_genes_count,
         )
+
+    def test_replicated_conditions_are_statistically_and_inferentially_eligible(self):
+        """11. Replicated experimental conditions (n >= 2) qualify for limma-trend differential inference."""
+        fixture_path = Path("tests/fixtures/gse232218_human_brain_organoid_tpm.tsv")
+        meta = _make_metadata(
+            samples=[
+                {"sample_id": "GSM7321024", "condition_id": "cond_vehicle", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "GSM7321026", "condition_id": "cond_vehicle", "biological_replicate_id": reported("rep2")},
+                {"sample_id": "GSM7321027", "condition_id": "cond_treated", "biological_replicate_id": reported("rep1")},
+            ],
+            processing_provenance={
+                "expression_unit": "TPM",
+                "transformation_scale": "linear",
+                "normalization_method": "tpm",
+                "software_pipeline": "Kallisto v0.48.0",
+                "reference_annotation": "Ensembl Release 112",
+            },
+            study_id="GSE232218",
+        )
+        meta["sequencing_assays"][0]["sample_ids"] = ["GSM7321024", "GSM7321026", "GSM7321027"]
+
+        # First case: cond_treated has only 1 replicate -> ineligible
+        dataset1 = ingest_processed_expression_matrix(fixture_path, meta)
+        self.assertFalse(dataset1.is_statistically_eligible)
+        self.assertFalse(dataset1.is_inferentially_eligible)
+
+        # Second case: assign GSM7321027 to cond_vehicle as rep3 -> condition has 3 replicates
+        meta["samples"][2]["condition_id"] = "cond_vehicle"
+        meta["samples"][2]["biological_replicate_id"] = reported("rep3")
+        dataset2 = ingest_processed_expression_matrix(fixture_path, meta)
+        self.assertTrue(dataset2.is_statistically_eligible)
+        self.assertTrue(dataset2.is_inferentially_eligible)
+        self.assertEqual("limma_trend", dataset2.target_analysis_engine)
+
+    def test_production_gene_reference_unavailable_preserves_data_with_review_finding(self):
+        """12. Missing production gene reference does NOT silently fallback; preserves data with NEEDS_REVIEW finding."""
+        fixture_path = Path("tests/fixtures/gse232218_human_brain_organoid_tpm.tsv")
+        meta = _make_metadata(
+            samples=[
+                {"sample_id": "GSM7321024", "condition_id": "cond_vehicle", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "GSM7321026", "condition_id": "cond_vehicle", "biological_replicate_id": reported("rep2")},
+                {"sample_id": "GSM7321027", "condition_id": "cond_vehicle", "biological_replicate_id": reported("rep3")},
+            ],
+            processing_provenance={
+                "expression_unit": "TPM",
+                "transformation_scale": "linear",
+                "normalization_method": "tpm",
+            },
+            study_id="GSE232218",
+        )
+        meta["sequencing_assays"][0]["sample_ids"] = ["GSM7321024", "GSM7321026", "GSM7321027"]
+
+        # Provide a config pointing to a nonexistent reference file
+        bad_config = {
+            "config_version": "0.1.0",
+            "stage_name": "gene_harmonization",
+            "scope": {"species": "Homo sapiens", "taxonomy_id": 9606, "modality": "bulk_rna_seq", "input_format": "raw_counts"},
+            "reference": {
+                "reference_id": "missing_ref",
+                "reference_version": "1",
+                "genome_build": "GRCh38",
+                "canonical_source_authority": "Ensembl",
+                "file_path": "nonexistent/path/to/reference.tsv",
+            },
+            "supported_identifier_types": {},
+            "structural_rules": {},
+            "coverage_thresholds": {},
+        }
+
+        dataset = ingest_processed_expression_matrix(fixture_path, meta, config=bad_config)
+
+        # Must report NEEDS_REVIEW due to reference unavailability
+        self.assertEqual(Status.NEEDS_REVIEW, dataset.status)
+        self.assertFalse(dataset.is_inferentially_eligible)
+        self.assertTrue(any(f.rule_id == "gene_reference_unavailable" and f.severity == Severity.REVIEW for f in dataset.gate_result.findings))
+        # Original gene IDs must still be preserved unmapped
+        self.assertEqual(15, len(dataset.harmonized_genes))
+        self.assertTrue(all(g.mapping_status == GeneMappingStatus.UNMAPPED for g in dataset.harmonized_genes))
 
 
 if __name__ == "__main__":

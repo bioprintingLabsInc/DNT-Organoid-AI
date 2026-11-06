@@ -170,6 +170,20 @@ class ProcessedMatrixQCResult:
         }
 
 
+def extract_qc_metadata_value(v: Any) -> Any:
+    """Extract string or normalized value from metadata attribute."""
+    if isinstance(v, dict):
+        if v.get("value_status") == "reported":
+            norm = v.get("normalized_value")
+            return norm if norm is not None else v.get("original_value")
+        if "reported" in v:
+            return v["reported"]
+        if "value" in v:
+            return v["value"]
+        return None
+    return v
+
+
 def reconcile_processed_metadata(
     metadata: dict[str, Any],
     matrix_samples: Sequence[str],
@@ -229,8 +243,8 @@ def reconcile_processed_metadata(
             contexts[sid] = {
                 "condition_id": s.get("condition_id"),
                 "experiment_id": s.get("experiment_id"),
-                "biological_replicate_id": reported_value(s.get("biological_replicate_id")),
-                "technical_replicate_id": reported_value(s.get("technical_replicate_id")),
+                "biological_replicate_id": extract_qc_metadata_value(s.get("biological_replicate_id")),
+                "technical_replicate_id": extract_qc_metadata_value(s.get("technical_replicate_id")),
             }
         else:
             contexts[sid] = {
