@@ -215,13 +215,15 @@ def _extract_contrast_metadata(
         context["treatment_sample_ids"] = tuple(trt_samples)
         context["control_sample_ids"] = tuple(ctrl_samples)
 
-        trt_bio = [_extract_val(s.get("biological_replicate_id")) or s.get("sample_id") for s in samples if s.get("condition_id") == treatment_cid]
-        ctrl_bio = [_extract_val(s.get("biological_replicate_id")) or s.get("sample_id") for s in samples if s.get("condition_id") in ctrl_cids]
+        trt_bio = [_extract_val(s.get("biological_replicate_id")) for s in samples if s.get("condition_id") == treatment_cid]
+        ctrl_bio = [_extract_val(s.get("biological_replicate_id")) for s in samples if s.get("condition_id") in ctrl_cids]
+        trt_bio = [b for b in trt_bio if b]
+        ctrl_bio = [b for b in ctrl_bio if b]
         context["treatment_biological_replicate_ids"] = tuple(trt_bio)
         context["control_biological_replicate_ids"] = tuple(ctrl_bio)
 
-        context["treatment_replicate_count"] = len(set(trt_bio)) if trt_bio else len(trt_samples)
-        context["control_replicate_count"] = len(set(ctrl_bio)) if ctrl_bio else len(ctrl_samples)
+        context["treatment_replicate_count"] = len(set(trt_bio))
+        context["control_replicate_count"] = len(set(ctrl_bio))
 
         trt_cond = conditions_by_id.get(treatment_cid, {})
         context["agent_name"] = trt_cond.get("chemical_agent_name") or trt_cond.get("agent_name") or metadata.get("agent_name")
@@ -233,43 +235,17 @@ def _extract_contrast_metadata(
         context["exposure_duration_unit"] = trt_cond.get("exposure_duration_unit") or metadata.get("exposure_duration_unit")
         context["developmental_age_or_stage_at_exposure"] = trt_cond.get("developmental_age_or_stage_at_exposure") or metadata.get("developmental_age_or_stage_at_exposure")
     else:
-        # Fallback to direct metadata fields or auto-inferring condition groups
-        context["relationship_id"] = metadata.get("relationship_id", "rel_1")
-        context["contrast_id"] = contrast_id or metadata.get("contrast_id", "contrast_1")
-
-        # Check unique conditions
-        cids = sorted(list({s.get("condition_id") for s in samples if s.get("condition_id")}))
-        if len(cids) >= 2:
-            # Look for control vs treated
-            ctrl_candidates = [c for c in cids if any(k in str(c).lower() for k in ("control", "vehicle", "dmso", "untreated", "ctrl"))]
-            ctrl_cid = ctrl_candidates[0] if ctrl_candidates else cids[0]
-            trt_candidates = [c for c in cids if c != ctrl_cid]
-            trt_cid = trt_candidates[0] if trt_candidates else cids[1]
-
-            context["treatment_condition_id"] = metadata.get("treatment_condition_id") or trt_cid
-            ctrl_setting = metadata.get("control_condition_id") or metadata.get("matched_control_condition_ids") or ctrl_cid
-            context["matched_control_condition_ids"] = (ctrl_setting,) if isinstance(ctrl_setting, str) else tuple(ctrl_setting)
-        else:
-            context["treatment_condition_id"] = metadata.get("treatment_condition_id", "treatment")
-            ctrl_setting = metadata.get("control_condition_id") or metadata.get("matched_control_condition_ids") or "control"
-            context["matched_control_condition_ids"] = (ctrl_setting,) if isinstance(ctrl_setting, str) else tuple(ctrl_setting)
-
-        trt_cid = context["treatment_condition_id"]
-        ctrl_cids = context["matched_control_condition_ids"]
-
-        trt_samples = [s.get("sample_id") for s in samples if s.get("condition_id") == trt_cid]
-        ctrl_samples = [s.get("sample_id") for s in samples if s.get("condition_id") in ctrl_cids]
-        context["treatment_sample_ids"] = tuple(trt_samples or metadata.get("treatment_sample_ids", ()))
-        context["control_sample_ids"] = tuple(ctrl_samples or metadata.get("control_sample_ids", ()))
-
-        trt_bio = [_extract_val(s.get("biological_replicate_id")) or s.get("sample_id") for s in samples if s.get("condition_id") == trt_cid]
-        ctrl_bio = [_extract_val(s.get("biological_replicate_id")) or s.get("sample_id") for s in samples if s.get("condition_id") in ctrl_cids]
-        context["treatment_biological_replicate_ids"] = tuple(trt_bio or metadata.get("treatment_biological_replicate_ids", ()))
-        context["control_biological_replicate_ids"] = tuple(ctrl_bio or metadata.get("control_biological_replicate_ids", ()))
-
-        context["treatment_replicate_count"] = len(set(trt_bio)) if trt_bio else len(context["treatment_sample_ids"])
-        context["control_replicate_count"] = len(set(ctrl_bio)) if ctrl_bio else len(context["control_sample_ids"])
-
+        # No verified relationship found - do NOT guess controls or fabricate relationships
+        context["relationship_id"] = None
+        context["contrast_id"] = contrast_id or "unverified_contrast"
+        context["treatment_condition_id"] = None
+        context["matched_control_condition_ids"] = ()
+        context["treatment_sample_ids"] = ()
+        context["control_sample_ids"] = ()
+        context["treatment_biological_replicate_ids"] = ()
+        context["control_biological_replicate_ids"] = ()
+        context["treatment_replicate_count"] = 0
+        context["control_replicate_count"] = 0
         context["agent_name"] = metadata.get("agent_name")
         context["agent_identifier"] = metadata.get("agent_identifier")
         context["vehicle"] = metadata.get("vehicle")
@@ -344,10 +320,10 @@ def _execute_python_fallback(
             "base_mean": ave_expr,
             "log2_fold_change": log2_fc,
             "lfc_standard_error": None,
-            "moderated_t": t_stat,
+            "moderated_t": None,
             "p_value": pval,
             "b_statistic": 0.0,
-            "result_status": "OK",
+            "result_status": "UNSUPPORTED_APPROXIMATION",
         })
 
     # Benjamini-Hochberg adjustment
@@ -365,9 +341,9 @@ def _execute_python_fallback(
         res["adjusted_p_value_bh"] = adj_p[i]
 
     return {
-        "status": "SUCCESS",
-        "analysis_method": "limma_trend",
-        "test_statistic_name": "moderated_t",
+        "status": "BLOCKED",
+        "analysis_method": "unsupported_python_approximation",
+        "test_statistic_name": "unmoderated_t_approximation",
         "r_version": "python_fallback",
         "bioc_version": "python_fallback",
         "limma_version": "python_fallback",
@@ -418,16 +394,6 @@ def execute_limma_trend_r(
     provenance["r_environment"] = env_info.to_dict()
 
     if not env_info.is_available:
-        if allow_python_fallback:
-            trt_samples = {r["sample_id"] for r in coldata_rows if r.get("condition") == "treatment"}
-            ctrl_samples = {r["sample_id"] for r in coldata_rows if r.get("condition") == "control"}
-            # transpose columns to rows: gene_count x sample_count
-            rows: list[list[float]] = []
-            for g_i in range(len(gene_ids)):
-                rows.append([expression_columns[s_i][g_i] for s_i in range(len(sample_ids))])
-            res = _execute_python_fallback(rows, list(gene_ids), list(sample_ids), trt_samples, ctrl_samples)
-            return res, env_info, findings, provenance
-
         findings.append(
             Finding(
                 Severity.ERROR,
@@ -438,6 +404,26 @@ def execute_limma_trend_r(
                 f"Official R/Bioconductor limma environment is unavailable: {env_info.error_message}. limma-trend differential inference requires R and Bioconductor limma.",
             )
         )
+        if allow_python_fallback:
+            findings.append(
+                Finding(
+                    Severity.WARNING,
+                    "unsupported_inferential_execution",
+                    "analysis_method",
+                    "python_fallback",
+                    "analysis_method",
+                    "Python fallback approximation used for offline evaluation. Official limma-trend statistics require R/Bioconductor limma and cannot enter accepted scientific results.",
+                )
+            )
+            trt_samples = {r["sample_id"] for r in coldata_rows if r.get("condition") == "treatment"}
+            ctrl_samples = {r["sample_id"] for r in coldata_rows if r.get("condition") == "control"}
+            # transpose columns to rows: gene_count x sample_count
+            rows: list[list[float]] = []
+            for g_i in range(len(gene_ids)):
+                rows.append([expression_columns[s_i][g_i] for s_i in range(len(sample_ids))])
+            res = _execute_python_fallback(rows, list(gene_ids), list(sample_ids), trt_samples, ctrl_samples)
+            return res, env_info, findings, provenance
+
         return None, env_info, findings, provenance
 
     if not script_p.exists():
@@ -575,6 +561,21 @@ def run_limma_trend_contrast(
     findings: list[Finding] = []
     ctx = _extract_contrast_metadata(metadata, contrast_id=contrast_id)
 
+    # 0. Verified relationship gating
+    if not ctx.get("treatment_condition_id") or not ctx.get("matched_control_condition_ids"):
+        findings.append(
+            Finding(
+                Severity.ERROR,
+                "unverified_treatment_control_relationship",
+                "contrast",
+                ctx.get("contrast_id"),
+                "relationships",
+                f"Contrast '{ctx.get('contrast_id')}' lacks a verified treatment-control relationship. "
+                "Automatically guessing control conditions or fabricating relationships is strictly prohibited.",
+            )
+        )
+        return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, "No verified treatment-control relationship.")
+
     # 1. Gating on dataset validity
     if dataset.status == Status.FAIL or not dataset.is_u3_3_evaluable:
         findings.extend(dataset.qc_result.findings)
@@ -610,9 +611,9 @@ def run_limma_trend_contrast(
         )
         return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, "Samples missing from expression matrix.")
 
-    # Biological replicate counting
-    trt_reps = len(set(ctx["treatment_biological_replicate_ids"])) if ctx["treatment_biological_replicate_ids"] else len(trt_samples)
-    ctrl_reps = len(set(ctx["control_biological_replicate_ids"])) if ctx["control_biological_replicate_ids"] else len(ctrl_samples)
+    # Biological replicate counting (strictly requires independent verified replicates; never substitute sample IDs)
+    trt_reps = len(set(ctx["treatment_biological_replicate_ids"]))
+    ctrl_reps = len(set(ctx["control_biological_replicate_ids"]))
 
     if trt_reps < 2 or ctrl_reps < 2:
         findings.append(
@@ -622,10 +623,12 @@ def run_limma_trend_contrast(
                 "contrast",
                 ctx["contrast_id"],
                 "biological_replicate_count",
-                f"Contrast '{ctx['contrast_id']}' has insufficient biological replicates (treatment={trt_reps}, control={ctrl_reps}); minimum 2 required in each arm for differential inference.",
+                f"Contrast '{ctx['contrast_id']}' has insufficient verified biological replicates "
+                f"(treatment={trt_reps}, control={ctrl_reps}); minimum 2 verified independent biological replicates "
+                "are strictly required in each arm for differential inference. Substituting sample IDs is prohibited.",
             )
         )
-        return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, "Insufficient biological replicates (< 2 per arm).")
+        return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, "Insufficient verified biological replicates (< 2 per arm).")
 
     # 3. Continuous Scale Preparation
     trans_cols, updated_prov, prep_findings = prepare_continuous_expression_matrix(
@@ -720,8 +723,11 @@ def run_limma_trend_contrast(
     )
     findings.extend(r_findings)
 
-    if r_output is None:
-        return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, "limma-trend execution failed.")
+    if r_output is None or r_output.get("status") != "SUCCESS" or r_output.get("analysis_method") != "limma_trend":
+        reason = "limma-trend execution failed or was blocked."
+        if r_output and r_output.get("analysis_method") == "unsupported_python_approximation":
+            reason = "Unsupported Python approximation cannot enter accepted scientific results."
+        return _make_blocked_result(ctx, findings, dataset.total_input_genes_count, reason)
 
     # 7. Map Gene Results
     gene_results: list[GeneDifferentialExpressionResult] = []
@@ -836,22 +842,43 @@ def run_limma_trend_pipeline(
     relationships = metadata.get("relationships") or metadata.get("treatment_control_relationships", [])
     contrast_results: list[DifferentialExpressionContrastResult] = []
 
-    if relationships:
-        for rel in relationships:
-            cid = rel.get("relationship_id") or rel.get("contrast_id")
-            res = run_limma_trend_contrast(
-                dataset=dataset,
-                metadata=metadata,
-                contrast_id=cid,
-                r_binary_path=r_binary_path,
-                allow_python_fallback=allow_python_fallback,
+    if not relationships:
+        findings = [
+            Finding(
+                Severity.ERROR,
+                "no_verified_treatment_control_relationships",
+                "pipeline",
+                dataset.dataset_id,
+                "metadata.treatment_control_relationships",
+                "No verified treatment-control relationships found in metadata. "
+                "Inferential differential expression is blocked.",
             )
-            contrast_results.append(res)
-    else:
-        # Single contrast inferred from metadata
+        ]
+        return DifferentialExpressionDataset(
+            status=Status.FAIL,
+            findings=tuple(findings),
+            contrast_results=(),
+            source_asset_id=dataset.dataset_id,
+            reference_identity="ensembl_human_genes_v112",
+            builder_version="limma_trend_builder_v1",
+            de_version="limma_trend_v1",
+            execution_provenance={
+                "analysis_method": "limma_trend",
+                "expression_unit": str(dataset.provenance.expression_unit),
+                "transformation_scale": str(dataset.provenance.transformation_scale),
+                "is_log_transformed": dataset.provenance.is_log_transformed,
+                "total_contrasts_evaluated": 0,
+                "eligible_contrasts_count": 0,
+                "blocked_contrasts_count": 0,
+            },
+        )
+
+    for rel in relationships:
+        cid = rel.get("relationship_id") or rel.get("contrast_id")
         res = run_limma_trend_contrast(
             dataset=dataset,
             metadata=metadata,
+            contrast_id=cid,
             r_binary_path=r_binary_path,
             allow_python_fallback=allow_python_fallback,
         )

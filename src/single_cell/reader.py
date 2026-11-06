@@ -10,7 +10,7 @@ import pandas as pd
 from scipy import io, sparse
 
 from src.qc.result import Finding, Severity
-from src.single_cell.models import SingleCellMatrix
+from src.single_cell.models import InvalidRawCountMatrixException, SingleCellMatrix
 
 
 class UnsupportedSingleCellFormatException(Exception):

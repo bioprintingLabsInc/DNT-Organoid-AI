@@ -78,10 +78,46 @@ def evaluate_single_cell_qc(
     # 3. Resolve cell metadata columns
     # Find donor / sample ID column
     donor_col = next((c for c in ("donor_id", "donor", "sample_id", "sample", "patient", "orig.ident") if c in obs_df.columns), None)
+    verified_donor_from_meta = None
+    if metadata:
+        verified_donor_from_meta = metadata.get("donor_id") or metadata.get("donor") or metadata.get("biological_source_id")
+
+    has_verified_donor = donor_col is not None or (verified_donor_from_meta is not None and str(verified_donor_from_meta).strip() != "")
+    if not has_verified_donor:
+        findings.append(
+            Finding(
+                Severity.ERROR,
+                "missing_verified_donor_identity",
+                "cell_metadata",
+                None,
+                "donor_identity",
+                "Single-cell dataset lacks verified biological sample/donor identity in obs dataframe or metadata. "
+                "Fabricating donor identities (e.g. 'donor_1') is strictly prohibited.",
+            )
+        )
+
     # Find cell type / cluster column
     ct_col = next((c for c in ("cell_type", "celltype", "cluster", "cell_annotation", "seurat_clusters", "predicted_celltype") if c in obs_df.columns), None)
+
     # Find condition / treatment column
     cond_col = next((c for c in ("condition_id", "condition", "treatment", "group", "status") if c in obs_df.columns), None)
+    verified_cond_from_meta = None
+    if metadata:
+        verified_cond_from_meta = metadata.get("condition_id") or metadata.get("treatment_condition_id")
+
+    has_verified_condition = cond_col is not None or (verified_cond_from_meta is not None and str(verified_cond_from_meta).strip() != "")
+    if not has_verified_condition:
+        findings.append(
+            Finding(
+                Severity.ERROR,
+                "missing_verified_condition_identity",
+                "cell_metadata",
+                None,
+                "condition_identity",
+                "Single-cell dataset lacks verified condition/treatment identity in obs dataframe or metadata. "
+                "Fabricating control/treatment condition identities (e.g. 'control') is strictly prohibited.",
+            )
+        )
 
     cell_metrics: list[CellMetadata] = []
     passed_count = 0
@@ -92,13 +128,48 @@ def evaluate_single_cell_qc(
         d_genes = int(detected_genes[idx])
         m_frac = float(mito_fraction[idx])
 
-        # Cell metadata attributes
-        donor = str(obs_df.iloc[idx][donor_col]) if donor_col else "donor_1"
-        cell_type = str(obs_df.iloc[idx][ct_col]) if ct_col else "unclassified"
-        condition = str(obs_df.iloc[idx][cond_col]) if cond_col else "control"
+        reasons: list[str] = []
+
+        # Resolve donor
+        donor: str
+        if donor_col:
+            raw_d = obs_df.iloc[idx][donor_col]
+            d_str = str(raw_d).strip() if (raw_d is not None and not pd.isna(raw_d)) else ""
+            if not d_str or d_str.lower() in ("unknown", "none", "nan", "null"):
+                reasons.append("unverified_donor_identity")
+                donor = "unverified_donor"
+            else:
+                donor = d_str
+        elif verified_donor_from_meta:
+            donor = str(verified_donor_from_meta).strip()
+        else:
+            reasons.append("unverified_donor_identity")
+            donor = "unverified_donor"
+
+        # Resolve condition
+        condition: str
+        if cond_col:
+            raw_c = obs_df.iloc[idx][cond_col]
+            c_str = str(raw_c).strip() if (raw_c is not None and not pd.isna(raw_c)) else ""
+            if not c_str or c_str.lower() in ("unknown", "none", "nan", "null"):
+                reasons.append("unverified_condition_identity")
+                condition = "unverified_condition"
+            else:
+                condition = c_str
+        elif verified_cond_from_meta:
+            condition = str(verified_cond_from_meta).strip()
+        else:
+            reasons.append("unverified_condition_identity")
+            condition = "unverified_condition"
+
+        # Resolve cell type
+        if ct_col:
+            raw_ct = obs_df.iloc[idx][ct_col]
+            cell_type = str(raw_ct).strip() if (raw_ct is not None and not pd.isna(raw_ct)) else "unclassified"
+        else:
+            cell_type = str(metadata.get("cell_type", "unclassified")).strip() if metadata else "unclassified"
 
         # Quality filtering
-        reasons: list[str] = []
         if d_genes < config.min_genes:
             reasons.append(f"low_detected_genes ({d_genes} < {config.min_genes})")
         if t_counts < config.min_counts:
@@ -129,7 +200,9 @@ def evaluate_single_cell_qc(
         )
 
     # 4. Global QC findings
-    if passed_count == 0:
+    if not has_verified_donor or not has_verified_condition:
+        status = Status.FAIL
+    elif passed_count == 0:
         findings.append(
             Finding(
                 Severity.ERROR,

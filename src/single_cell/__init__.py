@@ -2,6 +2,7 @@
 
 from src.single_cell.models import (
     CellMetadata,
+    InvalidRawCountMatrixException,
     PseudobulkConfig,
     PseudobulkDataset,
     PseudobulkSample,
@@ -31,6 +32,7 @@ __all__ = [
     "read_10x_matrix_market",
     "detect_and_reject_rds",
     "UnsupportedSingleCellFormatException",
+    "InvalidRawCountMatrixException",
     "evaluate_single_cell_qc",
     "aggregate_pseudobulk",
     "run_single_cell_ingestion_pipeline",

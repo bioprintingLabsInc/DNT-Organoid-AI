@@ -17,6 +17,7 @@ from src.qc.validator import validate_bulk_counts
 from src.routing import dispatch_route_execution, plan_route_execution
 from src.single_cell import (
     CellMetadata,
+    InvalidRawCountMatrixException,
     PseudobulkConfig,
     PseudobulkDataset,
     SingleCellMatrix,
@@ -295,6 +296,161 @@ class PhaseU4SingleCellIngestionTests(unittest.TestCase):
         pb_ds = res.artifacts["dataset"]
         self.assertIsInstance(pb_ds, PseudobulkDataset)
         self.assertGreater(len(pb_ds.pseudobulk_samples), 0)
+
+
+    def test_raw_count_matrix_rejects_floating_point_counts(self):
+        """8. SingleCellMatrix strictly validates raw counts and rejects floats / normalized data."""
+        gene_ids = ("ENSG00000001", "ENSG00000002")
+        cell_ids = ("cell_1", "cell_2")
+
+        # Dense float array (e.g. CPM or log-transformed values)
+        float_dense = np.array([[1.5, 2.0], [0.0, 3.7]], dtype=np.float64)
+        with self.assertRaises(InvalidRawCountMatrixException) as ctx:
+            SingleCellMatrix(gene_ids, cell_ids, float_dense)
+        self.assertIn("non-integer", str(ctx.exception).lower())
+
+        # Sparse float matrix
+        float_sparse = sparse.csr_matrix(float_dense)
+        with self.assertRaises(InvalidRawCountMatrixException) as ctx:
+            SingleCellMatrix(gene_ids, cell_ids, float_sparse)
+        self.assertIn("non-integer", str(ctx.exception).lower())
+
+    def test_raw_count_matrix_rejects_negative_counts(self):
+        """9. SingleCellMatrix rejects negative counts."""
+        gene_ids = ("ENSG00000001", "ENSG00000002")
+        cell_ids = ("cell_1", "cell_2")
+
+        neg_dense = np.array([[-1, 2], [0, 3]], dtype=np.int64)
+        with self.assertRaises(InvalidRawCountMatrixException) as ctx:
+            SingleCellMatrix(gene_ids, cell_ids, neg_dense)
+        self.assertIn("negative", str(ctx.exception).lower())
+
+    def test_missing_verified_donor_identity_fails_qc_without_inventing_donor_1(self):
+        """10. SingleCell QC rejects datasets missing verified donor identity without fabricating 'donor_1'."""
+        h5_path = self._create_synthetic_h5ad(n_cells=20, n_genes=5)
+        sc_mat, obs_df, var_df = read_h5ad(h5_path)
+
+        # Drop donor_id column
+        obs_no_donor = obs_df.drop(columns=["donor_id"])
+        qc_res = evaluate_single_cell_qc(sc_mat, obs_no_donor, var_df)
+
+        self.assertEqual(QCStatus.FAIL, qc_res.status)
+        self.assertEqual(0, qc_res.passed_cells)
+        self.assertTrue(any(f.rule_id == "missing_verified_donor_identity" for f in qc_res.findings))
+
+        # Ensure no cell received fabricated 'donor_1'
+        for cell in qc_res.cell_metrics:
+            self.assertFalse(cell.is_pass_qc)
+            self.assertEqual("unverified_donor", cell.donor_id)
+            self.assertIn("unverified_donor_identity", cell.qc_filter_reason)
+
+    def test_missing_verified_condition_identity_fails_qc_without_inventing_control(self):
+        """11. SingleCell QC rejects datasets missing verified condition identity without fabricating 'control'."""
+        h5_path = self._create_synthetic_h5ad(n_cells=20, n_genes=5)
+        sc_mat, obs_df, var_df = read_h5ad(h5_path)
+
+        # Drop condition_id column
+        obs_no_cond = obs_df.drop(columns=["condition_id"])
+        qc_res = evaluate_single_cell_qc(sc_mat, obs_no_cond, var_df)
+
+        self.assertEqual(QCStatus.FAIL, qc_res.status)
+        self.assertEqual(0, qc_res.passed_cells)
+        self.assertTrue(any(f.rule_id == "missing_verified_condition_identity" for f in qc_res.findings))
+
+        # Ensure no cell received fabricated 'control'
+        for cell in qc_res.cell_metrics:
+            self.assertFalse(cell.is_pass_qc)
+            self.assertEqual("unverified_condition", cell.condition_id)
+            self.assertIn("unverified_condition_identity", cell.qc_filter_reason)
+
+    def test_pseudobulk_metadata_does_not_invent_biological_defaults(self):
+        """12. Pseudobulk canonical metadata marks missing attributes explicitly unknown and fabricates no relationships."""
+        h5_path = self._create_synthetic_h5ad(n_cells=60, n_genes=10, is_sparse=True)
+        sc_mat, obs_df, var_df = read_h5ad(h5_path)
+        qc_res = evaluate_single_cell_qc(sc_mat, obs_df, var_df, config=SingleCellQCConfig(min_genes=1, min_counts=1))
+
+        # Aggregate without providing biological defaults in template
+        pb_dataset = aggregate_pseudobulk(
+            matrix=sc_mat,
+            qc_result=qc_res,
+            config=PseudobulkConfig(min_cells_per_sample=2),
+            metadata_template=None,  # No metadata template provided
+        )
+
+        meta = pb_dataset.metadata
+        # 1. Species and source material must be explicitly unknown
+        for bsrc in meta["biological_sources"]:
+            self.assertEqual("unknown", bsrc["species"]["value_status"])
+            self.assertIsNone(bsrc["species"]["original_value"])
+            self.assertEqual("unknown", bsrc["source_material_type"]["value_status"])
+            self.assertIsNone(bsrc["source_material_type"]["original_value"])
+
+        # 2. Organoid context must be explicitly unknown
+        for ctx in meta["organoid_contexts"]:
+            self.assertEqual("unknown", ctx["organoid_type"]["value_status"])
+            self.assertIsNone(ctx["organoid_type"]["original_value"])
+            self.assertEqual("unknown", ctx["brain_region_or_model_identity"]["value_status"])
+            self.assertIsNone(ctx["brain_region_or_model_identity"]["original_value"])
+
+        # 3. Sample developmental age and exposure duration must be explicitly unknown
+        for s in meta["samples"]:
+            self.assertEqual("unknown", s["developmental_age_or_stage_at_collection"]["value_status"])
+            self.assertIsNone(s["developmental_age_or_stage_at_collection"]["original_value"])
+            self.assertEqual("unknown", s["collection_time_relative_to_exposure"]["value_status"])
+            self.assertIsNone(s["collection_time_relative_to_exposure"]["original_value"])
+
+        # 4. No treatment-control relationships are fabricated
+        self.assertEqual([], meta["treatment_control_relationships"])
+
+    def test_pseudobulk_metadata_preserves_verified_source_metadata(self):
+        """13. Verified source metadata in metadata_template is preserved as reported."""
+        h5_path = self._create_synthetic_h5ad(n_cells=60, n_genes=10, is_sparse=True)
+        sc_mat, obs_df, var_df = read_h5ad(h5_path)
+        qc_res = evaluate_single_cell_qc(sc_mat, obs_df, var_df, config=SingleCellQCConfig(min_genes=1, min_counts=1))
+
+        verified_template = {
+            "conditions": [
+                {
+                    "condition_id": "control",
+                    "condition_label": reported("Vehicle Control"),
+                    "treatment_control_status": reported("control"),
+                    "control_type": reported("vehicle"),
+                },
+                {
+                    "condition_id": "vpa_treated",
+                    "condition_label": reported("Valproic Acid 200uM"),
+                    "treatment_control_status": reported("treatment"),
+                },
+            ],
+            "species": reported("Homo sapiens"),
+            "source_material_type": reported("iPSC"),
+            "organoid_type": reported("cortical_organoid"),
+            "brain_region_or_model_identity": reported("dorsal_telencephalon"),
+            "developmental_age_or_stage_at_collection": reported("day 60"),
+            "collection_time_relative_to_exposure": reported("48 hours"),
+            "treatment_control_relationships": [
+                {
+                    "relationship_id": "rel_vpa_vs_ctrl",
+                    "treatment_condition_ids": ["vpa_treated"],
+                    "matched_control_condition_ids": ["control"],
+                }
+            ],
+        }
+
+        pb_dataset = aggregate_pseudobulk(
+            matrix=sc_mat,
+            qc_result=qc_res,
+            config=PseudobulkConfig(min_cells_per_sample=2),
+            metadata_template=verified_template,
+        )
+
+        meta = pb_dataset.metadata
+        self.assertEqual("Homo sapiens", meta["biological_sources"][0]["species"]["normalized_value"])
+        self.assertEqual("iPSC", meta["biological_sources"][0]["source_material_type"]["normalized_value"])
+        self.assertEqual("cortical_organoid", meta["organoid_contexts"][0]["organoid_type"]["normalized_value"])
+        self.assertEqual("day 60", meta["samples"][0]["developmental_age_or_stage_at_collection"]["normalized_value"])
+        self.assertEqual(1, len(meta["treatment_control_relationships"]))
+        self.assertEqual("rel_vpa_vs_ctrl", meta["treatment_control_relationships"][0]["relationship_id"])
 
 
 if __name__ == "__main__":

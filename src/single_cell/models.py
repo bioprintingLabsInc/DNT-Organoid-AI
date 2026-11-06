@@ -11,6 +11,12 @@ from src.qc.matrix import CountMatrix
 from src.qc.result import Finding, Severity, Status
 
 
+class InvalidRawCountMatrixException(ValueError):
+    """Raised when a single-cell count matrix contains non-integer, negative, or normalized values."""
+
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class CellMetadata:
     """Metadata and quality metrics for a single cell / nucleus barcode."""
@@ -44,9 +50,28 @@ class SingleCellMatrix:
         self._cell_index = {c: i for i, c in enumerate(self._cell_ids)}
 
         if sparse.issparse(matrix):
-            self._matrix = matrix.tocsr()
+            if matrix.nnz > 0 and np.any(matrix.data < 0):
+                raise InvalidRawCountMatrixException(
+                    "Raw count matrix contains negative values. Raw non-negative integer counts are required."
+                )
+            if matrix.nnz > 0 and np.any(np.abs(matrix.data - np.round(matrix.data)) > 1e-6):
+                raise InvalidRawCountMatrixException(
+                    "Raw count matrix contains non-integer values (e.g. normalized, scaled, or log-transformed data). "
+                    "Raw integer UMI counts are strictly required; silent rounding or truncation is prohibited."
+                )
+            self._matrix = matrix.tocsr().astype(np.int64)
         else:
-            self._matrix = np.asarray(matrix, dtype=np.int64)
+            arr = np.asarray(matrix)
+            if arr.size > 0 and np.any(arr < 0):
+                raise InvalidRawCountMatrixException(
+                    "Raw count matrix contains negative values. Raw non-negative integer counts are required."
+                )
+            if arr.size > 0 and np.any(np.abs(arr - np.round(arr)) > 1e-6):
+                raise InvalidRawCountMatrixException(
+                    "Raw count matrix contains non-integer values (e.g. normalized, scaled, or log-transformed data). "
+                    "Raw integer UMI counts are strictly required; silent rounding or truncation is prohibited."
+                )
+            self._matrix = arr.astype(np.int64)
 
         if self._matrix.shape != (len(self._gene_ids), len(self._cell_ids)):
             raise ValueError(

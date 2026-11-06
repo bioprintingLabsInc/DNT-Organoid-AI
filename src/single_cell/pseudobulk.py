@@ -12,6 +12,7 @@ from src.qc.matrix import CountMatrix
 from src.qc.result import Finding, Severity, Status
 from src.single_cell.models import (
     CellMetadata,
+    InvalidRawCountMatrixException,
     PseudobulkConfig,
     PseudobulkDataset,
     PseudobulkSample,
@@ -49,8 +50,24 @@ def aggregate_pseudobulk(
     groups: dict[tuple[str, str, str], list[str]] = defaultdict(list)
     cell_metadata_by_id = {c.cell_id: c for c in qc_result.cell_metrics}
 
+    if qc_result.status == Status.FAIL or qc_result.passed_cells == 0:
+        empty_matrix = CountMatrix(matrix.gene_ids, (), ())
+        return PseudobulkDataset(
+            dataset_id=dataset_id,
+            cell_types=(),
+            count_matrix=empty_matrix,
+            per_cell_type_matrices={},
+            pseudobulk_samples=(),
+            metadata={},
+            provenance={"aggregation_rule": "sum_raw_integers", "status": "FAILED_QC"},
+            findings=qc_result.findings,
+            status=Status.FAIL,
+        )
+
     for cell in qc_result.cell_metrics:
         if cell.is_pass_qc:
+            if cell.donor_id.startswith("unverified_") or cell.condition_id.startswith("unverified_"):
+                continue
             key = (cell.donor_id, cell.cell_type, cell.condition_id)
             groups[key].append(cell.cell_id)
 
@@ -141,7 +158,14 @@ def aggregate_pseudobulk(
         else:
             summed_arr = np.asarray(raw_mat[:, c_idxs].sum(axis=1)).flatten()
 
-        int_column = tuple(int(round(float(v))) for v in summed_arr)
+        for v in summed_arr:
+            f_val = float(v)
+            if not f_val.is_integer() or f_val < 0:
+                raise InvalidRawCountMatrixException(
+                    f"Pseudobulk sum encountered non-integer or negative value: {v}. "
+                    "Raw integer UMI counts are required; rounding or truncation is prohibited."
+                )
+        int_column = tuple(int(v) for v in summed_arr)
         sample_columns.append(int_column)
         per_cell_type_columns[ct].append(int_column)
 
@@ -197,55 +221,151 @@ def aggregate_pseudobulk(
             "assertion_provenance_ids": [],
         }
 
+    def _unknown() -> dict[str, Any]:
+        return {
+            "original_value": None,
+            "normalized_value": None,
+            "value_status": "unknown",
+            "assertion_provenance_ids": [],
+        }
+
+    def _resolve_record(source: dict[str, Any] | None, field_name: str) -> dict[str, Any]:
+        if not source or field_name not in source:
+            return _unknown()
+        val = source[field_name]
+        if isinstance(val, dict) and "value_status" in val:
+            return val
+        if val is not None and str(val).strip() != "" and str(val).strip().lower() not in ("unknown", "none", "nan", "null"):
+            return _reported(val)
+        return _unknown()
+
+    template = metadata_template or {}
+
+    # Conditions
+    template_conditions = {
+        c.get("condition_id"): c
+        for c in template.get("conditions", [])
+        if isinstance(c, dict) and c.get("condition_id")
+    }
+
     conditions_list = []
     for cond in conditions_present:
-        is_ctrl = any(k in cond.lower() for k in ("control", "vehicle", "dmso", "untreated", "ctrl"))
-        conditions_list.append({
+        t_cond = template_conditions.get(cond)
+        if t_cond:
+            c_label = _resolve_record(t_cond, "condition_label")
+            if c_label.get("value_status") != "reported":
+                c_label = _reported(cond)
+            tc_status = _resolve_record(t_cond, "treatment_control_status")
+            c_type = _resolve_record(t_cond, "control_type")
+        else:
+            c_label = _reported(cond)
+            tc_status = _unknown()
+            c_type = _unknown()
+
+        c_entry: dict[str, Any] = {
             "condition_id": cond,
             "experiment_id": "exp_sc_pseudobulk",
-            "condition_label": _reported(cond),
-            "treatment_control_status": _reported("control" if is_ctrl else "treatment"),
-            "control_type": _reported("vehicle") if is_ctrl else _reported(None),
+            "condition_label": c_label,
+            "treatment_control_status": tc_status,
             "metadata_validation_status": "not_validated",
-        })
+        }
+        if c_type.get("value_status") == "reported":
+            c_entry["control_type"] = c_type
+        conditions_list.append(c_entry)
+
+    # Biological Sources
+    template_sources = {
+        s.get("biological_source_id"): s
+        for s in template.get("biological_sources", [])
+        if isinstance(s, dict) and s.get("biological_source_id")
+    }
+    for s in template.get("biological_sources", []):
+        if isinstance(s, dict):
+            d_id = s.get("donor_identifier")
+            if isinstance(d_id, dict):
+                d_id = d_id.get("original_value") or d_id.get("normalized_value")
+            if d_id:
+                template_sources[str(d_id)] = s
 
     sources_list = []
     for d in donors_present:
+        src = template_sources.get(f"source_{d}") or template_sources.get(d)
+        species_rec = _resolve_record(src, "species")
+        if species_rec.get("value_status") != "reported" and template.get("species"):
+            species_rec = _resolve_record(template, "species")
+
+        mat_rec = _resolve_record(src, "source_material_type")
+        if mat_rec.get("value_status") != "reported" and template.get("source_material_type"):
+            mat_rec = _resolve_record(template, "source_material_type")
+
+        cl_rec = _resolve_record(src, "cell_line_or_source_identifier")
+        if cl_rec.get("value_status") != "reported":
+            cl_rec = _reported(d)
+
+        donor_rec = _resolve_record(src, "donor_identifier")
+        if donor_rec.get("value_status") != "reported":
+            donor_rec = _reported(d)
+
         sources_list.append({
             "biological_source_id": f"source_{d}",
-            "species": _reported("Homo sapiens"),
-            "source_material_type": _reported("organoid_cells"),
-            "cell_line_or_source_identifier": _reported(d),
-            "donor_identifier": _reported(d),
+            "species": species_rec,
+            "source_material_type": mat_rec,
+            "cell_line_or_source_identifier": cl_rec,
+            "donor_identifier": donor_rec,
             "metadata_validation_status": "not_validated",
         })
 
+    # Organoid Contexts
+    template_contexts = [c for c in template.get("organoid_contexts", []) if isinstance(c, dict)]
+    if template_contexts:
+        contexts_list = template_contexts
+    else:
+        org_type_rec = _resolve_record(template, "organoid_type")
+        region_rec = _resolve_record(template, "brain_region_or_model_identity")
+        contexts_list = [{
+            "organoid_context_id": "organoid_context_1",
+            "organoid_type": org_type_rec,
+            "brain_region_or_model_identity": region_rec,
+            "metadata_validation_status": "not_validated",
+        }]
+
+    # Samples
+    template_samples = {
+        s.get("sample_id"): s
+        for s in template.get("samples", [])
+        if isinstance(s, dict) and s.get("sample_id")
+    }
+
     samples_list = []
     for s in pseudobulk_samples:
+        m_s = template_samples.get(s.sample_id)
+        age_rec = _resolve_record(m_s, "developmental_age_or_stage_at_collection")
+        if age_rec.get("value_status") != "reported" and template.get("developmental_age_or_stage_at_collection"):
+            age_rec = _resolve_record(template, "developmental_age_or_stage_at_collection")
+
+        dur_rec = _resolve_record(m_s, "collection_time_relative_to_exposure")
+        if dur_rec.get("value_status") != "reported" and template.get("collection_time_relative_to_exposure"):
+            dur_rec = _resolve_record(template, "collection_time_relative_to_exposure")
+
         samples_list.append({
             "sample_id": s.sample_id,
             "experiment_id": "exp_sc_pseudobulk",
             "condition_id": s.condition_id,
             "biological_source_id": f"source_{s.donor_id}",
-            "organoid_context_id": "organoid_context_1",
+            "organoid_context_id": contexts_list[0]["organoid_context_id"],
             "biological_replicate_id": _reported(f"{s.donor_id}_{s.cell_type}"),
-            "developmental_age_or_stage_at_collection": _reported("day 45"),
-            "collection_time_relative_to_exposure": _reported("24 hours"),
+            "developmental_age_or_stage_at_collection": age_rec,
+            "collection_time_relative_to_exposure": dur_rec,
             "metadata_validation_status": "not_validated",
         })
 
-    # Relationships
-    ctrl_cids = [c["condition_id"] for c in conditions_list if c["treatment_control_status"]["normalized_value"] == "control"]
-    trt_cids = [c["condition_id"] for c in conditions_list if c["treatment_control_status"]["normalized_value"] == "treatment"]
-    relationships_list = []
-    for idx, t_cid in enumerate(trt_cids):
-        relationships_list.append({
-            "relationship_id": f"rel_pb_{t_cid}_vs_ctrl",
-            "treatment_condition_ids": [t_cid],
-            "matched_control_condition_ids": ctrl_cids if ctrl_cids else [conditions_present[0]],
-            "matching_basis": _reported("matched_pseudobulk_cell_type_and_donor"),
-            "metadata_validation_status": "not_validated",
-        })
+    # Treatment Control Relationships
+    # NEVER infer control status or fabricate relationships! Only preserve verified relationships from template.
+    template_rels = [
+        r for r in template.get("treatment_control_relationships", [])
+        if isinstance(r, dict)
+    ]
+    relationships_list = template_rels
 
     canonical_metadata: dict[str, Any] = {
         "studies": [{
@@ -260,12 +380,7 @@ def aggregate_pseudobulk(
         }],
         "conditions": conditions_list,
         "biological_sources": sources_list,
-        "organoid_contexts": [{
-            "organoid_context_id": "organoid_context_1",
-            "organoid_type": _reported("cerebral organoid"),
-            "brain_region_or_model_identity": _reported("cortical"),
-            "metadata_validation_status": "not_validated",
-        }],
+        "organoid_contexts": contexts_list,
         "samples": samples_list,
         "exposures": [],
         "treatment_control_relationships": relationships_list,

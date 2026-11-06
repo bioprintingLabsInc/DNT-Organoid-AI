@@ -336,6 +336,122 @@ class LimmaTrendRunnerTests(unittest.TestCase):
         self.assertEqual(1, len(pipeline_res.eligible_results))
         self.assertEqual(ContrastStatus.ELIGIBLE, pipeline_res.contrast_results[0].status)
 
+    def test_missing_biological_replicate_ids_blocked_without_substituting_sample_ids(self):
+        """7. Samples without verified biological replicate IDs are blocked; sample IDs are not substituted."""
+        prov = ProcessingProvenance(
+            expression_unit=ExpressionUnit.TPM,
+            transformation_scale=TransformationScale.LINEAR,
+            normalization_method=ProcessedNormalizationMethod.TPM,
+        )
+        dataset = _create_mock_dataset(
+            gene_ids=("G1", "G2"),
+            sample_ids=("c1", "c2", "t1", "t2"),
+            columns=((2.0, 3.0), (2.1, 3.1), (10.0, 1.0), (10.2, 0.9)),
+            provenance=prov,
+        )
+        meta = {
+            "study_id": "test_missing_replicates",
+            "samples": [
+                {"sample_id": "c1", "condition_id": "cond_ctrl"},  # missing biological_replicate_id
+                {"sample_id": "c2", "condition_id": "cond_ctrl"},
+                {"sample_id": "t1", "condition_id": "cond_trt"},
+                {"sample_id": "t2", "condition_id": "cond_trt"},
+            ],
+            "treatment_control_relationships": [
+                {
+                    "relationship_id": "rel_1",
+                    "relationship_type": "treatment_control",
+                    "treatment_condition_id": "cond_trt",
+                    "control_condition_ids": ["cond_ctrl"],
+                }
+            ],
+        }
+
+        res = run_limma_trend_contrast(dataset, meta)
+        self.assertEqual(ContrastStatus.BLOCKED, res.status)
+        self.assertFalse(res.is_inferentially_eligible)
+        self.assertEqual(0, res.treatment_replicate_count)
+        self.assertEqual(0, res.control_replicate_count)
+        self.assertTrue(any(f.rule_id == "insufficient_biological_replicates" for f in res.findings))
+
+    def test_missing_treatment_control_relationship_blocks_inference(self):
+        """8. Missing verified treatment-control relationship blocks inference without guessing controls."""
+        prov = ProcessingProvenance(
+            expression_unit=ExpressionUnit.TPM,
+            transformation_scale=TransformationScale.LINEAR,
+            normalization_method=ProcessedNormalizationMethod.TPM,
+        )
+        dataset = _create_mock_dataset(
+            gene_ids=("G1", "G2"),
+            sample_ids=("c1", "c2", "t1", "t2"),
+            columns=((2.0, 3.0), (2.1, 3.1), (10.0, 1.0), (10.2, 0.9)),
+            provenance=prov,
+        )
+        meta_no_rel = {
+            "study_id": "test_no_relationship",
+            "samples": [
+                {"sample_id": "c1", "condition_id": "control", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "c2", "condition_id": "control", "biological_replicate_id": reported("rep2")},
+                {"sample_id": "t1", "condition_id": "treated", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "t2", "condition_id": "treated", "biological_replicate_id": reported("rep2")},
+            ],
+        }
+
+        # Pipeline test
+        pipe_res = run_limma_trend_pipeline(dataset, meta_no_rel)
+        self.assertEqual(Status.FAIL, pipe_res.status)
+        self.assertEqual(0, len(pipe_res.contrast_results))
+        self.assertTrue(any(f.rule_id == "no_verified_treatment_control_relationships" for f in pipe_res.findings))
+
+        # Contrast test
+        contrast_res = run_limma_trend_contrast(dataset, meta_no_rel)
+        self.assertEqual(ContrastStatus.BLOCKED, contrast_res.status)
+        self.assertTrue(any(f.rule_id == "unverified_treatment_control_relationship" for f in contrast_res.findings))
+
+    def test_python_fallback_blocked_and_cannot_claim_limma_trend(self):
+        """9. Python fallback is blocked, emits unmoderated approximation, and cannot claim limma-trend."""
+        prov = ProcessingProvenance(
+            expression_unit=ExpressionUnit.TPM,
+            transformation_scale=TransformationScale.LINEAR,
+            normalization_method=ProcessedNormalizationMethod.TPM,
+        )
+        dataset = _create_mock_dataset(
+            gene_ids=("G1", "G2"),
+            sample_ids=("c1", "c2", "t1", "t2"),
+            columns=((2.0, 3.0), (2.1, 3.1), (10.0, 1.0), (10.2, 0.9)),
+            provenance=prov,
+        )
+        meta = {
+            "study_id": "test_python_fallback",
+            "samples": [
+                {"sample_id": "c1", "condition_id": "cond_ctrl", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "c2", "condition_id": "cond_ctrl", "biological_replicate_id": reported("rep2")},
+                {"sample_id": "t1", "condition_id": "cond_trt", "biological_replicate_id": reported("rep1")},
+                {"sample_id": "t2", "condition_id": "cond_trt", "biological_replicate_id": reported("rep2")},
+            ],
+            "treatment_control_relationships": [
+                {
+                    "relationship_id": "contrast_fb",
+                    "relationship_type": "treatment_control",
+                    "treatment_condition_id": "cond_trt",
+                    "control_condition_ids": ["cond_ctrl"],
+                }
+            ],
+        }
+
+        res = run_limma_trend_contrast(
+            dataset,
+            meta,
+            r_binary_path="nonexistent_Rscript_binary",
+            allow_python_fallback=True,
+        )
+        self.assertEqual(ContrastStatus.BLOCKED, res.status)
+        self.assertFalse(res.is_inferentially_eligible)
+        self.assertEqual(0, len(res.gene_results))
+        rule_ids = {f.rule_id for f in res.findings}
+        self.assertIn("r_environment_missing", rule_ids)
+        self.assertIn("unsupported_inferential_execution", rule_ids)
+
 
 if __name__ == "__main__":
     unittest.main()
