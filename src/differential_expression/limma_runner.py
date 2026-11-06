@@ -191,8 +191,22 @@ def _extract_contrast_metadata(
     if selected_rel is not None:
         context["relationship_id"] = selected_rel.get("relationship_id", "rel_1")
         context["contrast_id"] = contrast_id or selected_rel.get("relationship_id", "contrast_1")
-        treatment_cid = selected_rel.get("treatment_condition_id", "treatment")
-        ctrl_cids = tuple(selected_rel.get("control_condition_ids", ()))
+        treatment_cid = selected_rel.get("treatment_condition_id")
+        if not treatment_cid:
+            t_ids = selected_rel.get("treatment_condition_ids")
+            if t_ids and isinstance(t_ids, (list, tuple)):
+                treatment_cid = t_ids[0]
+            elif isinstance(t_ids, str):
+                treatment_cid = t_ids
+            else:
+                treatment_cid = "treatment"
+
+        raw_ctrl = selected_rel.get("matched_control_condition_ids") or selected_rel.get("control_condition_ids") or selected_rel.get("control_condition_id", ())
+        if isinstance(raw_ctrl, str):
+            ctrl_cids = (raw_ctrl,)
+        else:
+            ctrl_cids = tuple(raw_ctrl)
+
         context["treatment_condition_id"] = treatment_cid
         context["matched_control_condition_ids"] = ctrl_cids
 

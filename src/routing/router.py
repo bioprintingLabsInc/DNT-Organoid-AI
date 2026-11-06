@@ -9,9 +9,29 @@ from src.metadata import MetadataValidator, ValidationStatus
 from .detector import detect_format
 
 
+_ROUTING_EXECUTION_KEYS = {
+    "processing_provenance",
+    "enable_processed_execution",
+    "enable_deg_execution",
+    "provenance_overrides",
+    "sheet_name",
+}
+
+
 def route_metadata_assets(metadata: dict[str, Any]) -> tuple[AssetResult, ...]:
     """Validate canonical metadata, inspect each local asset, and route safely."""
-    metadata_result = MetadataValidator().validate(metadata)
+    validator = MetadataValidator()
+    canonical_meta = {k: v for k, v in metadata.items() if k not in _ROUTING_EXECUTION_KEYS}
+    if "input_data_assets" in canonical_meta and isinstance(canonical_meta["input_data_assets"], list):
+        cleaned_assets = []
+        for a in canonical_meta["input_data_assets"]:
+            if isinstance(a, dict):
+                cleaned_assets.append({k: v for k, v in a.items() if k not in _ROUTING_EXECUTION_KEYS})
+            else:
+                cleaned_assets.append(a)
+        canonical_meta["input_data_assets"] = cleaned_assets
+
+    metadata_result = validator.validate(canonical_meta)
     registrations = register_assets(metadata)
     return tuple(_route(asset, metadata_result.status == ValidationStatus.INVALID) for asset in registrations)
 

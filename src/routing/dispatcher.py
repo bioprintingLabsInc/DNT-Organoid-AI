@@ -66,7 +66,11 @@ class RouteExecutionResult:
         }
 
 
-def plan_route_execution(metadata: dict[str, Any], enable_u3_deg_execution: bool = False) -> RouteExecutionPlan:
+def plan_route_execution(
+    metadata: dict[str, Any],
+    enable_u3_deg_execution: bool = False,
+    enable_u3_processed_execution: bool = False,
+) -> RouteExecutionPlan:
     """Inspect canonical metadata, route registered assets, and construct an execution plan.
 
     Enforces:
@@ -234,7 +238,29 @@ def plan_route_execution(metadata: dict[str, Any], enable_u3_deg_execution: bool
             metadata=metadata,
         )
 
-    # Case D: Other planned routes
+    # Case D: Processed Continuous Expression Matrix Pipeline (Phase U3.4)
+    if selected_route == Route.PROCESSED_EXPRESSION_PIPELINE and (enable_u3_processed_execution or metadata.get("enable_processed_execution")):
+        provenance = {
+            "input_format": "processed_expression_matrix",
+            "selected_route": "PROCESSED_EXPRESSION_PIPELINE",
+            "executor": "processed_expression_pipeline_runner",
+            "target_format": "differential_expression_dataset",
+            "downstream_route": None,
+        }
+        return RouteExecutionPlan(
+            route=Route.PROCESSED_EXPRESSION_PIPELINE,
+            status="READY_FOR_EXECUTION",
+            executor_id="processed_expression_pipeline_runner",
+            target_format="differential_expression_dataset",
+            downstream_route=None,
+            registered_assets=registrations,
+            routing_results=routing_results,
+            provenance_chain=provenance,
+            findings=tuple(findings),
+            metadata=metadata,
+        )
+
+    # Case E: Other planned routes
     return RouteExecutionPlan(
         route=selected_route,
         status="EXECUTION_NOT_IMPLEMENTED",
@@ -415,6 +441,103 @@ def dispatch_route_execution(
             },
             artifacts={"contrast_result": contrast_res, "table_data": table_data},
             error_message=None if is_success else "Published DEG table execution blocked due to fatal errors.",
+        )
+
+    # Route: PROCESSED_EXPRESSION_PIPELINE -> processed_expression_pipeline_runner (Phase U3.4)
+    if plan.executor_id == "processed_expression_pipeline_runner":
+        from src.differential_expression.limma_runner import run_limma_trend_pipeline
+        from src.normalization.provenance_gate import ingest_processed_expression_matrix
+        from src.response_builder.models import Status as ContrastStatusModel
+
+        if not plan.registered_assets:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="NO_ASSETS",
+                emitted_asset_path=None,
+                emitted_format=None,
+                provenance_record=plan.provenance_chain,
+                error_message="No registered assets to execute.",
+            )
+
+        asset = plan.registered_assets[0]
+        sheet_name = plan.metadata.get("sheet_name") or kwargs.get("sheet_name")
+        gene_ref = kwargs.get("gene_reference")
+        config = kwargs.get("config")
+        r_bin = kwargs.get("r_binary_path", "Rscript")
+
+        # 1. Ingest, QC, and Provenance Gate
+        dataset = ingest_processed_expression_matrix(
+            asset.local_path,
+            plan.metadata,
+            sheet_name=sheet_name,
+            asset_id=asset.asset_id,
+            gene_reference=gene_ref,
+            config=config,
+        )
+
+        # 2. Check U3.3 evaluability and statistical eligibility
+        if not dataset.is_u3_3_evaluable:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="EXECUTION_BLOCKED_INSUFFICIENT_PROVENANCE",
+                emitted_asset_path=asset.local_path,
+                emitted_format="processed_expression_dataset",
+                provenance_record={
+                    **plan.provenance_chain,
+                    "execution_state": "EXECUTION_BLOCKED_INSUFFICIENT_PROVENANCE",
+                    "dataset_status": str(dataset.status),
+                    "is_u3_3_evaluable": False,
+                },
+                artifacts={"dataset": dataset},
+                error_message="Processed expression matrix intake or provenance validation failed.",
+            )
+
+        if not dataset.is_statistically_eligible:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="EXECUTION_BLOCKED_UNDER_REPLICATED",
+                emitted_asset_path=asset.local_path,
+                emitted_format="processed_expression_dataset",
+                provenance_record={
+                    **plan.provenance_chain,
+                    "execution_state": "EXECUTION_BLOCKED_UNDER_REPLICATED",
+                    "dataset_status": str(dataset.status),
+                    "is_statistically_eligible": False,
+                    "statistical_eligibility_reason": dataset.statistical_eligibility_reason,
+                },
+                artifacts={"dataset": dataset},
+                error_message=f"Statistical inference blocked: {dataset.statistical_eligibility_reason}",
+            )
+
+        # 3. Approved U3.3 Execution
+        de_dataset = run_limma_trend_pipeline(
+            dataset=dataset,
+            metadata=plan.metadata,
+            r_binary_path=r_bin,
+            allow_python_fallback=kwargs.get("allow_python_fallback", False),
+        )
+
+        is_success = de_dataset.status != ContrastStatusModel.FAIL and len(de_dataset.eligible_results) > 0
+        return RouteExecutionResult(
+            plan=plan,
+            is_success=is_success,
+            execution_state="COMPLETED" if is_success else "EXECUTION_BLOCKED",
+            emitted_asset_path=asset.local_path,
+            emitted_format="differential_expression_dataset",
+            provenance_record={
+                **plan.provenance_chain,
+                "execution_state": "COMPLETED" if is_success else "EXECUTION_BLOCKED",
+                "dataset_id": dataset.dataset_id,
+                "total_contrasts": len(de_dataset.contrast_results),
+                "eligible_contrasts": len(de_dataset.eligible_results),
+                "total_genes": dataset.total_input_genes_count,
+                "eligible_canonical_genes": dataset.eligible_canonical_genes_count,
+            },
+            artifacts={"dataset": dataset, "differential_expression_dataset": de_dataset},
+            error_message=None if is_success else "limma-trend execution failed or was blocked.",
         )
 
     return RouteExecutionResult(
