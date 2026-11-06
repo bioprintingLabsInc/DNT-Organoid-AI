@@ -70,6 +70,7 @@ def plan_route_execution(
     metadata: dict[str, Any],
     enable_u3_deg_execution: bool = False,
     enable_u3_processed_execution: bool = False,
+    enable_u4_single_cell_execution: bool = False,
 ) -> RouteExecutionPlan:
     """Inspect canonical metadata, route registered assets, and construct an execution plan.
 
@@ -260,7 +261,31 @@ def plan_route_execution(
             metadata=metadata,
         )
 
-    # Case E: Other planned routes
+    # Case E: Single-Cell / Single-Nucleus Pipeline (Phase U4)
+    if selected_route in {Route.SINGLE_CELL_COUNT_PIPELINE, Route.SINGLE_CELL_OBJECT_PIPELINE} and (
+        enable_u4_single_cell_execution or metadata.get("enable_single_cell_execution")
+    ):
+        provenance = {
+            "input_format": "H5AD" if selected_route == Route.SINGLE_CELL_OBJECT_PIPELINE else "UMI_counts",
+            "selected_route": str(selected_route),
+            "executor": "single_cell_pipeline_runner",
+            "target_format": "pseudobulk_raw_counts",
+            "downstream_route": "BULK_RAW_COUNT_PIPELINE",
+        }
+        return RouteExecutionPlan(
+            route=selected_route,
+            status="READY_FOR_EXECUTION",
+            executor_id="single_cell_pipeline_runner",
+            target_format="pseudobulk_raw_counts",
+            downstream_route=Route.BULK_RAW_COUNT_PIPELINE,
+            registered_assets=registrations,
+            routing_results=routing_results,
+            provenance_chain=provenance,
+            findings=tuple(findings),
+            metadata=metadata,
+        )
+
+    # Case F: Other planned routes
     return RouteExecutionPlan(
         route=selected_route,
         status="EXECUTION_NOT_IMPLEMENTED",
@@ -539,6 +564,68 @@ def dispatch_route_execution(
             artifacts={"dataset": dataset, "differential_expression_dataset": de_dataset},
             error_message=None if is_success else "limma-trend execution failed or was blocked.",
         )
+
+    # Route: SINGLE_CELL_COUNT_PIPELINE / SINGLE_CELL_OBJECT_PIPELINE -> single_cell_pipeline_runner (Phase U4)
+    if plan.executor_id == "single_cell_pipeline_runner":
+        from src.qc.result import Status as QCStatus
+        from src.single_cell.pipeline import run_single_cell_ingestion_pipeline
+
+        if not plan.registered_assets:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="NO_ASSETS",
+                emitted_asset_path=None,
+                emitted_format=None,
+                provenance_record=plan.provenance_chain,
+                error_message="No registered assets to execute.",
+            )
+
+        asset = plan.registered_assets[0]
+        output_tsv = kwargs.get("output_tsv_path")
+        qc_cfg = kwargs.get("qc_config")
+        pb_cfg = kwargs.get("pseudobulk_config")
+
+        try:
+            pb_dataset = run_single_cell_ingestion_pipeline(
+                asset_path=asset.local_path,
+                metadata=plan.metadata,
+                qc_config=qc_cfg,
+                pseudobulk_config=pb_cfg,
+                output_tsv_path=output_tsv,
+            )
+            is_success = pb_dataset.status != QCStatus.FAIL and len(pb_dataset.pseudobulk_samples) > 0
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=is_success,
+                execution_state="COMPLETED" if is_success else "EXECUTION_BLOCKED",
+                emitted_asset_path=pb_dataset.emitted_matrix_path or asset.local_path,
+                emitted_format="pseudobulk_dataset",
+                provenance_record={
+                    **plan.provenance_chain,
+                    "execution_state": "COMPLETED" if is_success else "EXECUTION_BLOCKED",
+                    "dataset_id": pb_dataset.dataset_id,
+                    "total_pseudobulk_samples": len(pb_dataset.pseudobulk_samples),
+                    "cell_types": list(pb_dataset.cell_types),
+                    "downstream_route": "BULK_RAW_COUNT_PIPELINE",
+                },
+                artifacts={
+                    "dataset": pb_dataset,
+                    "count_matrix": pb_dataset.count_matrix,
+                    "metadata": pb_dataset.metadata,
+                },
+                error_message=None if is_success else "Pseudobulk aggregation produced no eligible samples.",
+            )
+        except Exception as exc:
+            return RouteExecutionResult(
+                plan=plan,
+                is_success=False,
+                execution_state="EXECUTION_FAILED",
+                emitted_asset_path=asset.local_path,
+                emitted_format=None,
+                provenance_record=plan.provenance_chain,
+                error_message=str(exc),
+            )
 
     return RouteExecutionResult(
         plan=plan,

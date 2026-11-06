@@ -13,8 +13,10 @@ _ROUTING_EXECUTION_KEYS = {
     "processing_provenance",
     "enable_processed_execution",
     "enable_deg_execution",
+    "enable_single_cell_execution",
     "provenance_overrides",
     "sheet_name",
+    "output_tsv_path",
 }
 
 
