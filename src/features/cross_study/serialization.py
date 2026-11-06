@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Any
 import pandas as pd
 
-from src.features.cross_study.models import ConditionGeneResponseRegistry
+from src.features.cross_study.models import (
+    ConditionGeneResponseRegistry,
+    CrossStudyComparisonDataset,
+)
 
 
 CANONICAL_LONG_COLUMNS = [
@@ -100,5 +103,53 @@ def export_registry_to_csv(registry: ConditionGeneResponseRegistry, output_path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     df = export_registry_to_dataframe(registry)
+    df.to_csv(path, index=False)
+    return path
+
+
+CANONICAL_COMPARISON_COLUMNS = [
+    "canonical_ensembl_gene_id",
+    "gene_symbol",
+    "study1_id",
+    "study1_contrast_id",
+    "study1_log2_fold_change",
+    "study1_log2_fold_change_se",
+    "study1_wald_statistic",
+    "study1_p_value",
+    "study1_adjusted_p_value",
+    "study1_response_direction",
+    "study1_estimate_status",
+    "study2_id",
+    "study2_contrast_id",
+    "study2_log2_fold_change",
+    "study2_log2_fold_change_se",
+    "study2_wald_statistic",
+    "study2_p_value",
+    "study2_adjusted_p_value",
+    "study2_response_direction",
+    "study2_estimate_status",
+    "direction_concordance",
+    "is_concordant",
+    "cross_study_status",
+    "is_synthesis_justified",
+    "pooled_log2_fold_change",
+    "pooled_standard_error",
+]
+
+
+def export_comparison_to_dataframe(dataset: CrossStudyComparisonDataset) -> pd.DataFrame:
+    """Convert CrossStudyComparisonDataset to a canonical comparative DataFrame."""
+    rows = [r.to_dict() for r in dataset.gene_comparisons]
+    df = pd.DataFrame(rows, columns=CANONICAL_COMPARISON_COLUMNS)
+    if not df.empty:
+        df = df.sort_values(by=["canonical_ensembl_gene_id"], ascending=True).reset_index(drop=True)
+    return df
+
+
+def export_comparison_to_csv(dataset: CrossStudyComparisonDataset, output_path: str | Path) -> Path:
+    """Export cross-study comparative dataset to a deterministic CSV file."""
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df = export_comparison_to_dataframe(dataset)
     df.to_csv(path, index=False)
     return path

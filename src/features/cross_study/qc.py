@@ -22,7 +22,9 @@ from src.differential_expression.models import (
 from src.features.cross_study.models import (
     ConditionGeneResponseRecord,
     ConditionGeneResponseRegistry,
+    CrossStudyComparisonDataset,
     CrossStudyStatus,
+    DirectionConcordance,
     ResponseDirection,
 )
 
@@ -214,6 +216,133 @@ def audit_registry_qc(
         gene_identity_mismatches_count=id_mismatches,
         direction_mismatches_count=dir_mismatches,
         context_mismatches_count=ctx_mismatches,
+        leakage_violations_count=leak_violations,
+        findings=tuple(findings),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ComparisonQCSummary:
+    """Structured audit summary for Stage 8A.2 Cross-Study Comparability Evaluation."""
+
+    is_valid: bool
+    total_genes_compared: int
+    shared_genes_count: int
+    study1_only_genes_count: int
+    study2_only_genes_count: int
+    numerical_mismatches_count: int
+    direction_mismatches_count: int
+    synthesis_boundary_violations_count: int
+    leakage_violations_count: int
+    findings: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "is_valid": self.is_valid,
+            "total_genes_compared": self.total_genes_compared,
+            "shared_genes_count": self.shared_genes_count,
+            "study1_only_genes_count": self.study1_only_genes_count,
+            "study2_only_genes_count": self.study2_only_genes_count,
+            "numerical_mismatches_count": self.numerical_mismatches_count,
+            "direction_mismatches_count": self.direction_mismatches_count,
+            "synthesis_boundary_violations_count": self.synthesis_boundary_violations_count,
+            "leakage_violations_count": self.leakage_violations_count,
+            "findings": list(self.findings),
+        }
+
+
+def audit_comparison_qc(
+    comparison: CrossStudyComparisonDataset,
+    registry1: ConditionGeneResponseRegistry,
+    registry2: ConditionGeneResponseRegistry,
+) -> ComparisonQCSummary:
+    """Audit the scientific integrity and synthesis boundaries of a CrossStudyComparisonDataset."""
+    findings: list[str] = []
+    num_mismatches = 0
+    dir_mismatches = 0
+    boundary_violations = 0
+    leak_violations = 0
+
+    cid1 = comparison.assessment.contrast1_id
+    cid2 = comparison.assessment.contrast2_id
+    recs1 = {r.canonical_ensembl_gene_id: r for r in registry1.get_records_for_contrast(cid1)}
+    recs2 = {r.canonical_ensembl_gene_id: r for r in registry2.get_records_for_contrast(cid2)}
+
+    # 1. Synthesis boundary enforcement
+    if not comparison.assessment.is_synthesis_justified:
+        for r in comparison.gene_comparisons:
+            if r.pooled_log2_fold_change is not None or r.pooled_standard_error is not None:
+                boundary_violations += 1
+                findings.append(
+                    f"Gene {r.canonical_ensembl_gene_id}: pooled statistics present when is_synthesis_justified is False."
+                )
+            if r.cross_study_status != CrossStudyStatus.NONCOMPARABLE_CONTEXT:
+                boundary_violations += 1
+                findings.append(
+                    f"Gene {r.canonical_ensembl_gene_id}: invalid cross_study_status '{r.cross_study_status}' for non-comparable context."
+                )
+
+    # 2. Gene-by-gene fidelity
+    for r in comparison.gene_comparisons:
+        gid = r.canonical_ensembl_gene_id
+        src1 = recs1.get(gid)
+        src2 = recs2.get(gid)
+
+        if src1 is not None:
+            if not _approx_eq(r.study1_log2_fold_change, src1.log2_fold_change):
+                num_mismatches += 1
+            if not _approx_eq(r.study1_log2_fold_change_se, src1.log2_fold_change_se):
+                num_mismatches += 1
+            if not _approx_eq(r.study1_p_value, src1.p_value):
+                num_mismatches += 1
+
+        if src2 is not None:
+            if not _approx_eq(r.study2_log2_fold_change, src2.log2_fold_change):
+                num_mismatches += 1
+            if not _approx_eq(r.study2_log2_fold_change_se, src2.log2_fold_change_se):
+                num_mismatches += 1
+            if not _approx_eq(r.study2_p_value, src2.p_value):
+                num_mismatches += 1
+
+        # Check direction concordance logic
+        if src1 is not None and src2 is not None:
+            d1 = src1.response_direction
+            d2 = src2.response_direction
+            if d1 == ResponseDirection.UP and d2 == ResponseDirection.UP:
+                expected = DirectionConcordance.CONCORDANT_UP
+            elif d1 == ResponseDirection.DOWN and d2 == ResponseDirection.DOWN:
+                expected = DirectionConcordance.CONCORDANT_DOWN
+            elif (d1 == ResponseDirection.UP and d2 == ResponseDirection.DOWN) or (
+                d1 == ResponseDirection.DOWN and d2 == ResponseDirection.UP
+            ):
+                expected = DirectionConcordance.DISCORDANT
+            elif d1 == ResponseDirection.NO_DIRECTION or d2 == ResponseDirection.NO_DIRECTION:
+                expected = DirectionConcordance.NO_DIRECTION
+            else:
+                expected = DirectionConcordance.UNDETERMINED
+
+            if r.direction_concordance != expected:
+                dir_mismatches += 1
+                findings.append(
+                    f"Gene {gid} direction mismatch: expected {expected}, got {r.direction_concordance}."
+                )
+
+    is_valid = (
+        num_mismatches == 0
+        and dir_mismatches == 0
+        and boundary_violations == 0
+        and leak_violations == 0
+    )
+
+    return ComparisonQCSummary(
+        is_valid=is_valid,
+        total_genes_compared=comparison.total_genes_evaluated,
+        shared_genes_count=comparison.shared_genes_count,
+        study1_only_genes_count=comparison.study1_only_genes_count,
+        study2_only_genes_count=comparison.study2_only_genes_count,
+        numerical_mismatches_count=num_mismatches,
+        direction_mismatches_count=dir_mismatches,
+        synthesis_boundary_violations_count=boundary_violations,
         leakage_violations_count=leak_violations,
         findings=tuple(findings),
     )

@@ -252,10 +252,17 @@ def _parse_rows_into_matrix(
         return ProcessedMatrixData(None, (finding,), path, sheet_name)
 
     header = [cell.strip() for cell in rows[start_idx]]
-    if not header or not header[0]:
+    has_row_identifiers = (
+        len(rows) > start_idx + 1
+        and bool(rows[start_idx + 1])
+        and bool(rows[start_idx + 1][0].strip())
+    )
+    if not header or (not header[0] and not has_row_identifiers):
         findings.append(
             AssetFinding("ERROR", "gene_identifier_column_required", "header[0]", "Gene identifier column is missing.")
         )
+    elif not header[0] and has_row_identifiers:
+        header[0] = "gene_id"
 
     samples = tuple(header[1:])
     if not samples:

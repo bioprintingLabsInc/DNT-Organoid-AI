@@ -58,16 +58,18 @@ def derive_estimate_status(gene_result: GeneDifferentialExpressionResult) -> tup
     if gene_result.result_status == "FIT_ERROR":
         return EstimateStatus.FIT_ERROR, gene_result.result_notes or "Model fitting failure in DESeq2"
 
-    # 4. Valid estimate check
+    # 4. Valid estimate check (supports both DESeq2 Wald and limma-trend moderated t)
+    is_limma = bool(gene_result.result_notes and "analysis_method=limma_trend" in gene_result.result_notes)
     if (
         gene_result.log2_fold_change is not None
-        and gene_result.lfc_standard_error is not None
+        and (gene_result.lfc_standard_error is not None or is_limma)
         and gene_result.wald_statistic is not None
         and gene_result.p_value is not None
     ):
         if not (math.isnan(gene_result.wald_statistic) or math.isinf(gene_result.wald_statistic)):
             return EstimateStatus.OK, None
-        return EstimateStatus.INVALID_STATISTIC, "Wald statistic is NaN or infinite"
+        stat_name = "Moderated t-statistic" if is_limma else "Wald statistic"
+        return EstimateStatus.INVALID_STATISTIC, f"{stat_name} is NaN or infinite"
 
     return EstimateStatus.INVALID_STATISTIC, gene_result.result_notes or "Incomplete or missing statistical estimates"
 
