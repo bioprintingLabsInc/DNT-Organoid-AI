@@ -30,6 +30,7 @@ from src.features.compound_pathway.runner import (
     build_stage8d_evidence_pipeline,
     load_pathway_results_from_csv,
     load_registry_from_csv,
+    load_stage8c_pathway_database_version,
     parse_bool_safely,
 )
 from src.features.compound_pathway.serialization import (
@@ -60,5 +61,6 @@ __all__ = [
     "link_chemical_gene_pathway_evidence",
     "load_pathway_results_from_csv",
     "load_registry_from_csv",
+    "load_stage8c_pathway_database_version",
     "parse_bool_safely",
 ]

@@ -65,11 +65,13 @@ def run_stage8d_evidence_generation() -> dict:
     all_pathways = pathways_go + pathways_kegg
 
     out_csv_232 = artifacts_dir / "GSE232218_VPA_200uM_chemical_gene_pathway_evidence.csv"
+    prov_csv_232 = artifacts_dir / "GSE232218_VPA_200uM_provenance.json"
     ds_232, qc_232 = build_stage8d_evidence_pipeline(
         registry=reg_232,
         pathway_results=all_pathways,
         dataset_id="evds_GSE232218_VPA_200uM",
         output_csv=out_csv_232,
+        provenance_path=prov_csv_232,
     )
 
     print(f"   Input Genes:               {qc_232.input_genes_count:,}")

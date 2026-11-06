@@ -66,11 +66,11 @@ class ChemicalExposureContext:
     biological_source_ids: tuple[str, ...] = ()
     organoid_context_ids: tuple[str, ...] = ()
     study_id: str = ""
-    study_family_id: str = ""
-    independent_study_id: str = ""
-    experiment_id: str = ""
+    study_family_id: str | None = None
+    independent_study_id: str | None = None
+    experiment_id: str | None = None
     contrast_id: str = ""
-    treatment_condition_id: str = ""
+    treatment_condition_id: str | None = None
     matched_control_condition_ids: tuple[str, ...] = ()
     treatment_sample_ids: tuple[str, ...] = ()
     control_sample_ids: tuple[str, ...] = ()
@@ -116,14 +116,14 @@ class ChemicalGeneRecord:
     canonical_ensembl_gene_id: str
     gene_symbol: str | None
     entrez_gene_id: str | None
-    base_mean: float
-    log2_fold_change: float | None
-    log2_fold_change_se: float | None
-    wald_statistic: float | None
-    p_value: float | None
-    adjusted_p_value: float | None
-    response_direction: ResponseDirection
-    estimate_status: EstimateStatus
+    base_mean: float | None = None
+    log2_fold_change: float | None = None
+    log2_fold_change_se: float | None = None
+    wald_statistic: float | None = None
+    p_value: float | None = None
+    adjusted_p_value: float | None = None
+    response_direction: ResponseDirection = ResponseDirection.NO_DIRECTION
+    estimate_status: EstimateStatus = EstimateStatus.OK
     evidence_type: EvidenceType = EvidenceType.OBSERVED_TRANSCRIPTOMIC_PERTURBATION
     is_direct_target_interaction: bool = False
     causality_claim: str = "OBSERVED_TRANSCRIPTOMIC_RESPONSE"
@@ -162,8 +162,9 @@ class ChemicalPathwayRecord:
     leading_edge_symbols: tuple[str, ...]
     all_member_gene_ids: tuple[str, ...] = ()
     all_member_symbols: tuple[str, ...] = ()
+    has_complete_membership: bool = False
     ranking_metric: str = "wald_statistic"
-    analysis_version: str = "1.0.0"
+    analysis_version: str | None = None
     scientific_limitation: str = (
         "Statistically evaluated pathway enrichment from preranked GSEA. "
         "Reflects coordinated transcriptional modulation across the gene set."
@@ -190,10 +191,10 @@ class ChemicalGenePathwayEvidenceRecord:
     evidence_id: str
     study_id: str
     contrast_id: str
-    independent_study_id: str
+    independent_study_id: str | None
     compound_id: str
     compound_name: str
-    treatment_condition_id: str
+    treatment_condition_id: str | None
     matched_control_condition_ids: tuple[str, ...]
     dose_value: float | None
     dose_unit: str | None
@@ -205,7 +206,7 @@ class ChemicalGenePathwayEvidenceRecord:
     # Gene Evidence
     canonical_ensembl_gene_id: str
     gene_symbol: str | None
-    base_mean: float
+    base_mean: float | None
     log2_fold_change: float | None
     log2_fold_change_se: float | None
     wald_statistic: float | None
@@ -219,7 +220,7 @@ class ChemicalGenePathwayEvidenceRecord:
     pathway_id: str | None
     pathway_name: str | None
     source_database: str | None
-    database_version: str | None
+    database_version: str | None = None
     enrichment_score: float | None = None
     pathway_normalized_enrichment_score: float | None = None
     pathway_p_value: float | None = None

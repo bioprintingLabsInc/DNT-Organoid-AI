@@ -49,6 +49,7 @@ from src.features.compound_pathway.runner import (
     build_stage8d_evidence_pipeline,
     load_pathway_results_from_csv,
     load_registry_from_csv,
+    load_stage8c_pathway_database_version,
     parse_bool_safely,
 )
 from src.features.compound_pathway.serialization import (
@@ -506,6 +507,8 @@ def test_pathway_membership_distinguishes_four_states() -> None:
         registry=reg,
         pathway_results=[pw],
         pathway_gene_members=pathway_members,
+        pathway_database_version="Bioconductor_3.20_GO.db_3.20.0",
+        has_complete_reference=True,
     )
     assert qc.is_valid is True
 
@@ -680,3 +683,170 @@ def test_robust_parsing_of_boolean_significance_fields() -> None:
     assert parse_bool_safely(0) is False
     assert parse_bool_safely(None, default=False) is False
     assert parse_bool_safely(None, default=True) is True
+
+
+def test_partial_reference_membership_remains_unknown() -> None:
+    """Focus negative test: Partial reference mappings must remain UNKNOWN_OR_UNAVAILABLE for non-members."""
+    r1 = _make_dummy_response_record(gene_id="ENSG00000141510", symbol="TP53")
+    r2 = _make_dummy_response_record(gene_id="ENSG00000157764", symbol="BRAF")
+    reg = ConditionGeneResponseRegistry(records=(r1, r2), registry_id="reg_partial")
+
+    pw = _make_dummy_pathway_result(
+        contrast_id="contrast_1",
+        pathway_id="GO:0007399",
+        leading_edge_ids=("ENSG00000141510",),
+    )
+
+    # Incomplete/partial member mapping without complete reference flag
+    partial_members = {"GO:0007399": {"ENSG00000141510", "TP53"}}
+
+    dataset, qc = build_stage8d_evidence_pipeline(
+        registry=reg,
+        pathway_results=[pw],
+        pathway_gene_members=partial_members,
+        pathway_database_version="Bioconductor_3.20_GO.db_3.20.0",
+        has_complete_reference=False,  # Partial reference mapping!
+    )
+    assert qc.is_valid is True
+
+    # TP53 is leading edge
+    assert dataset.get_records_for_gene("ENSG00000141510")[0].gene_membership_type == GenePathwayMembershipType.LEADING_EDGE_MEMBER
+
+    # BRAF is NOT in partial list, but because reference is partial, it MUST remain UNKNOWN_OR_UNAVAILABLE, NOT CONFIRMED_NON_MEMBER
+    braf_rec = dataset.get_records_for_gene("ENSG00000157764")[0]
+    assert braf_rec.gene_membership_type == GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE
+    assert braf_rec.gene_membership_type != GenePathwayMembershipType.CONFIRMED_NON_MEMBER
+
+
+def test_unversioned_reference_membership_remains_unknown() -> None:
+    """Focus negative test: Unversioned reference mappings must remain UNKNOWN_OR_UNAVAILABLE for non-members."""
+    r1 = _make_dummy_response_record(gene_id="ENSG00000141510", symbol="TP53")
+    r2 = _make_dummy_response_record(gene_id="ENSG00000157764", symbol="BRAF")
+    reg = ConditionGeneResponseRegistry(records=(r1, r2), registry_id="reg_unversioned")
+
+    pw = _make_dummy_pathway_result(
+        contrast_id="contrast_1",
+        pathway_id="GO:0007399",
+        leading_edge_ids=("ENSG00000141510",),
+    )
+
+    members = {"GO:0007399": {"ENSG00000141510", "TP53"}}
+
+    # Complete flag is True, but pathway_database_version is None (unversioned)
+    dataset, qc = build_stage8d_evidence_pipeline(
+        registry=reg,
+        pathway_results=[pw],
+        pathway_gene_members=members,
+        pathway_database_version=None,  # Unversioned!
+        has_complete_reference=True,
+    )
+    assert qc.is_valid is True
+
+    braf_rec = dataset.get_records_for_gene("ENSG00000157764")[0]
+    assert braf_rec.gene_membership_type == GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE
+    assert braf_rec.gene_membership_type != GenePathwayMembershipType.CONFIRMED_NON_MEMBER
+
+
+def test_production_csv_loader_does_not_infer_replicate_counts_from_samples(tmp_path: Path) -> None:
+    """Focus test: CSV loader must not infer replicate counts from sample IDs when replicate count is missing."""
+    csv_file = tmp_path / "test_missing_reps.csv"
+    data = {
+        "study_id": ["study_rep_test"],
+        "contrast_id": ["contrast_test"],
+        "canonical_ensembl_gene_id": ["ENSG00000141510"],
+        "gene_symbol": ["TP53"],
+        "compound_id": ["CID:3121"],
+        "compound_name": ["VPA"],
+        "dose_value": [200.0],
+        "treatment_sample_ids": ["sample1;sample2;sample3;sample4"],
+        "control_sample_ids": ["ctrl1;ctrl2;ctrl3;ctrl4"],
+        # Missing treatment_replicate_count and control_replicate_count!
+        # Missing treatment_biological_replicate_ids!
+        "base_mean": [100.0],
+        "log2_fold_change": [1.5],
+        "response_direction": ["UP"],
+        "estimate_status": ["OK"],
+    }
+    pd.DataFrame(data).to_csv(csv_file, index=False)
+
+    reg = load_registry_from_csv(csv_file)
+    rec = reg.records[0]
+
+    # Sample IDs were loaded
+    assert len(rec.treatment_sample_ids) == 4
+    assert len(rec.control_sample_ids) == 4
+
+    # CRITICAL: Replicate counts MUST remain None (unknown), NEVER inferred as 4 from len(sample_ids)!
+    assert rec.treatment_replicate_count is None
+    assert rec.control_replicate_count is None
+
+
+def test_production_csv_loader_does_not_fabricate_units_or_measurements(tmp_path: Path) -> None:
+    """Focus test: CSV loader must preserve missing units, experimental IDs, and base_mean as None."""
+    csv_file = tmp_path / "test_missing_units.csv"
+    data = {
+        "study_id": ["study_missing_units"],
+        "contrast_id": ["contrast_test"],
+        "canonical_ensembl_gene_id": ["ENSG00000141510"],
+        "gene_symbol": ["TP53"],
+        "compound_id": ["CID:3121"],
+        "compound_name": ["VPA"],
+        "exposure_duration": [48.0],
+        # Missing exposure_duration_unit, dose_unit, experiment_id, base_mean!
+        "log2_fold_change": [1.5],
+        "response_direction": ["UP"],
+        "estimate_status": ["OK"],
+    }
+    pd.DataFrame(data).to_csv(csv_file, index=False)
+
+    reg = load_registry_from_csv(csv_file)
+    rec = reg.records[0]
+
+    assert rec.exposure_duration_unit is None  # NOT defaulted to "h"
+    assert rec.dose_unit is None              # NOT defaulted to "uM"
+    assert rec.experiment_id is None          # NOT defaulted to "UNKNOWN_EXPERIMENT"
+    assert rec.base_mean is None              # NOT defaulted to 0.0
+
+
+def test_production_csv_loader_rejects_scientifically_insufficient_inputs(tmp_path: Path) -> None:
+    """Focus test: CSV loader must explicitly reject scientifically insufficient inputs (missing mandatory identifiers)."""
+    # 1. Missing study_id
+    f1 = tmp_path / "missing_study.csv"
+    pd.DataFrame({
+        "contrast_id": ["c1"],
+        "canonical_ensembl_gene_id": ["ENSG001"],
+        "compound_id": ["CID:1"],
+        "compound_name": ["C1"],
+        "response_direction": ["UP"],
+        "estimate_status": ["OK"],
+    }).to_csv(f1, index=False)
+
+    with pytest.raises(ValueError, match="Scientifically insufficient input: missing or empty study_id"):
+        load_registry_from_csv(f1)
+
+    # 2. Missing canonical_ensembl_gene_id
+    f2 = tmp_path / "missing_gene.csv"
+    pd.DataFrame({
+        "study_id": ["s1"],
+        "contrast_id": ["c1"],
+        "compound_id": ["CID:1"],
+        "compound_name": ["C1"],
+        "response_direction": ["UP"],
+        "estimate_status": ["OK"],
+    }).to_csv(f2, index=False)
+
+    with pytest.raises(ValueError, match="Scientifically insufficient input: missing or empty canonical_ensembl_gene_id"):
+        load_registry_from_csv(f2)
+
+
+def test_obtain_pathway_database_version_from_stage8c_provenance() -> None:
+    """Focus test: Obtain pathway database version from verified Stage 8C provenance, not fixed '1.0.0'."""
+    prov_path = Path("data/processed/GSE232218_VPA_200uM_provenance.json")
+    if not prov_path.exists():
+        pytest.skip("GSE232218 provenance JSON not found.")
+
+    version = load_stage8c_pathway_database_version(prov_path)
+    assert version is not None
+    assert "Bioconductor 3.20" in version
+    assert "KEGG hsa snapshot 2026-10-13" in version
+    assert version != "1.0.0"

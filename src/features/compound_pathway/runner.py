@@ -8,6 +8,7 @@ Provides universal, dataset-independent pipelines to:
 5. Serialize to governed canonical formats.
 """
 
+import json
 from pathlib import Path
 from typing import Any, Sequence
 import pandas as pd
@@ -64,6 +65,20 @@ def parse_leading_edge_tokens(val: Any) -> tuple[str, ...]:
     return tuple(t.strip() for t in s.split(delim) if t.strip())
 
 
+def load_stage8c_pathway_database_version(provenance_path: str | Path) -> str | None:
+    """Extract verified pathway database version from Stage 8C provenance JSON."""
+    path = Path(provenance_path)
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        ver = data.get("pathway_database_version")
+        return str(ver).strip() if ver and str(ver).strip() else None
+    except Exception:
+        return None
+
+
 def load_pathway_results_from_csv(csv_path: str | Path) -> list[PathwayEnrichmentResult]:
     """Load Stage 8C pathway enrichment results from a canonical CSV export."""
     path = Path(csv_path)
@@ -84,6 +99,7 @@ def load_pathway_results_from_csv(csv_path: str | Path) -> list[PathwayEnrichmen
         else:
             sig = bool(adj_p < 0.05)
 
+        raw_ver = str(row["analysis_version"]).strip() if pd.notna(row.get("analysis_version")) and str(row.get("analysis_version")).strip() else None
         res = PathwayEnrichmentResult(
             contrast_id=str(row["contrast_id"]),
             source_database=str(row["source_database"]),
@@ -98,7 +114,7 @@ def load_pathway_results_from_csv(csv_path: str | Path) -> list[PathwayEnrichmen
             leading_edge_gene_ids=le_ids,
             leading_edge_symbols=le_syms,
             ranking_metric=str(row.get("ranking_metric") or "wald_statistic"),
-            analysis_version=str(row.get("analysis_version") or "1.0.0"),
+            analysis_version=raw_ver or "clusterProfiler",
             is_significant=sig,
         )
         results.append(res)
@@ -114,6 +130,7 @@ def load_registry_from_csv(
 
     Preserves exact upstream values. Missing metadata remains None or empty tuples;
     never assumes sample IDs, biological replicates, or default replicate counts.
+    Never fabricates missing experimental identifiers, duration/dose units, or expression measurements.
     """
     path = Path(csv_path)
     if not path.exists():
@@ -123,9 +140,17 @@ def load_registry_from_csv(
     records: list[ConditionGeneResponseRecord] = []
 
     for _, row in df.iterrows():
+        # Validate required identifiers - explicitly reject scientifically insufficient inputs
+        if pd.isna(row.get("study_id")) or not str(row.get("study_id")).strip():
+            raise ValueError("Scientifically insufficient input: missing or empty study_id.")
+        if pd.isna(row.get("canonical_ensembl_gene_id")) or not str(row.get("canonical_ensembl_gene_id")).strip():
+            raise ValueError("Scientifically insufficient input: missing or empty canonical_ensembl_gene_id.")
+        if pd.isna(row.get("contrast_id")) or not str(row.get("contrast_id")).strip():
+            raise ValueError("Scientifically insufficient input: missing or empty contrast_id.")
+
         # Contrast & Condition IDs
-        cid = str(row["contrast_id"])
-        trt_cond = str(row["treatment_condition_id"]) if pd.notna(row.get("treatment_condition_id")) else cid
+        cid = str(row["contrast_id"]).strip()
+        trt_cond = str(row["treatment_condition_id"]).strip() if pd.notna(row.get("treatment_condition_id")) and str(row.get("treatment_condition_id")).strip() else None
         ctrl_raw = str(row["matched_control_condition_ids"]) if pd.notna(row.get("matched_control_condition_ids")) else ""
         ctrl_tuple = tuple(c.strip() for c in ctrl_raw.split(";") if c.strip()) if ctrl_raw else ()
 
@@ -142,8 +167,10 @@ def load_registry_from_csv(
         ctrl_bio_raw = str(row["control_biological_replicate_ids"]) if pd.notna(row.get("control_biological_replicate_ids")) else ""
         ctrl_bio = tuple(b.strip() for b in ctrl_bio_raw.split(";") if b.strip()) if ctrl_bio_raw else ()
 
-        trt_count = int(row["treatment_replicate_count"]) if pd.notna(row.get("treatment_replicate_count")) else len(trt_samples)
-        ctrl_count = int(row["control_replicate_count"]) if pd.notna(row.get("control_replicate_count")) else len(ctrl_samples)
+        # Biological replicate count - NEVER infer from sample counts!
+        # Missing replicate counts must remain unknown (None) unless independently supported by verified biological replicate IDs
+        trt_count = int(row["treatment_replicate_count"]) if pd.notna(row.get("treatment_replicate_count")) else (len(trt_bio) if trt_bio else None)
+        ctrl_count = int(row["control_replicate_count"]) if pd.notna(row.get("control_replicate_count")) else (len(ctrl_bio) if ctrl_bio else None)
 
         bio_src_raw = str(row["biological_source_ids"]) if pd.notna(row.get("biological_source_ids")) else ""
         bio_src = tuple(s.strip() for s in bio_src_raw.split(";") if s.strip()) if bio_src_raw else ()
@@ -151,25 +178,37 @@ def load_registry_from_csv(
         ctx_raw = str(row["organoid_context_ids"]) if pd.notna(row.get("organoid_context_ids")) else ""
         ctx_ids = tuple(c.strip() for c in ctx_raw.split(";") if c.strip()) if ctx_raw else ()
 
+        # Missing experimental identifiers must remain None, not fabricated defaults like "UNKNOWN_EXPERIMENT"
+        exp_id = str(row["experiment_id"]).strip() if pd.notna(row.get("experiment_id")) and str(row.get("experiment_id")).strip() else None
+
+        # Study family and independent study IDs
+        study_family_id = str(row["study_family_id"]).strip() if pd.notna(row.get("study_family_id")) and str(row.get("study_family_id")).strip() else str(row["study_id"]).strip()
+        ind_study_id = str(row["independent_study_id"]).strip() if pd.notna(row.get("independent_study_id")) and str(row.get("independent_study_id")).strip() else str(row["study_id"]).strip()
+
+        # Units and measurements - do not default duration unit to "h" or base_mean to 0.0
+        exp_dur_unit = str(row["exposure_duration_unit"]).strip() if pd.notna(row.get("exposure_duration_unit")) and str(row.get("exposure_duration_unit")).strip() else None
+        dose_unit = str(row["dose_unit"]).strip() if pd.notna(row.get("dose_unit")) and str(row.get("dose_unit")).strip() else None
+        base_mean = float(row["base_mean"]) if pd.notna(row.get("base_mean")) else None
+
         rec = ConditionGeneResponseRecord(
-            canonical_ensembl_gene_id=str(row["canonical_ensembl_gene_id"]),
-            gene_symbol=str(row["gene_symbol"]) if pd.notna(row.get("gene_symbol")) else None,
-            study_id=str(row["study_id"]),
-            study_family_id=str(row.get("study_family_id") or row["study_id"]),
-            independent_study_id=str(row.get("independent_study_id") or row["study_id"]),
-            experiment_id=str(row["experiment_id"]) if pd.notna(row.get("experiment_id")) else "UNKNOWN_EXPERIMENT",
+            canonical_ensembl_gene_id=str(row["canonical_ensembl_gene_id"]).strip(),
+            gene_symbol=str(row["gene_symbol"]).strip() if pd.notna(row.get("gene_symbol")) and str(row.get("gene_symbol")).strip() else None,
+            study_id=str(row["study_id"]).strip(),
+            study_family_id=study_family_id,
+            independent_study_id=ind_study_id,
+            experiment_id=exp_id,
             contrast_id=cid,
-            treatment_condition_id=trt_cond,
+            treatment_condition_id=trt_cond or cid,
             matched_control_condition_ids=ctrl_tuple,
-            compound_id=str(row["compound_id"]),
-            compound_name=str(row["compound_name"]),
+            compound_id=str(row["compound_id"]).strip(),
+            compound_name=str(row["compound_name"]).strip(),
             dose_value=float(row["dose_value"]) if pd.notna(row.get("dose_value")) else None,
-            dose_unit=str(row["dose_unit"]) if pd.notna(row.get("dose_unit")) else None,
-            dose_original=str(row["dose_original"]) if pd.notna(row.get("dose_original")) else None,
+            dose_unit=dose_unit,
+            dose_original=str(row["dose_original"]).strip() if pd.notna(row.get("dose_original")) and str(row.get("dose_original")).strip() else None,
             exposure_duration=float(row["exposure_duration"]) if pd.notna(row.get("exposure_duration")) else None,
-            exposure_duration_unit=str(row.get("exposure_duration_unit") or "h"),
-            developmental_stage=str(row["developmental_stage"]) if pd.notna(row.get("developmental_stage")) else None,
-            model_type=str(row["model_type"]) if pd.notna(row.get("model_type")) else None,
+            exposure_duration_unit=exp_dur_unit,
+            developmental_stage=str(row["developmental_stage"]).strip() if pd.notna(row.get("developmental_stage")) and str(row.get("developmental_stage")).strip() else None,
+            model_type=str(row["model_type"]).strip() if pd.notna(row.get("model_type")) and str(row.get("model_type")).strip() else None,
             biological_source_ids=bio_src,
             organoid_context_ids=ctx_ids,
             treatment_replicate_count=trt_count,
@@ -178,19 +217,19 @@ def load_registry_from_csv(
             control_sample_ids=ctrl_samples,
             treatment_biological_replicate_ids=trt_bio,
             control_biological_replicate_ids=ctrl_bio,
-            base_mean=float(row["base_mean"]) if pd.notna(row.get("base_mean")) else 0.0,
+            base_mean=base_mean,
             log2_fold_change=float(row["log2_fold_change"]) if pd.notna(row.get("log2_fold_change")) else None,
             log2_fold_change_se=float(row["log2_fold_change_se"]) if pd.notna(row.get("log2_fold_change_se")) else None,
             wald_statistic=float(row["wald_statistic"]) if pd.notna(row.get("wald_statistic")) else None,
             p_value=float(row["p_value"]) if pd.notna(row.get("p_value")) else None,
             adjusted_p_value=float(row["adjusted_p_value"]) if pd.notna(row.get("adjusted_p_value")) else None,
-            response_direction=ResponseDirection(str(row["response_direction"])),
-            estimate_status=EstimateStatus(str(row["estimate_status"])),
-            missing_reason=str(row["missing_reason"]) if pd.notna(row.get("missing_reason")) else None,
-            cross_study_status=CrossStudyStatus(str(row.get("cross_study_status") or CrossStudyStatus.SINGLE_STUDY_ONLY.value)),
+            response_direction=ResponseDirection(str(row["response_direction"]).strip()),
+            estimate_status=EstimateStatus(str(row["estimate_status"]).strip()),
+            missing_reason=str(row["missing_reason"]).strip() if pd.notna(row.get("missing_reason")) and str(row.get("missing_reason")).strip() else None,
+            cross_study_status=CrossStudyStatus(str(row.get("cross_study_status") or CrossStudyStatus.SINGLE_STUDY_ONLY.value).strip()),
             source_contrast_id=cid,
-            de_version=str(row.get("de_version") or "1.0.0"),
-            registry_version=str(row.get("registry_version") or "1.0.0"),
+            de_version=str(row["de_version"]).strip() if pd.notna(row.get("de_version")) and str(row.get("de_version")).strip() else None,
+            registry_version=str(row["registry_version"]).strip() if pd.notna(row.get("registry_version")) and str(row.get("registry_version")).strip() else None,
         )
         records.append(rec)
 
@@ -206,6 +245,9 @@ def build_stage8d_evidence_pipeline(
     dataset_id: str | None = None,
     output_csv: str | Path | None = None,
     pathway_gene_members: dict[str, set[str]] | None = None,
+    pathway_database_version: str | None = None,
+    provenance_path: str | Path | None = None,
+    has_complete_reference: bool = False,
 ) -> tuple[ChemicalGenePathwayEvidenceDataset, EvidenceQCSummary]:
     """Generic, dataset-independent pipeline to generate Stage 8D evidence records.
 
@@ -216,11 +258,25 @@ def build_stage8d_evidence_pipeline(
         contrast_id: Optional contrast filter (if None, processes all contrasts in registry).
         dataset_id: Optional dataset identifier.
         output_csv: Optional destination file path for CSV export.
-        pathway_gene_members: Optional dictionary mapping pathway_id to full member gene IDs/symbols.
+        pathway_gene_members: Optional dictionary mapping pathway_id to member gene IDs/symbols.
+        pathway_database_version: Optional explicit pathway database version from verified Stage 8C provenance.
+        provenance_path: Optional path to Stage 8C provenance JSON to extract pathway database version.
+        has_complete_reference: Whether pathway_gene_members constitutes a complete, exhaustive gene set reference.
 
     Returns:
         tuple of (ChemicalGenePathwayEvidenceDataset, EvidenceQCSummary)
     """
+    # Resolve pathway database version from verified Stage 8C provenance
+    pw_db_version = pathway_database_version
+    if pw_db_version is None and provenance_path is not None:
+        pw_db_version = load_stage8c_pathway_database_version(provenance_path)
+    if pw_db_version is None and output_csv is not None:
+        out_p = Path(output_csv)
+        candidate_stem = out_p.stem.replace("_chemical_gene_pathway_evidence", "")
+        cand_path = out_p.parent / f"{candidate_stem}_provenance.json"
+        if cand_path.exists():
+            pw_db_version = load_stage8c_pathway_database_version(cand_path)
+
     # 1. Build Chemical-Gene records
     cg_records = build_chemical_gene_records(registry, contrast_id=contrast_id)
     if not cg_records:
@@ -249,6 +305,8 @@ def build_stage8d_evidence_pipeline(
                     matching_pathways,
                     first_exp,
                     pathway_gene_members=pathway_gene_members,
+                    pathway_database_version=pw_db_version,
+                    has_complete_membership=has_complete_reference,
                 )
                 cp_records.extend(c_pw_recs)
 
@@ -259,6 +317,7 @@ def build_stage8d_evidence_pipeline(
         pathway_status=pathway_status,
         dataset_id=dataset_id,
         pathway_gene_members=pathway_gene_members,
+        has_complete_reference=has_complete_reference,
     )
 
     # 4. Audit Quality Control per study, contrast, and gene

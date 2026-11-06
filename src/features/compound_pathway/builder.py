@@ -118,10 +118,13 @@ def build_chemical_pathway_records(
     pathway_results: Sequence[PathwayEnrichmentResult],
     exposure: ChemicalExposureContext,
     pathway_gene_members: dict[str, set[str]] | None = None,
+    pathway_database_version: str | None = None,
+    has_complete_membership: bool = False,
 ) -> tuple[ChemicalPathwayRecord, ...]:
     """Convert Stage 8C GSEA results into typed ChemicalPathwayRecords.
 
     Enforces contrast-specific matching: rejects mismatched pathway results.
+    Obtains pathway database version from verified Stage 8C provenance without fabricating defaults.
     """
     cp_records: list[ChemicalPathwayRecord] = []
     for pw in pathway_results:
@@ -145,7 +148,7 @@ def build_chemical_pathway_records(
             pathway_id=pw.pathway_id,
             pathway_name=pw.pathway_name,
             source_database=pw.source_database,
-            database_version="1.0.0",
+            database_version=pathway_database_version,
             enrichment_score=pw.enrichment_score,
             normalized_enrichment_score=pw.normalized_enrichment_score,
             p_value=pw.p_value,
@@ -157,6 +160,7 @@ def build_chemical_pathway_records(
             leading_edge_symbols=pw.leading_edge_symbols,
             all_member_gene_ids=all_ids,
             all_member_symbols=all_syms,
+            has_complete_membership=has_complete_membership,
             ranking_metric=pw.ranking_metric,
             analysis_version=pw.analysis_version,
             scientific_limitation=(
@@ -173,6 +177,7 @@ def determine_gene_pathway_membership(
     gene_symbol: str | None,
     pathway: ChemicalPathwayRecord,
     pathway_gene_members: dict[str, set[str]] | None = None,
+    has_complete_reference: bool | None = None,
 ) -> tuple[GenePathwayMembershipType, bool]:
     """Determine the four-state biological gene-pathway participation.
 
@@ -180,7 +185,7 @@ def determine_gene_pathway_membership(
     1. LEADING_EDGE_MEMBER: Verified core driving member in GSEA.
     2. NON_LEADING_EDGE_MEMBER: Verified member of pathway gene set outside the leading edge.
     3. CONFIRMED_NON_MEMBER: Complete versioned gene set reference confirms gene is NOT a member.
-    4. UNKNOWN_OR_UNAVAILABLE: Complete gene set reference was unavailable or incomplete.
+    4. UNKNOWN_OR_UNAVAILABLE: Partial, unversioned, or unavailable reference membership.
 
     Returns:
         tuple of (GenePathwayMembershipType, is_leading_edge: bool)
@@ -193,7 +198,7 @@ def determine_gene_pathway_membership(
     if (gid_clean and gid_clean in le_tokens) or (sym_clean and sym_clean in le_tokens):
         return GenePathwayMembershipType.LEADING_EDGE_MEMBER, True
 
-    # 2. Check complete reference membership if available
+    # 2. Check reference membership if available
     ref_tokens: set[str] = set()
     if pathway.all_member_gene_ids or pathway.all_member_symbols:
         ref_tokens = {g.strip().upper() for g in pathway.all_member_gene_ids + pathway.all_member_symbols if g}
@@ -203,8 +208,14 @@ def determine_gene_pathway_membership(
     if ref_tokens:
         if (gid_clean and gid_clean in ref_tokens) or (sym_clean and sym_clean in ref_tokens):
             return GenePathwayMembershipType.NON_LEADING_EDGE_MEMBER, False
-        else:
+
+        # Assign CONFIRMED_NON_MEMBER ONLY when complete, versioned membership exists
+        is_versioned = bool(pathway.database_version and str(pathway.database_version).strip())
+        is_complete = has_complete_reference if has_complete_reference is not None else pathway.has_complete_membership
+        if is_versioned and is_complete:
             return GenePathwayMembershipType.CONFIRMED_NON_MEMBER, False
+        else:
+            return GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE, False
 
     # 3. Reference is unavailable or incomplete
     return GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE, False
@@ -216,6 +227,7 @@ def link_chemical_gene_pathway_evidence(
     pathway_status: PathwayEvidenceStatus | None = None,
     dataset_id: str | None = None,
     pathway_gene_members: dict[str, set[str]] | None = None,
+    has_complete_reference: bool = False,
 ) -> ChemicalGenePathwayEvidenceDataset:
     """Synthesize structured Chemical–Gene–Pathway evidence records with strict contrast enforcement.
 
@@ -420,7 +432,11 @@ def link_chemical_gene_pathway_evidence(
                 ev_id = _derive_evidence_id(study_id, contrast_id, cg.canonical_ensembl_gene_id, None)
                 if current_status == PathwayEvidenceStatus.AVAILABLE:
                     pw_stat = PathwayEvidenceStatus.NOT_ANNOTATED
-                    mem_type = GenePathwayMembershipType.CONFIRMED_NON_MEMBER if pathway_gene_members else GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE
+                    all_pws_versioned = bool(
+                        contrast_pathways and all(pw.database_version and str(pw.database_version).strip() for pw in contrast_pathways)
+                    )
+                    can_confirm = has_complete_reference and all_pws_versioned and bool(pathway_gene_members)
+                    mem_type = GenePathwayMembershipType.CONFIRMED_NON_MEMBER if can_confirm else GenePathwayMembershipType.UNKNOWN_OR_UNAVAILABLE
                     limitation_text = "Observed transcriptomic perturbation. Gene is not an annotated member or leading-edge driver of evaluated pathways."
                     prov_note = "Conserved gene universe record; not participating in evaluated pathways"
                 else:
