@@ -56,81 +56,177 @@ def derive_direction_concordance(
     return DirectionConcordance.UNDETERMINED
 
 
+def _is_valid_metadata_value(val: Any) -> bool:
+    """Check if metadata value is present, non-empty, and not an uninformative placeholder."""
+    if val is None:
+        return False
+    if isinstance(val, str):
+        s = val.strip().lower()
+        if not s or s in ("unknown", "unspecified", "none", "n/a", "na", "null", "missing"):
+            return False
+    return True
+
+
 def evaluate_study_comparability(
     record1: ConditionGeneResponseRecord,
     record2: ConditionGeneResponseRecord,
-    replicates_verified1: bool = True,
-    replicates_verified2: bool = True,
+    replicates_verified1: bool | None = None,
+    replicates_verified2: bool | None = None,
 ) -> StudyComparabilityAssessment:
     """Evaluate biological, chemical, and statistical comparability between two study conditions.
 
-    Strict rules:
-    - Differing compounds -> NONCOMPARABLE_CONTEXT, synthesis rejected.
-    - Differing doses or units -> recorded as mismatch.
-    - Differing developmental stages -> recorded as mismatch.
-    - Differing exposure durations -> recorded as mismatch.
-    - Unverified biological replicates -> synthesis blocked.
+    Governed Scientific Invariants:
+    1. Independent study verification: Compared records must have explicit evidence of coming
+       from independent studies or study families. Different cell lines, donors, or conditions
+       within the same study cannot count as independent studies.
+    2. Biological replication: Missing replicate verification must NOT default to approved;
+       both studies require explicit validated status (replicates_verified is True) and >= 2 reps.
+    3. Regimen & model matching: Dose, developmental stage, exposure duration, AND organoid model
+       system must match.
+    4. Missing metadata: Missing, unknown, or unspecified metadata is strictly NOT interpreted as
+       verified equivalence.
+    5. Final synthesis eligibility: True ONLY if independent studies, compound, dose, stage,
+       duration, organoid model match, and replicates are verified.
     """
     differences: list[str] = []
 
-    # 1. Compound Identity Match
+    # 1. Study Independence Verification
+    s1_id = (record1.study_id or "").strip()
+    s2_id = (record2.study_id or "").strip()
+    s1_fam = (record1.study_family_id or "").strip()
+    s2_fam = (record2.study_family_id or "").strip()
+    s1_ind = (record1.independent_study_id or "").strip()
+    s2_ind = (record2.independent_study_id or "").strip()
+
+    has_study_identifiers = (
+        _is_valid_metadata_value(s1_id)
+        and _is_valid_metadata_value(s2_id)
+        and _is_valid_metadata_value(s1_fam)
+        and _is_valid_metadata_value(s2_fam)
+        and _is_valid_metadata_value(s1_ind)
+        and _is_valid_metadata_value(s2_ind)
+    )
+
+    is_same_study = bool(
+        s1_id.lower() == s2_id.lower()
+        or s1_fam.lower() == s2_fam.lower()
+        or s1_ind.lower() == s2_ind.lower()
+    )
+
+    is_independent_studies = has_study_identifiers and not is_same_study
+
+    if not has_study_identifiers:
+        differences.append(
+            f"Study identifiers missing or unverified: '{record1.study_id}' vs '{record2.study_id}'"
+        )
+    elif is_same_study:
+        differences.append(
+            f"Records belong to the same study or study family: '{s1_fam}' "
+            "(different cell lines, donors, or conditions within the same study are not independent studies)"
+        )
+
+    # 2. Compound Identity Match
     c1_id = (record1.compound_id or "").strip()
     c2_id = (record2.compound_id or "").strip()
     c1_name = (record1.compound_name or "").strip().lower()
     c2_name = (record2.compound_name or "").strip().lower()
 
-    is_compound_matched = bool((c1_id and c2_id and c1_id == c2_id) or (c1_name and c2_name and c1_name == c2_name))
-    if not is_compound_matched:
+    has_compound_meta = (
+        (_is_valid_metadata_value(c1_id) or _is_valid_metadata_value(c1_name))
+        and (_is_valid_metadata_value(c2_id) or _is_valid_metadata_value(c2_name))
+    )
+    is_compound_matched = bool(
+        has_compound_meta
+        and (
+            (c1_id and c2_id and c1_id.lower() == c2_id.lower())
+            or (c1_name and c2_name and c1_name == c2_name)
+        )
+    )
+    if not has_compound_meta:
+        differences.append("Compound metadata missing, unknown, or unspecified")
+    elif not is_compound_matched:
         differences.append(
             f"Compound mismatch: '{record1.compound_name}' ({record1.compound_id}) vs '{record2.compound_name}' ({record2.compound_id})"
         )
 
-    # 2. Dose Match
+    # 3. Dose Match
     d1 = record1.dose_value
     d2 = record2.dose_value
     u1 = (record1.dose_unit or "").strip().lower()
     u2 = (record2.dose_unit or "").strip().lower()
-    is_dose_matched = bool(d1 is not None and d2 is not None and abs(d1 - d2) < 1e-6 and u1 == u2)
-    if not is_dose_matched:
+    has_dose_meta = (
+        d1 is not None
+        and d2 is not None
+        and _is_valid_metadata_value(u1)
+        and _is_valid_metadata_value(u2)
+    )
+    is_dose_matched = bool(
+        has_dose_meta
+        and abs(d1 - d2) < 1e-6
+        and u1 == u2
+    )
+    if not has_dose_meta:
+        differences.append("Dose or concentration metadata missing, unknown, or unspecified")
+    elif not is_dose_matched:
         differences.append(f"Dose mismatch: {d1} {record1.dose_unit} vs {d2} {record2.dose_unit}")
 
-    # 3. Developmental Stage Match
+    # 4. Developmental Stage Match
     st1 = (record1.developmental_stage or "").strip().lower()
     st2 = (record2.developmental_stage or "").strip().lower()
-    is_developmental_stage_matched = bool(st1 and st2 and st1 == st2)
-    if not is_developmental_stage_matched:
+    has_stage_meta = _is_valid_metadata_value(st1) and _is_valid_metadata_value(st2)
+    is_developmental_stage_matched = bool(has_stage_meta and st1 == st2)
+    if not has_stage_meta:
+        differences.append("Developmental stage metadata missing, unknown, or unspecified")
+    elif not is_developmental_stage_matched:
         differences.append(
             f"Developmental stage mismatch: '{record1.developmental_stage}' vs '{record2.developmental_stage}'"
         )
 
-    # 4. Exposure Duration Match
+    # 5. Exposure Duration Match
     dur1 = record1.exposure_duration
     dur2 = record2.exposure_duration
     du1 = (record1.exposure_duration_unit or "").strip().lower()
     du2 = (record2.exposure_duration_unit or "").strip().lower()
-    is_duration_matched = bool(dur1 is not None and dur2 is not None and abs(dur1 - dur2) < 1e-6 and du1 == du2)
-    if not is_duration_matched:
+    has_dur_meta = (
+        dur1 is not None
+        and dur2 is not None
+        and _is_valid_metadata_value(du1)
+        and _is_valid_metadata_value(du2)
+    )
+    is_duration_matched = bool(
+        has_dur_meta
+        and abs(dur1 - dur2) < 1e-6
+        and du1 == du2
+    )
+    if not has_dur_meta:
+        differences.append("Exposure duration metadata missing, unknown, or unspecified")
+    elif not is_duration_matched:
         differences.append(
             f"Exposure duration mismatch: {dur1} {record1.exposure_duration_unit} vs {dur2} {record2.exposure_duration_unit}"
         )
 
-    # 5. Organoid Model Match
+    # 6. Organoid Model Match
     m1 = (record1.model_type or "").strip().lower()
     m2 = (record2.model_type or "").strip().lower()
-    is_organoid_model_matched = bool(m1 and m2 and m1 == m2)
-    if not is_organoid_model_matched:
+    has_model_meta = _is_valid_metadata_value(m1) and _is_valid_metadata_value(m2)
+    is_organoid_model_matched = bool(has_model_meta and m1 == m2)
+    if not has_model_meta:
+        differences.append("Organoid model metadata missing, unknown, or unspecified")
+    elif not is_organoid_model_matched:
         differences.append(f"Organoid model mismatch: '{record1.model_type}' vs '{record2.model_type}'")
 
-    # 6. Biological Replicates Verification
+    # 7. Biological Replicates Verification
     rep_adequacy1 = record1.treatment_replicate_count >= 2 and record1.control_replicate_count >= 2
     rep_adequacy2 = record2.treatment_replicate_count >= 2 and record2.control_replicate_count >= 2
-    are_replicates_verified = replicates_verified1 and replicates_verified2 and rep_adequacy1 and rep_adequacy2
+    study1_reps_verified = bool(replicates_verified1 is True)
+    study2_reps_verified = bool(replicates_verified2 is True)
+    are_replicates_verified = study1_reps_verified and study2_reps_verified and rep_adequacy1 and rep_adequacy2
     if not are_replicates_verified:
         diff_str: list[str] = []
-        if not replicates_verified1:
-            diff_str.append(f"Study 1 ({record1.study_id}) replicates unverified")
-        if not replicates_verified2:
-            diff_str.append(f"Study 2 ({record2.study_id}) replicates unverified")
+        if not study1_reps_verified:
+            diff_str.append(f"Study 1 ({record1.study_id}) replicates not explicitly verified")
+        if not study2_reps_verified:
+            diff_str.append(f"Study 2 ({record2.study_id}) replicates not explicitly verified")
         if not rep_adequacy1:
             diff_str.append(f"Study 1 under-replicated (trt={record1.treatment_replicate_count}, ctrl={record1.control_replicate_count})")
         if not rep_adequacy2:
@@ -139,16 +235,24 @@ def evaluate_study_comparability(
 
     # Synthesis Decision
     is_synthesis_justified = (
-        is_compound_matched
+        is_independent_studies
+        and is_compound_matched
         and is_dose_matched
         and is_developmental_stage_matched
         and is_duration_matched
+        and is_organoid_model_matched
         and are_replicates_verified
     )
 
     if not is_compound_matched:
         status = CrossStudyStatus.NONCOMPARABLE_CONTEXT
         rationale = "Formal statistical synthesis rejected: distinct chemical compounds cannot be pooled."
+    elif not is_independent_studies:
+        status = CrossStudyStatus.SINGLE_STUDY_ONLY
+        rationale = (
+            "Formal cross-study synthesis rejected: compared records do not come from independent studies or study families. "
+            f"Both records belong to study family '{record1.study_family_id}' (different cell lines, donors, or conditions within the same study are not independent studies)."
+        )
     elif not is_synthesis_justified:
         status = CrossStudyStatus.NONCOMPARABLE_CONTEXT
         rationale = (
@@ -160,7 +264,7 @@ def evaluate_study_comparability(
         status = CrossStudyStatus.COMPARABLE_INDEPENDENT_STUDIES
         rationale = (
             "Independent studies share verified comparable experimental regimens, developmental stages, "
-            "and biological replication. Formally eligible for prespecified meta-analysis."
+            "organoid model systems, and verified biological replication. Formally eligible for prespecified meta-analysis."
         )
 
     return StudyComparabilityAssessment(
@@ -170,6 +274,7 @@ def evaluate_study_comparability(
         contrast2_id=record2.contrast_id,
         compound_id=record1.compound_id,
         compound_name=record1.compound_name,
+        is_independent_studies=is_independent_studies,
         is_compound_matched=is_compound_matched,
         is_dose_matched=is_dose_matched,
         study1_dose=record1.dose_value,
@@ -185,8 +290,8 @@ def evaluate_study_comparability(
         study1_model=record1.model_type,
         study2_model=record2.model_type,
         are_replicates_verified=are_replicates_verified,
-        study1_replicates_verified=replicates_verified1,
-        study2_replicates_verified=replicates_verified2,
+        study1_replicates_verified=study1_reps_verified,
+        study2_replicates_verified=study2_reps_verified,
         is_synthesis_justified=is_synthesis_justified,
         cross_study_status=status,
         rationale=rationale,
@@ -199,8 +304,8 @@ def compare_cross_study_gene_responses(
     registry2: ConditionGeneResponseRegistry,
     contrast1_id: str | None = None,
     contrast2_id: str | None = None,
-    replicates_verified1: bool = True,
-    replicates_verified2: bool = True,
+    replicates_verified1: bool | None = None,
+    replicates_verified2: bool | None = None,
     comparison_id: str | None = None,
 ) -> CrossStudyComparisonDataset:
     """Compare and align gene responses across two independent studies.

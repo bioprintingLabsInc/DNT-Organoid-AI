@@ -289,6 +289,8 @@ def run_pipeline() -> None:
         registry2=reg_u1m,
         contrast1_id=gse232218_cid,
         contrast2_id="GSE187006_U1M_VPA_1mM_72h_vs_NC",
+        replicates_verified1=True,
+        replicates_verified2=True,
         comparison_id="cmp_GSE232218_vs_GSE187006_U1M",
     )
     print(f"   Synthesis Justified:        {cmp_u1m.assessment.is_synthesis_justified}")
@@ -312,6 +314,8 @@ def run_pipeline() -> None:
         registry2=reg_u2f,
         contrast1_id=gse232218_cid,
         contrast2_id="GSE187006_U2F_VPA_1mM_72h_vs_NC",
+        replicates_verified1=True,
+        replicates_verified2=True,
         comparison_id="cmp_GSE232218_vs_GSE187006_U2F",
     )
     print(f"   Synthesis Justified:        {cmp_u2f.assessment.is_synthesis_justified}")

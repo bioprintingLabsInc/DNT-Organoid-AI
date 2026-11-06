@@ -235,6 +235,7 @@ class StudyComparabilityAssessment:
     contrast2_id: str
     compound_id: str
     compound_name: str
+    is_independent_studies: bool
     is_compound_matched: bool
     is_dose_matched: bool
     study1_dose: float | None
@@ -265,6 +266,7 @@ class StudyComparabilityAssessment:
             "contrast2_id": self.contrast2_id,
             "compound_id": self.compound_id,
             "compound_name": self.compound_name,
+            "is_independent_studies": self.is_independent_studies,
             "is_compound_matched": self.is_compound_matched,
             "is_dose_matched": self.is_dose_matched,
             "study1_dose": self.study1_dose,

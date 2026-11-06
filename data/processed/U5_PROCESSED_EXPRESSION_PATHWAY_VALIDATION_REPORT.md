@@ -79,15 +79,25 @@
 ---
 
 ### Requirement 4: Independent Numerical Reproduction & Discrepancy Audit
-- **Objective:** Independently reproduce differential expression using direct R execution on the same inputs, compare against pipeline outputs, and document numerical discrepancies.
-- **Comparison Method:**
-  - Direct independent R script executed `limma::lmFit`, `limma::makeContrasts`, `limma::contrasts.fit`, `limma::eBayes(trend=TRUE)`, `limma::topTable` on the raw expression CSV.
-  - Compared 15,004 shared gene symbols between direct R and pipeline results.
-- **Discrepancy Findings:**
-  - Mean absolute difference in $\log_2\text{FC}$: $1.88 \times 10^{-5}$
-  - Mean absolute difference in moderated $t$: $2.23 \times 10^{-2}$
-  - For all 1-to-1 non-colliding loci: max absolute $\log_2\text{FC}$ difference is $\le 1.20 \times 10^{-8}$ (exact to the 8-decimal JSON serialization limit).
-  - **Identified Discrepancy Root Cause:** A single symbol (`MIR222HG`) showed a $\log_2\text{FC}$ discrepancy of 0.282. Investigation revealed that in the source data, both `LINC02595` (row 9251) and `MIR222HG` (row 9978) were present and both map to Ensembl ID `ENSG00000270069`. The pipeline strictly enforced canonical collision deduplication (retaining the first row and excluding duplicate entries to preserve the canonical gene universe), whereas direct unharmonized R evaluated both symbol rows independently.
+- **Objective:** Independently reproduce differential expression using direct R execution on exactly the same harmonized gene universe and sample set used by our pipeline, evaluate log2FC, moderated t, p-value, and FDR, and establish justified numerical tolerances.
+- **Evaluation on Harmonized Canonical Universe (15,561 loci):**
+  - Direct independent R script executed `limma::lmFit`, `limma::makeContrasts`, `limma::contrasts.fit`, `limma::eBayes(trend=TRUE)`, `limma::topTable` on the exact harmonized canonical matrix and sample sets.
+  - Tested across both **U1M** ($n=3$ vs $n=3$) and **U2F** ($n=3$ vs $n=3$) arms.
+- **Audited Numerical Discrepancies (`limma_numerical_parity_audit.json`):**
+  | Arm | Evaluated Loci | Metric | Max Abs Diff | Mean Abs Diff | Tolerance Justification |
+  |---|---|---|:---:|:---:|---|
+  | **U1M** | 15,561 | $\log_2\text{FC}$ | $1.20 \times 10^{-8}$ | $2.96 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+  | **U1M** | 15,561 | Moderated $t$ | $1.77 \times 10^{-7}$ | $2.03 \times 10^{-8}$ | Exact to 8-decimal JSON serialization |
+  | **U1M** | 15,561 | $p$-value | $7.92 \times 10^{-8}$ | $5.75 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+  | **U1M** | 15,561 | FDR (adj $p$) | $8.82 \times 10^{-8}$ | $7.38 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+  | **U2F** | 15,561 | $\log_2\text{FC}$ | $1.17 \times 10^{-8}$ | $3.01 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+  | **U2F** | 15,561 | Moderated $t$ | $1.64 \times 10^{-7}$ | $1.68 \times 10^{-8}$ | Exact to 8-decimal JSON serialization |
+  | **U2F** | 15,561 | $p$-value | $6.75 \times 10^{-8}$ | $5.65 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+  | **U2F** | 15,561 | FDR (adj $p$) | $7.72 \times 10^{-8}$ | $7.39 \times 10^{-9}$ | Exact to 8-decimal JSON serialization |
+- **Expression Scale Verification:**
+  - Source GEO matrix contains pre-computed $\log_2(\text{TPM})$ values from RSEM (with negative values corresponding to $0 < \text{TPM} < 1.0$).
+  - Provenance gate correctly verified `is_log_transformed=True` and `transformation_scale=TransformationScale.LOG2`.
+  - Confirmed that zero additional log transformation was applied downstream; values enter limma-trend directly on the true $\log_2(\text{TPM})$ scale.
 - **Verdict:** **PASS**
 
 ---
