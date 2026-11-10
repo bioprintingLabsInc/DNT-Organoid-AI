@@ -57,6 +57,7 @@ from .downstream_bridge import DownstreamBridgeResult, execute_downstream_pipeli
 from .env_exec import run_wsl, to_wsl_path
 from .fastp_runner import run_fastp_preprocessing
 from .featurecounts_runner import parse_featurecounts_summary, run_featurecounts
+from .library_type import LibraryType
 from .pairing import FastqPair, FastqSingle, determine_read_mate, extract_sample_stem
 from .profiles import (
     ExecutionProfile,
@@ -84,6 +85,7 @@ class SampleInput:
     r2_path: Path | None = None
     sra_accession: str | None = None
     read_layout: str = "paired_end"  # "paired_end" or "single_end"
+    library_type: LibraryType | str | None = None
     attributes: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -93,6 +95,7 @@ class SampleInput:
             "r2_path": str(self.r2_path) if self.r2_path else None,
             "sra_accession": self.sra_accession,
             "read_layout": self.read_layout,
+            "library_type": str(self.library_type.value) if isinstance(self.library_type, LibraryType) else str(self.library_type) if self.library_type else None,
             "attributes": self.attributes,
         }
 
@@ -131,6 +134,9 @@ class UniversalPipelineConfig:
     experiment_id: str = "exp_01"
     profile_name: str | None = "workstation_evaluation"
     read_layout: str = "paired_end"  # "paired_end" or "single_end"
+    library_type: LibraryType | str = LibraryType.CONVENTIONAL_BULK
+    enable_umi_pipeline: bool = False
+    trim_front1: int = 0
     strandedness: int | None = None  # None for auto RSeQC inference, or 0, 1, 2
     threads: int = 4
     require_approval: bool = True
@@ -154,6 +160,9 @@ class UniversalPipelineConfig:
             "experiment_id": self.experiment_id,
             "profile_name": self.profile_name,
             "read_layout": self.read_layout,
+            "library_type": str(self.library_type.value) if isinstance(self.library_type, LibraryType) else str(self.library_type),
+            "enable_umi_pipeline": self.enable_umi_pipeline,
+            "trim_front1": self.trim_front1,
             "strandedness": self.strandedness,
             "threads": self.threads,
             "require_approval": self.require_approval,
@@ -991,6 +1000,8 @@ class UniversalFastqPipeline:
             for s in samples:
                 d = {"sample_id": s.sample_id}
                 d.update(s.attributes)
+                if s.library_type is not None:
+                    d["library_type"] = str(s.library_type.value) if isinstance(s.library_type, LibraryType) else str(s.library_type)
                 # Keep unprovided attributes explicitly missing or unknown - DO NOT invent vehicle, chemical, concentration, or unit
                 raw_dicts.append(d)
 
@@ -1000,6 +1011,17 @@ class UniversalFastqPipeline:
                 source_type=config.source_type,
                 study_title=config.study_title,
             )
+
+    def get_sample_library_type(self, sample: SampleInput) -> LibraryType:
+        """Resolve effective library preparation type for an individual sample."""
+        if sample.library_type is not None:
+            return LibraryType.from_string(sample.library_type)
+        for k in ("library_type", "library_prep", "library_kit", "library_name", "library_strategy", "protocol", "description", "title"):
+            if k in sample.attributes and sample.attributes[k]:
+                parsed = LibraryType.from_string(str(sample.attributes[k]))
+                if parsed != LibraryType.UNKNOWN:
+                    return parsed
+        return LibraryType.from_string(self.config.library_type)
 
     def _ensure_directories(self) -> None:
         """Create output directories only upon approved execution initiation."""
@@ -1146,6 +1168,35 @@ class UniversalFastqPipeline:
                     code="MIXED_SEQUENCING_LAYOUTS_UNSUPPORTED",
                     message=f"Cohort contains mixed sequencing layouts: {sorted(layouts)}. Mixed single-end and paired-end runs within a single study pipeline run are not supported.",
                     remediation="Split the cohort into separate single-end and paired-end pipeline runs.",
+                )
+            )
+
+        # Check library types across cohort
+        sample_lib_types = {self.get_sample_library_type(s) for s in self.samples}
+        has_quantseq = any(lt.is_quantseq for lt in sample_lib_types)
+        has_conventional = any(lt == LibraryType.CONVENTIONAL_BULK for lt in sample_lib_types)
+
+        if has_quantseq and has_conventional:
+            findings.append(
+                PipelineFinding(
+                    severity="FATAL",
+                    code="MIXED_LIBRARY_TYPES_UNSUPPORTED",
+                    message="Cohort combines QuantSeq 3' mRNA-seq and conventional bulk RNA-seq samples within a single run.",
+                    remediation="Split the cohort and process QuantSeq 3' mRNA-seq and conventional bulk samples in separate pipeline runs.",
+                )
+            )
+
+        has_umi = any(lt.has_umi for lt in sample_lib_types) or LibraryType.from_string(self.config.library_type).has_umi
+        if has_umi and not self.config.enable_umi_pipeline:
+            findings.append(
+                PipelineFinding(
+                    severity="WARNING",
+                    code="QUANTSEQ_UMI_PIPELINE_REQUIRED",
+                    message=(
+                        "QuantSeq with UMIs was declared or detected, but the UMI-aware deduplication pipeline is not enabled. "
+                        "Execution will fail closed with BLOCKED_UNVALIDATED_QUANTSEQ_UMI unless enabled."
+                    ),
+                    remediation="Enable validated UMI pipeline when available, or specify non-UMI QuantSeq if UMIs are absent.",
                 )
             )
 
@@ -1395,12 +1446,14 @@ class UniversalFastqPipeline:
 
         # 2. Per-sample trimming
         for s in self.samples:
+            s_lib_type = self.get_sample_library_type(s)
             r2_target = self.trimmed_dir / f"{s.sample_id}_trimmed_R2.fastq.gz" if s.read_layout == "paired_end" else None
             stages.append({
                 "stage_id": f"02_fastp_{s.sample_id}",
                 "name": f"fastp QC & Trimming ({s.sample_id})",
                 "sample_id": s.sample_id,
                 "read_layout": s.read_layout,
+                "library_type": s_lib_type.value,
                 "out_r1": str(self.trimmed_dir / f"{s.sample_id}_trimmed_R1.fastq.gz"),
                 "out_r2": str(r2_target) if r2_target else None,
                 "report_json": str(self.qc_dir / f"{s.sample_id}_fastp.json"),
@@ -1558,6 +1611,41 @@ class UniversalFastqPipeline:
                     failed_stage="approval_gate",
                 )
 
+        # UMI Deduplication Safeguard
+        eff_study_lib = LibraryType.from_string(self.config.library_type)
+        has_unvalidated_umi = eff_study_lib.has_umi or any(
+            self.get_sample_library_type(s).has_umi for s in self.samples
+        )
+        if has_unvalidated_umi and not self.config.enable_umi_pipeline:
+            umi_finding = PipelineFinding(
+                severity="FATAL",
+                code="BLOCKED_UNVALIDATED_QUANTSEQ_UMI",
+                message=(
+                    "QuantSeq with UMIs (Unique Molecular Identifiers) was declared or detected, but the UMI-aware "
+                    "deduplication pipeline is not currently enabled. Applying standard coordinate-based deduplication "
+                    "or omitting UMI deduplication would introduce false transcript collapse or severe quantification bias."
+                ),
+                remediation=(
+                    "Enable a validated UMI pipeline when implemented, or configure non-UMI QuantSeq if UMIs are not present."
+                ),
+            )
+            return UniversalFastqResult(
+                status="BLOCKED_UNVALIDATED_QUANTSEQ_UMI",
+                study_id=self.config.study_id,
+                sample_ids=tuple(s.sample_id for s in self.samples),
+                raw_counts_path=None,
+                canonical_metadata_path=None,
+                qc_reports_dir=None,
+                alignments_dir=None,
+                strandedness_evidence_path=None,
+                counting_summary_path=None,
+                execution_record_path=None,
+                findings=(umi_finding,),
+                completed_stages=(),
+                failed_stage="umi_deduplication",
+                metrics={"remediation": umi_finding.remediation},
+            )
+
         # Ensure output directories exist upon approved execution start
         self._ensure_directories()
 
@@ -1694,6 +1782,7 @@ class UniversalFastqPipeline:
 
         for sample in self.samples:
             sid = sample.sample_id
+            eff_lib_type = self.get_sample_library_type(sample)
             trimmed_r1 = self.trimmed_dir / f"{sid}_trimmed_R1.fastq.gz"
             trimmed_r2 = self.trimmed_dir / f"{sid}_trimmed_R2.fastq.gz" if sample.read_layout == "paired_end" else None
             json_report = self.qc_dir / f"{sid}_fastp.json"
@@ -1705,23 +1794,33 @@ class UniversalFastqPipeline:
                 compute_file_content_hash(raw_r1),
                 compute_file_content_hash(raw_r2) if raw_r2 else "",
             )
-            config_hash_fastp = self._compute_hash(sid, sample.read_layout, str(self.config.threads))
+            config_hash_fastp = self._compute_hash(
+                sid,
+                sample.read_layout,
+                str(self.config.threads),
+                eff_lib_type.value,
+                str(self.config.trim_front1),
+            )
             expected_fastp = [trimmed_r1, json_report] + ([trimmed_r2] if trimmed_r2 else [])
 
             if not self.checkpoint_manager.is_stage_completed(
                 "fastp", sid, expected_fastp, input_hash_fastp, config_hash_fastp
             ):
-                print(f"Executing fastp for {sid}...")
-                fastp_res = run_fastp_preprocessing(
-                    raw_r1=raw_r1,
-                    raw_r2=raw_r2,
-                    out_r1=trimmed_r1,
-                    out_r2=trimmed_r2,
-                    json_report=json_report,
-                    html_report=html_report,
-                    sample_id=sid,
-                    threads=self.config.threads,
-                )
+                print(f"Executing fastp for {sid} ({eff_lib_type.value})...")
+                fastp_kwargs: dict[str, Any] = {
+                    "raw_r1": raw_r1,
+                    "raw_r2": raw_r2,
+                    "out_r1": trimmed_r1,
+                    "out_r2": trimmed_r2,
+                    "json_report": json_report,
+                    "html_report": html_report,
+                    "sample_id": sid,
+                    "threads": self.config.threads,
+                }
+                if eff_lib_type != LibraryType.CONVENTIONAL_BULK or self.config.trim_front1 > 0:
+                    fastp_kwargs["library_type"] = eff_lib_type
+                    fastp_kwargs["trim_front1"] = self.config.trim_front1
+                fastp_res = run_fastp_preprocessing(**fastp_kwargs)
                 self.checkpoint_manager.record_checkpoint(
                     stage="fastp",
                     identifier=sid,
@@ -1804,6 +1903,7 @@ class UniversalFastqPipeline:
             generate_bed12_from_gtf(self.references.gtf_annotation, bed12_path)
 
         per_sample_strandedness: dict[str, Any] = {}
+        eff_study_lib_type = LibraryType.from_string(self.config.library_type)
         if self.config.strandedness is not None:
             # User or study explicit decision with justification
             decision = StrandednessDecision(
@@ -1818,18 +1918,19 @@ class UniversalFastqPipeline:
             )
         else:
             # Empirical diagnosis via RSeQC infer_experiment.py
-            print("Evaluating empirical library strandedness across BAMs...")
+            print(f"Evaluating empirical library strandedness across BAMs ({eff_study_lib_type.value})...")
             for sid, bam_p in zip(sample_ids, bam_paths):
                 exp_res = run_infer_experiment(bam_p, bed12_path)
                 per_sample_strandedness[sid] = exp_res
 
-            decision = infer_strandedness_decision(per_sample_strandedness)
+            decision = infer_strandedness_decision(per_sample_strandedness, library_type=eff_study_lib_type)
 
         strandedness_evidence = {
             "study_id": self.config.study_id,
+            "library_type": eff_study_lib_type.value,
             "decision": decision.to_dict(),
             "per_sample_strandedness": per_sample_strandedness,
-            "recorded_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "recorded_at": datetime.timezone.utc and datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         evidence_file.write_text(json.dumps(strandedness_evidence, indent=2), encoding="utf-8")
         completed_stages.append("rseqc_strandedness")
@@ -1846,7 +1947,11 @@ class UniversalFastqPipeline:
                 strandedness_evidence_path=evidence_file,
                 counting_summary_path=None,
                 execution_record_path=None,
-                metrics={"rationale": decision.rationale},
+                metrics={
+                    "rationale": decision.rationale,
+                    "confidence": decision.confidence,
+                    "consensus_indication": decision.consensus_indication,
+                },
                 completed_stages=tuple(completed_stages),
                 failed_stage="rseqc_strandedness",
             )
@@ -1937,6 +2042,7 @@ class UniversalFastqPipeline:
             "study_id": self.config.study_id,
             "species": self.references.species,
             "read_layout": self.config.read_layout,
+            "library_type": eff_study_lib_type.value,
             "sample_ids": list(sample_ids),
             "samples_count": len(sample_ids),
             "strandedness_flag": decision.strandedness_flag,

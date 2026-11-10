@@ -1,13 +1,16 @@
 """RSeQC infer_experiment.py strandedness diagnostic wrapper and evidence-based decision engine."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 from typing import Any
 
 from .adapter import sha256_file
 from .env_exec import run_wsl, to_wsl_path
+from .library_type import LibraryType
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,7 +19,7 @@ class StrandednessDecision:
 
     strandedness_flag: int  # 0: Unstranded, 1: Forward, 2: Reverse, -1: Ambiguous
     strand_mode: str  # "unstranded", "forward", "reverse", "ambiguous"
-    confidence: str  # "HIGH", "MEDIUM", "LOW", "AMBIGUOUS"
+    confidence: str  # "HIGH", "MEDIUM", "LOW", "AMBIGUOUS", "CONFLICT"
     mean_forward: float
     mean_reverse: float
     mean_unexplained: float
@@ -38,6 +41,7 @@ class StrandednessDecision:
 
 def infer_strandedness_decision(
     metrics_or_summary: dict[str, Any],
+    library_type: str | LibraryType | None = None,
 ) -> StrandednessDecision:
     """Evaluate empirical RSeQC evidence to determine the featureCounts strandedness flag.
 
@@ -46,6 +50,10 @@ def infer_strandedness_decision(
        'mean_forward_fraction', 'mean_reverse_fraction', 'mean_unexplained_fraction'
     2. A dictionary mapping sample IDs to infer_experiment result dictionaries.
 
+    If library_type is specified (e.g. LEXOGEN_QUANTSEQ_3UTR_FWD), verifies empirical
+    consensus with declared library orientation and halts with CONFLICT (-1) if
+    empirical fractions contradict expected strandedness.
+
     Scientific Decision Invariants:
     - Reverse-stranded (featureCounts -s 2):
       Dominant antisense reads (mean_rev >= 0.70) with low sense signal (mean_fwd <= 0.15).
@@ -53,9 +61,12 @@ def infer_strandedness_decision(
       Dominant sense reads (mean_fwd >= 0.70) with low antisense signal (mean_rev <= 0.15).
     - Unstranded (featureCounts -s 0):
       Balanced forward/reverse fractions (|mean_fwd - mean_rev| <= 0.15, each >= 0.25).
-    - Ambiguous:
-      Neither criterion met; halts for investigator review (flag = -1).
+    - Ambiguous / Conflict:
+      Neither criterion met, or empirical evidence conflicts with declared library prep;
+      halts for investigator review (flag = -1).
     """
+    lib_type = LibraryType.from_string(library_type) if library_type else LibraryType.UNKNOWN
+
     if "mean_forward_fraction" in metrics_or_summary and "mean_reverse_fraction" in metrics_or_summary:
         mean_fwd = float(metrics_or_summary["mean_forward_fraction"])
         mean_rev = float(metrics_or_summary["mean_reverse_fraction"])
@@ -83,7 +94,91 @@ def infer_strandedness_decision(
 
     delta = abs(mean_fwd - mean_rev)
 
+    # 1. Evaluate empirical signal
+    empirical_flag: int
+    empirical_mode: str
     if mean_rev >= 0.70 and mean_fwd <= 0.15:
+        empirical_flag = 2
+        empirical_mode = "reverse"
+    elif mean_fwd >= 0.70 and mean_rev <= 0.15:
+        empirical_flag = 1
+        empirical_mode = "forward"
+    elif delta <= 0.15 and (mean_fwd >= 0.25 and mean_rev >= 0.25):
+        empirical_flag = 0
+        empirical_mode = "unstranded"
+    else:
+        empirical_flag = -1
+        empirical_mode = "ambiguous"
+
+    # 2. Consensus Gating against declared library type
+    if lib_type.is_fwd:
+        # QuantSeq FWD requires forward sense reads (-s 1)
+        if empirical_flag == 1:
+            return StrandednessDecision(
+                strandedness_flag=1,
+                strand_mode="forward",
+                confidence="HIGH",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication="CONSENSUS_VERIFIED_FORWARD (featureCounts -s 1)",
+                rationale=(
+                    f"Declared library type {lib_type.value} verified by empirical RSeQC evidence: "
+                    f"dominant forward/sense orientation ({mean_fwd:.1%}) with low antisense signal ({mean_rev:.1%})."
+                ),
+            )
+        else:
+            return StrandednessDecision(
+                strandedness_flag=-1,
+                strand_mode="ambiguous",
+                confidence="CONFLICT",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication=f"CONFLICT_DECLARED_FWD_EMPIRICAL_{empirical_mode.upper()}",
+                rationale=(
+                    f"Library preparation is declared as {lib_type.value} (which requires forward strand -s 1), "
+                    f"but empirical RSeQC fractions indicate {empirical_mode} "
+                    f"(forward={mean_fwd:.1%}, reverse={mean_rev:.1%}, unexplained={mean_unexp:.1%}). "
+                    "Halting downstream quantification to prevent erroneous strandedness assignment."
+                ),
+            )
+
+    if lib_type.is_rev:
+        # QuantSeq REV requires reverse antisense reads (-s 2)
+        if empirical_flag == 2:
+            return StrandednessDecision(
+                strandedness_flag=2,
+                strand_mode="reverse",
+                confidence="HIGH",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication="CONSENSUS_VERIFIED_REVERSE (featureCounts -s 2)",
+                rationale=(
+                    f"Declared library type {lib_type.value} verified by empirical RSeQC evidence: "
+                    f"dominant reverse/antisense orientation ({mean_rev:.1%}) with low forward signal ({mean_fwd:.1%})."
+                ),
+            )
+        else:
+            return StrandednessDecision(
+                strandedness_flag=-1,
+                strand_mode="ambiguous",
+                confidence="CONFLICT",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication=f"CONFLICT_DECLARED_REV_EMPIRICAL_{empirical_mode.upper()}",
+                rationale=(
+                    f"Library preparation is declared as {lib_type.value} (which requires reverse strand -s 2), "
+                    f"but empirical RSeQC fractions indicate {empirical_mode} "
+                    f"(forward={mean_fwd:.1%}, reverse={mean_rev:.1%}, unexplained={mean_unexp:.1%}). "
+                    "Halting downstream quantification to prevent erroneous strandedness assignment."
+                ),
+            )
+
+    # Standard conventional / unspecified handling
+    if empirical_flag == 2:
         return StrandednessDecision(
             strandedness_flag=2,
             strand_mode="reverse",
@@ -97,7 +192,7 @@ def infer_strandedness_decision(
                 f"({mean_fwd:.1%}) indicates reverse-stranded (dUTP / stranded-reverse) RNA-seq."
             ),
         )
-    elif mean_fwd >= 0.70 and mean_rev <= 0.15:
+    elif empirical_flag == 1:
         return StrandednessDecision(
             strandedness_flag=1,
             strand_mode="forward",
@@ -111,7 +206,7 @@ def infer_strandedness_decision(
                 f"({mean_rev:.1%}) indicates forward-stranded (directional) RNA-seq."
             ),
         )
-    elif delta <= 0.15 and (mean_fwd >= 0.25 and mean_rev >= 0.25):
+    elif empirical_flag == 0:
         return StrandednessDecision(
             strandedness_flag=0,
             strand_mode="unstranded",
@@ -176,9 +271,14 @@ def run_infer_experiment(
         out_p.write_text(raw_output, encoding="utf-8")
 
     # Parse fractions:
-    # Fraction of reads failed to determine: 0.0412
-    # Fraction of reads explained by "1++,1--,2+-,2-+": 0.0125
-    # Fraction of reads explained by "1+-,1-+,2++,2--": 0.9463
+    # Paired-end patterns:
+    #   Fraction of reads failed to determine: 0.0412
+    #   Fraction of reads explained by "1++,1--,2+-,2-+": 0.0125
+    #   Fraction of reads explained by "1+-,1-+,2++,2--": 0.9463
+    # Single-end patterns:
+    #   Fraction of reads failed to determine: 0.0412
+    #   Fraction of reads explained by "++,--": 0.9463
+    #   Fraction of reads explained by "+-,-+": 0.0125
     failed_frac = None
     sense_frac = None
     antisense_frac = None
@@ -188,11 +288,13 @@ def run_infer_experiment(
             m = re.search(r":\s*([0-9.]+)", line)
             if m:
                 failed_frac = float(m.group(1))
-        elif '1++,1--,2+-,2-+' in line:
+        # Forward/sense strand:
+        elif "1++,1--,2+-,2-+" in line or '"++,--"' in line or '++,--' in line:
             m = re.search(r":\s*([0-9.]+)", line)
             if m:
                 sense_frac = float(m.group(1))
-        elif '1+-,1-+,2++,2--' in line:
+        # Reverse/antisense strand:
+        elif "1+-,1-+,2++,2--" in line or '"+-,-+"' in line or '+-,-+' in line:
             m = re.search(r":\s*([0-9.]+)", line)
             if m:
                 antisense_frac = float(m.group(1))

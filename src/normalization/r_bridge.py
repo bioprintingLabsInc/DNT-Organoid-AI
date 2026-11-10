@@ -96,7 +96,7 @@ def probe_r_environment(r_binary: str = "Rscript") -> REnvironmentInfo:
         "if (requireNamespace('BiocManager', quietly=TRUE)) {"
         "as.character(BiocManager::version())"
         "} else if (requireNamespace('BiocVersion', quietly=TRUE)) {"
-        "sub('^([0-9]+\\\\.[0-9]+).*', '\\\\1', as.character(packageVersion('BiocVersion')))"
+        "sub('^([0-9]+[.][0-9]+).*', '\\\\1', as.character(packageVersion('BiocVersion')))"
         "} else {"
         "'unavailable'"
         "}"

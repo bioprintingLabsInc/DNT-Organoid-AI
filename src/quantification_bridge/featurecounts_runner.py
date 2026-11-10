@@ -116,10 +116,10 @@ def run_featurecounts(
     cmd_parts = ["featureCounts"]
     if paired_end:
         cmd_parts.extend(["-p", "--countReadPairs"])
-    if both_ends_mapped:
-        cmd_parts.append("-B")
-    if exclude_chimeric:
-        cmd_parts.append("-C")
+        if both_ends_mapped:
+            cmd_parts.append("-B")
+        if exclude_chimeric:
+            cmd_parts.append("-C")
 
     cmd_parts.extend([
         "-s", str(strandedness),
@@ -165,6 +165,7 @@ def execute_featurecounts_and_adapter(
     approved_runs: tuple[str, ...] = APPROVED_RUN_ACCESSIONS,
     strandedness: int = 0,
     threads: int = 8,
+    paired_end: bool = True,
 ) -> dict[str, Any]:
     """Execute featureCounts and convert directly to frozen pipeline CountMatrix format.
 
@@ -176,6 +177,7 @@ def execute_featurecounts_and_adapter(
         output_counts_path=raw_featurecounts_path,
         strandedness=strandedness,
         threads=threads,
+        paired_end=paired_end,
     )
 
     adapt_res = convert_featurecounts_to_matrix(

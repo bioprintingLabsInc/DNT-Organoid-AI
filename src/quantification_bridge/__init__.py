@@ -18,6 +18,7 @@ from .checkpoints import (
     sync_and_verify_file,
 )
 from .manifest import APPROVED_2_SAMPLE_TECHNICAL_PILOT, get_approved_technical_pilot_runs
+from .library_type import LibraryType
 from .pairing import (
     FastqPair,
     FastqPairingError,
@@ -71,6 +72,7 @@ __all__ = [
     "FastqSingle",
     "HardwareBaseline",
     "InsufficientStorageCapacityError",
+    "LibraryType",
     "ManifestVerificationError",
     "PipelineCheckpointManager",
     "PipelineFinding",
