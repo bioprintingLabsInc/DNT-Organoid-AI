@@ -43,6 +43,15 @@ from .profiles import (
     run_profile_preflight_checks,
     validate_pilot_configuration,
 )
+from .star_runner import (
+    REQUIRED_STAR_INDEX_FILES,
+    align_reads_star,
+    build_star_index,
+    check_star_alignment_resources,
+    parse_star_final_log,
+    restore_star_index_from_archive,
+    verify_star_index,
+)
 from .universal_pipeline import (
     CheckpointManager as UniversalCheckpointManager,
     PipelineCheckpointManager,
@@ -81,6 +90,7 @@ __all__ = [
     "PreflightReport",
     "ProcessingPlan",
     "QuantificationBridgePipeline",
+    "REQUIRED_STAR_INDEX_FILES",
     "ReferenceConfig",
     "SampleInput",
     "SraCheckpointVerification",
@@ -91,6 +101,9 @@ __all__ = [
     "UniversalPipelineConfig",
     "UnverifiedStorageQuotaError",
     "archive_and_sync_directory",
+    "align_reads_star",
+    "build_star_index",
+    "check_star_alignment_resources",
     "check_storage_capacity",
     "compute_full_file_sha256",
     "determine_read_mate",
@@ -105,10 +118,12 @@ __all__ = [
     "probe_tool_inventory",
     "resolve_pipeline_paths",
     "restore_and_verify_archive",
+    "restore_star_index_from_archive",
     "run_profile_preflight_checks",
     "sync_and_verify_directory",
     "sync_and_verify_file",
     "validate_paired_fastqs",
     "validate_pilot_configuration",
     "validate_single_fastq",
+    "verify_star_index",
 ]

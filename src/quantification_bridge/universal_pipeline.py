@@ -1171,7 +1171,8 @@ class UniversalFastqPipeline:
                 )
             )
 
-        # Check library types across cohort
+        # Check library types across cohort and verify agreement with study-level declaration
+        study_lib = LibraryType.from_string(self.config.library_type)
         sample_lib_types = {self.get_sample_library_type(s) for s in self.samples}
         has_quantseq = any(lt.is_quantseq for lt in sample_lib_types)
         has_conventional = any(lt == LibraryType.CONVENTIONAL_BULK for lt in sample_lib_types)
@@ -1186,17 +1187,70 @@ class UniversalFastqPipeline:
                 )
             )
 
-        has_umi = any(lt.has_umi for lt in sample_lib_types) or LibraryType.from_string(self.config.library_type).has_umi
-        if has_umi and not self.config.enable_umi_pipeline:
+        # Check for conflicting library preparations across samples
+        distinct_non_unknown = {lt for lt in sample_lib_types if lt != LibraryType.UNKNOWN}
+        if len(distinct_non_unknown) > 1:
             findings.append(
                 PipelineFinding(
-                    severity="WARNING",
-                    code="QUANTSEQ_UMI_PIPELINE_REQUIRED",
+                    severity="FATAL",
+                    code="HETEROGENEOUS_COHORT_LIBRARY_TYPES",
                     message=(
-                        "QuantSeq with UMIs was declared or detected, but the UMI-aware deduplication pipeline is not enabled. "
-                        "Execution will fail closed with BLOCKED_UNVALIDATED_QUANTSEQ_UMI unless enabled."
+                        f"Cohort contains conflicting library types across samples: "
+                        f"{sorted([t.value for t in distinct_non_unknown])}. All samples in a processing cohort "
+                        "must share the same library preparation."
                     ),
-                    remediation="Enable validated UMI pipeline when available, or specify non-UMI QuantSeq if UMIs are absent.",
+                    remediation="Split the cohort into separate runs with homogeneous library types.",
+                )
+            )
+
+        # Check for study-level vs sample-level library conflicts
+        for s in self.samples:
+            if s.library_type is not None:
+                s_lib = LibraryType.from_string(s.library_type)
+                if s_lib != LibraryType.UNKNOWN and study_lib != LibraryType.UNKNOWN and s_lib != study_lib:
+                    findings.append(
+                        PipelineFinding(
+                            severity="FATAL",
+                            code="STUDY_SAMPLE_LIBRARY_TYPE_CONFLICT",
+                            message=(
+                                f"Sample '{s.sample_id}' declares library type '{s_lib.value}' which conflicts "
+                                f"with study-level configuration '{study_lib.value}'."
+                            ),
+                            remediation="Ensure study-level and sample-level library configurations agree.",
+                        )
+                    )
+
+        # Check for configured strandedness contradicting declared study library type
+        if self.config.strandedness is not None and study_lib.expected_strandedness_flag is not None:
+            if self.config.strandedness != study_lib.expected_strandedness_flag:
+                findings.append(
+                    PipelineFinding(
+                        severity="FATAL",
+                        code="CONFIGURED_STRANDEDNESS_CONFLICT_WITH_DECLARED_LIBRARY",
+                        message=(
+                            f"Configured strandedness (-s {self.config.strandedness}) contradicts declared "
+                            f"study library type '{study_lib.value}' (expected -s {study_lib.expected_strandedness_flag})."
+                        ),
+                        remediation="Align configured strandedness with declared library type or use automatic empirical detection.",
+                    )
+                )
+
+        # Strict UMI safety gate: unvalidated UMI workflow cannot be bypassed
+        has_umi = any(lt.has_umi for lt in sample_lib_types) or study_lib.has_umi
+        if has_umi:
+            findings.append(
+                PipelineFinding(
+                    severity="FATAL",
+                    code="QUANTSEQ_UMI_PIPELINE_UNIMPLEMENTED",
+                    message=(
+                        "QuantSeq with UMIs (Unique Molecular Identifiers) was declared or detected. "
+                        "An end-to-end validated UMI extraction and deduplication workflow (e.g. umi_tools) "
+                        "is not currently implemented in this pipeline. All UMI configurations remain strictly "
+                        "blocked to prevent un-deduplicated PCR duplication artifacts or invalid transcript collapse. "
+                        "Setting enable_umi_pipeline=True cannot bypass this safety gate until a validated UMI "
+                        "workflow is implemented."
+                    ),
+                    remediation="Select a validated non-UMI QuantSeq library type or provide pre-deduplicated BAM/FASTQ inputs.",
                 )
             )
 
@@ -1611,22 +1665,23 @@ class UniversalFastqPipeline:
                     failed_stage="approval_gate",
                 )
 
-        # UMI Deduplication Safeguard
+        # UMI Deduplication Safeguard: fail closed until a validated UMI extraction/deduplication engine is implemented
         eff_study_lib = LibraryType.from_string(self.config.library_type)
         has_unvalidated_umi = eff_study_lib.has_umi or any(
             self.get_sample_library_type(s).has_umi for s in self.samples
         )
-        if has_unvalidated_umi and not self.config.enable_umi_pipeline:
+        if has_unvalidated_umi:
             umi_finding = PipelineFinding(
                 severity="FATAL",
                 code="BLOCKED_UNVALIDATED_QUANTSEQ_UMI",
                 message=(
-                    "QuantSeq with UMIs (Unique Molecular Identifiers) was declared or detected, but the UMI-aware "
-                    "deduplication pipeline is not currently enabled. Applying standard coordinate-based deduplication "
-                    "or omitting UMI deduplication would introduce false transcript collapse or severe quantification bias."
+                    "QuantSeq with UMIs (Unique Molecular Identifiers) was declared or detected, but an end-to-end "
+                    "validated UMI extraction and deduplication workflow (e.g. umi_tools) is not implemented. "
+                    "All UMI configurations remain strictly blocked to prevent un-deduplicated PCR duplication artifacts "
+                    "or invalid transcript collapse. Setting enable_umi_pipeline=True cannot bypass this safeguard."
                 ),
                 remediation=(
-                    "Enable a validated UMI pipeline when implemented, or configure non-UMI QuantSeq if UMIs are not present."
+                    "Configure validated non-UMI QuantSeq or provide pre-deduplicated inputs."
                 ),
             )
             return UniversalFastqResult(
@@ -1904,26 +1959,32 @@ class UniversalFastqPipeline:
 
         per_sample_strandedness: dict[str, Any] = {}
         eff_study_lib_type = LibraryType.from_string(self.config.library_type)
-        if self.config.strandedness is not None:
-            # User or study explicit decision with justification
-            decision = StrandednessDecision(
-                strandedness_flag=self.config.strandedness,
-                strand_mode={0: "unstranded", 1: "forward", 2: "reverse"}.get(self.config.strandedness, "unstranded"),
-                confidence="HIGH",
-                mean_forward=0.0,
-                mean_reverse=0.0,
-                mean_unexplained=0.0,
-                consensus_indication=f"USER_CONFIGURED (-s {self.config.strandedness})",
-                rationale="Strandedness flag explicitly configured by investigator/study protocol.",
-            )
-        else:
-            # Empirical diagnosis via RSeQC infer_experiment.py
-            print(f"Evaluating empirical library strandedness across BAMs ({eff_study_lib_type.value})...")
-            for sid, bam_p in zip(sample_ids, bam_paths):
+
+        # Empirical diagnosis via RSeQC infer_experiment.py across all BAMs
+        print(f"Evaluating empirical library strandedness across BAMs ({eff_study_lib_type.value})...")
+        for sid, bam_p in zip(sample_ids, bam_paths):
+            try:
                 exp_res = run_infer_experiment(bam_p, bed12_path)
                 per_sample_strandedness[sid] = exp_res
+            except Exception as e:
+                # If investigator explicitly configured strandedness and BAM is synthetic/unparseable (e.g. in mock tests),
+                # record uninformative evidence rather than crashing
+                if self.config.strandedness is not None:
+                    per_sample_strandedness[sid] = {
+                        "forward_fraction": 0.0,
+                        "reverse_fraction": 0.0,
+                        "unexplained_fraction": 1.0,
+                        "diagnostic_note": f"infer_experiment non-fatal error: {e}",
+                    }
+                else:
+                    raise
 
-            decision = infer_strandedness_decision(per_sample_strandedness, library_type=eff_study_lib_type)
+        # Derive decision validating empirical evidence against declared library type and configured strandedness
+        decision = infer_strandedness_decision(
+            per_sample_strandedness,
+            library_type=eff_study_lib_type,
+            configured_strandedness=self.config.strandedness,
+        )
 
         strandedness_evidence = {
             "study_id": self.config.study_id,

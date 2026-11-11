@@ -6,14 +6,280 @@ Supports configurable execution profiles:
 - Native or external streaming coordinate sorting (samtools sort).
 """
 
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
+import tarfile
+import time
 from typing import Any
 
 from .env_exec import run_wsl, to_wsl_path
+
+
+REQUIRED_STAR_INDEX_FILES: tuple[str, ...] = (
+    "Genome",
+    "SA",
+    "SAindex",
+    "chrLength.txt",
+    "chrName.txt",
+    "chrNameLength.txt",
+    "chrStart.txt",
+    "exonGeTrInfo.tab",
+    "exonInfo.tab",
+    "geneInfo.tab",
+    "transcriptInfo.tab",
+    "sjdbList.fromGTF.out.tab",
+    "sjdbInfo.txt",
+    "genomeParameters.txt",
+)
+
+
+def verify_star_index(
+    index_dir: str | Path,
+    expected_overhang: int | None = None,
+    expected_major_version: str = "2.7",
+) -> dict[str, Any]:
+    """Verify presence, non-zero size, and parameters of all required STAR index files.
+    
+    A partially generated or interrupted index must never be accepted as complete.
+    """
+    idx_p = Path(index_dir).resolve()
+    if not idx_p.is_dir():
+        return {
+            "is_complete": False,
+            "is_compatible": False,
+            "missing_files": list(REQUIRED_STAR_INDEX_FILES),
+            "total_bytes": 0,
+            "total_gb": 0.0,
+            "parameters": {},
+            "chromosome_count": 0,
+            "error": f"Index directory does not exist: {idx_p}",
+        }
+
+    missing: list[str] = []
+    file_details: dict[str, dict[str, Any]] = {}
+    total_bytes = 0
+
+    for fname in REQUIRED_STAR_INDEX_FILES:
+        fpath = idx_p / fname
+        try:
+            if not fpath.is_file() or fpath.stat().st_size == 0:
+                missing.append(fname)
+            else:
+                sz = fpath.stat().st_size
+                total_bytes += sz
+                file_details[fname] = {
+                    "size_bytes": sz,
+                    "size_mb": round(sz / (1024**2), 2),
+                }
+        except OSError:
+            missing.append(fname)
+
+    # Parse genome parameters
+    params: dict[str, str] = {}
+    param_file = idx_p / "genomeParameters.txt"
+    if param_file.is_file():
+        try:
+            for line in param_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    params[parts[0]] = parts[1]
+        except Exception:
+            pass
+
+    # Validate chromosome count
+    chr_names: list[str] = []
+    chr_file = idx_p / "chrName.txt"
+    if chr_file.is_file():
+        try:
+            chr_names = [
+                l.strip()
+                for l in chr_file.read_text(encoding="utf-8", errors="ignore").splitlines()
+                if l.strip()
+            ]
+        except Exception:
+            pass
+
+    is_complete = (len(missing) == 0 and len(chr_names) > 0 and len(params) > 0)
+
+    # Check compatibility
+    is_compatible = is_complete
+    compat_error: str | None = None
+    if is_complete:
+        version_genome = params.get("versionGenome", "")
+        if expected_major_version and not version_genome.startswith(expected_major_version):
+            is_compatible = False
+            compat_error = (
+                f"Index version '{version_genome}' is incompatible with STAR major version "
+                f"'{expected_major_version}'."
+            )
+        elif expected_overhang is not None:
+            actual_overhang = int(params.get("sjdbOverhang", 0))
+            # STAR can align reads shorter than or equal to sjdbOverhang + 1
+            if actual_overhang < min(expected_overhang, 50):
+                is_compatible = False
+                compat_error = (
+                    f"Index sjdbOverhang ({actual_overhang}) is too small for expected "
+                    f"overhang ({expected_overhang})."
+                )
+
+    return {
+        "is_complete": is_complete,
+        "is_compatible": is_compatible,
+        "missing_files": missing,
+        "total_bytes": total_bytes,
+        "total_gb": round(total_bytes / (1024**3), 2),
+        "file_details": file_details,
+        "chromosome_count": len(chr_names),
+        "parameters": params,
+        "error": compat_error if compat_error else (f"Missing files: {missing}" if missing else None),
+    }
+
+
+def restore_star_index_from_archive(
+    archive_path: str | Path,
+    target_dir: str | Path,
+    expected_sha256: str | None = None,
+    manifest_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Restore and verify a complete STAR index from an authorized tar archive."""
+    arc_p = Path(archive_path).resolve()
+    target_p = Path(target_dir).resolve()
+
+    if not arc_p.is_file():
+        raise FileNotFoundError(f"STAR index archive not found: {arc_p}")
+
+    target_p.mkdir(parents=True, exist_ok=True)
+
+    # Verify archive checksum if expected hash provided
+    if expected_sha256:
+        h = hashlib.sha256()
+        with open(arc_p, "rb") as f:
+            while chunk := f.read(8 * 1024 * 1024):
+                h.update(chunk)
+        observed_sha = h.hexdigest()
+        if observed_sha.lower() != expected_sha256.lower():
+            raise ValueError(
+                f"Archive SHA-256 mismatch for {arc_p.name}!\n"
+                f"Expected: {expected_sha256}\nObserved: {observed_sha}"
+            )
+
+    t0 = time.time()
+    # Extract archive
+    with tarfile.open(arc_p, "r:*") as tar:
+        tar.extractall(path=target_p)
+    extract_time = round(time.time() - t0, 2)
+
+    # Verify manifest if provided
+    verified_files = 0
+    if manifest_path:
+        man_p = Path(manifest_path).resolve()
+        if man_p.is_file():
+            man_data = json.loads(man_p.read_text(encoding="utf-8"))
+            file_entries = man_data.get("files", man_data.get("file_details", {}))
+            if isinstance(file_entries, dict):
+                for fname, meta in file_entries.items():
+                    extracted_f = target_p / fname
+                    if not extracted_f.is_file():
+                        raise FileNotFoundError(f"Extracted manifest file missing: {fname}")
+                    verified_files += 1
+
+    # Structural verification of the restored directory
+    eval_res = verify_star_index(target_p)
+    if not eval_res["is_complete"]:
+        raise ValueError(
+            f"Restored STAR index is incomplete or corrupt. Missing files: {eval_res['missing_files']}"
+        )
+
+    return {
+        "status": "RESTORED_AND_VERIFIED",
+        "archive_path": str(arc_p),
+        "target_dir": str(target_p),
+        "extract_time_seconds": extract_time,
+        "total_gb": eval_res["total_gb"],
+        "chromosome_count": eval_res["chromosome_count"],
+        "manifest_verified_files": verified_files,
+        "parameters": eval_res["parameters"],
+    }
+
+
+def check_star_alignment_resources(
+    index_dir: str | Path,
+    safety_margin_gb: float = 2.0,
+) -> dict[str, Any]:
+    """Check available RAM and scratch disk before loading the STAR index for alignment.
+    
+    Prevents Out-Of-Memory (OOM) crashes by verifying physical memory against the
+    actual resident size of the index (sparse ~8-10 GB, dense ~28-30 GB).
+    """
+    idx_p = Path(index_dir).resolve()
+    eval_res = verify_star_index(idx_p)
+
+    # Required RAM is approximately the size of Genome + SA + SAindex
+    genome_file = idx_p / "Genome"
+    sa_file = idx_p / "SA"
+    saindex_file = idx_p / "SAindex"
+
+    idx_bin_bytes = 0
+    for f in (genome_file, sa_file, saindex_file):
+        if f.is_file():
+            idx_bin_bytes += f.stat().st_size
+
+    required_ram_gb = round(idx_bin_bytes / (1024**3), 2)
+    # If files don't exist yet, estimate based on sparsity or human default
+    if required_ram_gb < 1.0:
+        sparse_d = int(eval_res.get("parameters", {}).get("genomeSAsparseD", 4))
+        required_ram_gb = 30.0 if sparse_d == 1 else 9.0
+
+    # Measure available system RAM
+    available_ram_gb = 16.0  # conservative fallback
+    try:
+        meminfo_path = Path("/proc/meminfo")
+        if meminfo_path.is_file():
+            for line in meminfo_path.read_text(encoding="utf-8").splitlines():
+                if line.startswith("MemAvailable:"):
+                    kb = int(line.split()[1])
+                    available_ram_gb = round(kb / (1024**2), 2)
+                    break
+    except Exception:
+        pass
+
+    # Measure free disk space
+    free_disk_gb = 100.0
+    try:
+        total, used, free = shutil.disk_usage(idx_p)
+        free_disk_gb = round(free / (1024**3), 2)
+    except Exception:
+        pass
+
+    has_sufficient_ram = available_ram_gb >= (required_ram_gb - 1.0)
+    has_sufficient_disk = free_disk_gb >= safety_margin_gb
+
+    warning: str | None = None
+    if not has_sufficient_ram:
+        warning = (
+            f"Available RAM ({available_ram_gb:.1f} GB) is below the estimated memory "
+            f"required to load the STAR index ({required_ram_gb:.1f} GB). Alignment may trigger "
+            "swap paging or OOM termination. Consider using a sparse index (sparseD=4)."
+        )
+    elif not has_sufficient_disk:
+        warning = (
+            f"Free disk space ({free_disk_gb:.1f} GB) is below the recommended safety "
+            f"margin ({safety_margin_gb:.1f} GB)."
+        )
+
+    return {
+        "has_sufficient_ram": has_sufficient_ram,
+        "has_sufficient_disk": has_sufficient_disk,
+        "required_ram_gb": required_ram_gb,
+        "available_ram_gb": available_ram_gb,
+        "free_disk_gb": free_disk_gb,
+        "warning": warning,
+    }
 
 
 def build_star_index(

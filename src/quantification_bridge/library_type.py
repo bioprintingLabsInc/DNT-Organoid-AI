@@ -21,8 +21,10 @@ class LibraryType(str, Enum):
     CONVENTIONAL_BULK = "CONVENTIONAL_BULK"
     LEXOGEN_QUANTSEQ_3UTR_FWD = "LEXOGEN_QUANTSEQ_3UTR_FWD"
     LEXOGEN_QUANTSEQ_3UTR_REV = "LEXOGEN_QUANTSEQ_3UTR_REV"
+    LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND = "LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND"
     LEXOGEN_QUANTSEQ_3UTR_FWD_UMI = "LEXOGEN_QUANTSEQ_3UTR_FWD_UMI"
     LEXOGEN_QUANTSEQ_3UTR_REV_UMI = "LEXOGEN_QUANTSEQ_3UTR_REV_UMI"
+    LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI = "LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI"
     UNKNOWN = "UNKNOWN"
 
     @classmethod
@@ -52,25 +54,36 @@ class LibraryType(str, Enum):
         # Check for UMI indicators as isolated word/token (avoid false match in 'ILLUMINA')
         has_umi = bool(re.search(r"(?:^|[_ -])UMI(?:$|[_ -])", norm))
 
-        # Lexogen QuantSeq patterns
+        # Check for non-QuantSeq Lexogen kits (e.g. CORALL is full-length bulk RNA-seq)
+        if "CORALL" in norm:
+            return cls.CONVENTIONAL_BULK
+
+        # Lexogen QuantSeq patterns: MUST explicitly mention QuantSeq or 3' mRNA-Seq.
+        # General 'LEXOGEN' alone or unspecified Lexogen kits MUST NOT be assumed to be QuantSeq.
         is_quantseq = (
             "QUANTSEQ" in norm
-            or "LEXOGEN" in norm
+            or "QUANT_SEQ" in norm
             or "3_MRNA_SEQ" in norm
-            or "3PRIME" in norm
-            or "3_PRIME" in norm
-            or "3UTR" in norm
+            or "3PRIME_MRNA" in norm
+            or "3_PRIME_MRNA" in norm
+            or "3UTR_SEQ" in norm
+            or "3_UTR_SEQ" in norm
+            or ("LEXOGEN" in norm and ("3UTR" in norm or "3_UTR" in norm or "3PRIME" in norm or "3_PRIME" in norm or "3_MRNA" in norm))
         )
 
         if is_quantseq:
-            # Distinguish REV vs FWD
-            if "REV" in norm or "ANTISENSE" in norm:
+            # Distinguish REV vs FWD vs UNKNOWN_STRAND using word-boundary tokens
+            has_rev = bool(re.search(r"(?:^|[_ -])(?:REV|REVERSE|ANTISENSE)(?:$|[_ -])", norm))
+            has_fwd = bool(re.search(r"(?:^|[_ -])(?:FWD|FORWARD|SENSE)(?:$|[_ -])", norm))
+
+            if has_rev and not has_fwd:
                 return cls.LEXOGEN_QUANTSEQ_3UTR_REV_UMI if has_umi else cls.LEXOGEN_QUANTSEQ_3UTR_REV
-            if "FWD" in norm or "FORWARD" in norm or "SENSE" in norm:
+            if has_fwd and not has_rev:
                 return cls.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI if has_umi else cls.LEXOGEN_QUANTSEQ_3UTR_FWD
-            # If QuantSeq is mentioned without explicit FWD or REV, Lexogen standard kit is FWD
-            # but if UMI is present, assign FWD_UMI
-            return cls.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI if has_umi else cls.LEXOGEN_QUANTSEQ_3UTR_FWD
+
+            # If QuantSeq orientation is not documented, keep it unknown!
+            # Do NOT assume FWD. Require verified empirical evidence before selecting counting orientation.
+            return cls.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI if has_umi else cls.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
 
         # Conventional bulk patterns
         conventional_tokens = {
@@ -99,8 +112,10 @@ class LibraryType(str, Enum):
         return self in (
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD,
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV,
+            LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND,
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI,
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV_UMI,
+            LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI,
         )
 
     @property
@@ -125,6 +140,7 @@ class LibraryType(str, Enum):
         return self in (
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI,
             LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV_UMI,
+            LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI,
         )
 
     @property
@@ -138,9 +154,13 @@ class LibraryType(str, Enum):
 
     @property
     def requires_length_normalization(self) -> bool:
-        """Whether counts must undergo transcript-length normalization (e.g. TPM).
+        """Whether within-sample abundance comparisons (e.g. TPM) require transcript-length adjustment.
         
-        QuantSeq 3' mRNA-seq produces exactly 1 read per transcript molecule at the 3' end,
-        meaning counts are inherently independent of transcript length.
+        Note: Differential expression engines like DESeq2 ALWAYS consume raw unnormalized integer counts
+        for both conventional bulk and QuantSeq. However, for within-sample descriptive abundance metrics:
+        - Conventional bulk RNA-seq fragments across the entire transcript, requiring transcript-length
+          normalization (TPM/FPKM) to compare relative abundance across genes.
+        - QuantSeq 3' mRNA-seq yields exactly 1 read per transcript molecule at the 3' end, so counts
+          are inherently length-independent (proportional to CPM without gene length division).
         """
         return not self.is_quantseq

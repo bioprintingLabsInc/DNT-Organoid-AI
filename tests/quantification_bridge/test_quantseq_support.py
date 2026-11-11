@@ -94,6 +94,18 @@ def test_library_type_enum_parsing():
     assert LibraryType.from_string("LEXOGEN_QUANTSEQ_3UTR_REV_UMI") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV_UMI
     assert LibraryType.from_string("QuantSeq REV with UMI") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV_UMI
 
+    # QuantSeq with undocumented orientation: strictly keeps orientation UNKNOWN
+    assert LibraryType.from_string("LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
+    assert LibraryType.from_string("QuantSeq") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
+    assert LibraryType.from_string("Lexogen QuantSeq") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
+    assert LibraryType.from_string("3' mRNA-Seq") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
+    assert LibraryType.from_string("QuantSeq with UMI") == LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI
+
+    # Non-QuantSeq Lexogen kits must NOT be classified as QuantSeq
+    assert LibraryType.from_string("Lexogen CORALL Total RNA-Seq") == LibraryType.CONVENTIONAL_BULK
+    assert LibraryType.from_string("CORALL") == LibraryType.CONVENTIONAL_BULK
+    assert LibraryType.from_string("Lexogen") == LibraryType.UNKNOWN  # Unspecified Lexogen kit is UNKNOWN
+
     # Unknown fallback (does not invent false kits)
     assert LibraryType.from_string(None) == LibraryType.UNKNOWN
     assert LibraryType.from_string("") == LibraryType.UNKNOWN
@@ -122,6 +134,14 @@ def test_library_type_properties():
     assert fwd_umi.has_umi is True
     assert fwd_umi.is_fwd is True
     assert fwd_umi.requires_length_normalization is False
+
+    unk_strand = LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND
+    assert unk_strand.is_quantseq is True
+    assert unk_strand.is_fwd is False
+    assert unk_strand.is_rev is False
+    assert unk_strand.expected_strandedness_flag is None
+    assert unk_strand.has_umi is False
+    assert unk_strand.requires_length_normalization is False
 
     bulk = LibraryType.CONVENTIONAL_BULK
     assert bulk.is_quantseq is False
@@ -322,6 +342,83 @@ def test_strandedness_consensus_quantseq_rev_conflict():
     assert "CONFLICT_DECLARED_REV_EMPIRICAL_FORWARD" in decision.consensus_indication
 
 
+def test_strandedness_undocumented_quantseq_resolved_by_empirical_forward():
+    """Verify that undocumented QuantSeq orientation is resolved to forward when empirical evidence is sense."""
+    metrics = {
+        "mean_forward_fraction": 0.91,
+        "mean_reverse_fraction": 0.04,
+        "mean_unexplained_fraction": 0.05,
+    }
+    decision = infer_strandedness_decision(metrics, library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND)
+    assert decision.strandedness_flag == 1
+    assert decision.strand_mode == "forward"
+    assert decision.confidence == "HIGH"
+    assert "EMPIRICAL_QUANTSEQ_FORWARD" in decision.consensus_indication
+
+
+def test_strandedness_undocumented_quantseq_resolved_by_empirical_reverse():
+    """Verify that undocumented QuantSeq orientation is resolved to reverse when empirical evidence is antisense."""
+    metrics = {
+        "mean_forward_fraction": 0.04,
+        "mean_reverse_fraction": 0.91,
+        "mean_unexplained_fraction": 0.05,
+    }
+    decision = infer_strandedness_decision(metrics, library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND)
+    assert decision.strandedness_flag == 2
+    assert decision.strand_mode == "reverse"
+    assert decision.confidence == "HIGH"
+    assert "EMPIRICAL_QUANTSEQ_REVERSE" in decision.consensus_indication
+
+
+def test_strandedness_undocumented_quantseq_non_stranded_halts():
+    """Verify that undocumented QuantSeq orientation halts if empirical evidence is unstranded or ambiguous."""
+    metrics = {
+        "mean_forward_fraction": 0.45,
+        "mean_reverse_fraction": 0.45,
+        "mean_unexplained_fraction": 0.10,
+    }
+    decision = infer_strandedness_decision(metrics, library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND)
+    assert decision.strandedness_flag == -1
+    assert decision.confidence == "CONFLICT"
+    assert "CONFLICT_QUANTSEQ_NON_STRANDED" in decision.consensus_indication
+
+
+def test_configured_strandedness_cannot_bypass_conflicting_empirical_evidence():
+    """Verify that investigator-configured strandedness does not silently bypass conflicting empirical evidence."""
+    # Investigator configured -s 1 (forward), but BAMs show 92% reverse antisense
+    metrics = {
+        "mean_forward_fraction": 0.04,
+        "mean_reverse_fraction": 0.92,
+        "mean_unexplained_fraction": 0.04,
+    }
+    decision = infer_strandedness_decision(
+        metrics,
+        library_type=LibraryType.CONVENTIONAL_BULK,
+        configured_strandedness=1,
+    )
+    assert decision.strandedness_flag == -1
+    assert decision.confidence == "CONFLICT"
+    assert "CONFLICT_CONFIGURED_FORWARD_EMPIRICAL_REVERSE" in decision.consensus_indication
+    assert "cannot silently bypass" in decision.rationale
+
+
+def test_configured_strandedness_verified_by_agreeing_empirical_evidence():
+    """Verify that investigator-configured strandedness succeeds when verified by empirical evidence."""
+    metrics = {
+        "mean_forward_fraction": 0.92,
+        "mean_reverse_fraction": 0.04,
+        "mean_unexplained_fraction": 0.04,
+    }
+    decision = infer_strandedness_decision(
+        metrics,
+        library_type=LibraryType.CONVENTIONAL_BULK,
+        configured_strandedness=1,
+    )
+    assert decision.strandedness_flag == 1
+    assert decision.confidence == "HIGH"
+    assert "CONSENSUS_VERIFIED_USER_CONFIGURED" in decision.consensus_indication
+
+
 # -----------------------------------------------------------------------------
 # 4. featureCounts Single-End Flag Construction Tests
 # -----------------------------------------------------------------------------
@@ -365,13 +462,13 @@ def test_featurecounts_single_end_flags(tmp_path: Path):
 # -----------------------------------------------------------------------------
 
 def test_umi_safeguard_fails_closed(tmp_path: Path):
-    """Verify that QuantSeq with UMIs fails closed if UMI deduplication is unvalidated."""
+    """Verify that QuantSeq with UMIs fails closed during preflight and execution."""
     cfg = UniversalPipelineConfig(
         study_id="TEST_UMI_STUDY",
         output_dir=tmp_path / "out",
         read_layout="single_end",
         library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI,
-        enable_umi_pipeline=False,  # Unvalidated / not enabled
+        enable_umi_pipeline=False,
     )
     ref = ReferenceConfig(
         species="Homo sapiens",
@@ -397,15 +494,60 @@ def test_umi_safeguard_fails_closed(tmp_path: Path):
         samples=[sample],
     )
 
-    # Approve and run
-    plan = pipeline.plan()
-    pipeline.approve(plan.approval_token)
-    res = pipeline.run(approval_token=plan.approval_token)
+    preflight = pipeline.validate_inputs()
+    assert preflight.has_fatal_errors is True
+    assert any(f.code == "QUANTSEQ_UMI_PIPELINE_UNIMPLEMENTED" for f in preflight.findings)
 
-    assert res.status == "BLOCKED_UNVALIDATED_QUANTSEQ_UMI"
-    assert res.failed_stage == "umi_deduplication"
-    assert len(res.findings) > 0
-    assert res.findings[0].code == "BLOCKED_UNVALIDATED_QUANTSEQ_UMI"
+    # Preflight gate blocks execution
+    plan = pipeline.plan()
+    assert plan.can_execute is False
+    res_run = pipeline.run()
+    assert res_run.status == "BLOCKED_PREFLIGHT_FAILURES"
+    assert any(f.code == "QUANTSEQ_UMI_PIPELINE_UNIMPLEMENTED" for f in res_run.findings)
+
+
+def test_umi_safeguard_cannot_be_bypassed_by_enable_flag(tmp_path: Path):
+    """Verify that setting enable_umi_pipeline=True cannot bypass the safety gate."""
+    cfg = UniversalPipelineConfig(
+        study_id="TEST_UMI_BYPASS",
+        output_dir=tmp_path / "out",
+        read_layout="single_end",
+        library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI,
+        enable_umi_pipeline=True,  # Attempting to bypass
+    )
+    ref = ReferenceConfig(
+        species="Homo sapiens",
+        genome_fasta=tmp_path / "genome.fa",
+        gtf_annotation=tmp_path / "genes.gtf",
+    )
+    ref.genome_fasta.write_text(">chr1\nACGTACGTACGTACGTACGTACGTACGTACGT\n")
+    ref.gtf_annotation.write_text('chr1\tHAVANA\texon\t1\t30\t.\t+\t.\tgene_id "G1";\n')
+
+    fq = tmp_path / "s1.fq.gz"
+    make_dummy_fastq(fq, ["readA", "readB"], is_gz=True)
+
+    sample = SampleInput(
+        sample_id="SAMPLE_UMI_BYPASS",
+        r1_path=fq,
+        read_layout="single_end",
+        library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD_UMI,
+    )
+
+    pipeline = UniversalFastqPipeline(
+        config=cfg,
+        references=ref,
+        samples=[sample],
+    )
+
+    preflight = pipeline.validate_inputs()
+    assert preflight.has_fatal_errors is True
+    assert any(f.code == "QUANTSEQ_UMI_PIPELINE_UNIMPLEMENTED" for f in preflight.findings)
+
+    plan = pipeline.plan()
+    assert plan.can_execute is False
+    res_run = pipeline.run()
+    assert res_run.status == "BLOCKED_PREFLIGHT_FAILURES"
+    assert any(f.code == "QUANTSEQ_UMI_PIPELINE_UNIMPLEMENTED" for f in res_run.findings)
 
 
 # -----------------------------------------------------------------------------
@@ -454,6 +596,98 @@ def test_mixed_library_types_rejected(tmp_path: Path):
     preflight = pipeline.validate_inputs()
     codes = [f.code for f in preflight.findings]
     assert "MIXED_LIBRARY_TYPES_UNSUPPORTED" in codes
+    assert preflight.has_fatal_errors is True
+
+
+def test_study_sample_library_conflict_rejected(tmp_path: Path):
+    """Verify that conflict between study-level and sample-level declarations triggers fatal preflight failure."""
+    cfg = UniversalPipelineConfig(
+        study_id="TEST_CONFLICT",
+        output_dir=tmp_path / "out",
+        read_layout="single_end",
+        library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD,
+    )
+    ref = ReferenceConfig(
+        species="Homo sapiens",
+        genome_fasta=tmp_path / "genome.fa",
+        gtf_annotation=tmp_path / "genes.gtf",
+    )
+    ref.genome_fasta.write_text(">chr1\nACGT\n")
+    ref.gtf_annotation.write_text('chr1\tHAVANA\texon\t1\t4\t.\t+\t.\tgene_id "G1";\n')
+
+    fq = tmp_path / "s1.fq.gz"
+    make_dummy_fastq(fq, ["r1"], is_gz=True)
+
+    # Sample explicitly declares REV while study declares FWD
+    s = SampleInput(
+        sample_id="SAMPLE_REV_IN_FWD_STUDY",
+        r1_path=fq,
+        read_layout="single_end",
+        library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV,
+    )
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=ref, samples=[s])
+    preflight = pipeline.validate_inputs()
+    codes = [f.code for f in preflight.findings]
+    assert "STUDY_SAMPLE_LIBRARY_TYPE_CONFLICT" in codes
+    assert preflight.has_fatal_errors is True
+
+
+def test_heterogeneous_cohort_library_types_rejected(tmp_path: Path):
+    """Verify that heterogeneous QuantSeq types (FWD + REV) in a cohort trigger preflight failure."""
+    cfg = UniversalPipelineConfig(
+        study_id="TEST_HETEROGENEOUS",
+        output_dir=tmp_path / "out",
+        read_layout="single_end",
+    )
+    ref = ReferenceConfig(
+        species="Homo sapiens",
+        genome_fasta=tmp_path / "genome.fa",
+        gtf_annotation=tmp_path / "genes.gtf",
+    )
+    ref.genome_fasta.write_text(">chr1\nACGT\n")
+    ref.gtf_annotation.write_text('chr1\tHAVANA\texon\t1\t4\t.\t+\t.\tgene_id "G1";\n')
+
+    fq1 = tmp_path / "s1.fq.gz"
+    fq2 = tmp_path / "s2.fq.gz"
+    make_dummy_fastq(fq1, ["r1"], is_gz=True)
+    make_dummy_fastq(fq2, ["r2"], is_gz=True)
+
+    s1 = SampleInput(sample_id="S1_FWD", r1_path=fq1, read_layout="single_end", library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD)
+    s2 = SampleInput(sample_id="S2_REV", r1_path=fq2, read_layout="single_end", library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_REV)
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=ref, samples=[s1, s2])
+    preflight = pipeline.validate_inputs()
+    codes = [f.code for f in preflight.findings]
+    assert "HETEROGENEOUS_COHORT_LIBRARY_TYPES" in codes
+    assert preflight.has_fatal_errors is True
+
+
+def test_configured_strandedness_conflicts_declared_library_rejected(tmp_path: Path):
+    """Verify that configured strandedness (-s 2) contradicting declared library (FWD -> -s 1) triggers preflight failure."""
+    cfg = UniversalPipelineConfig(
+        study_id="TEST_STRAND_CONFLICT",
+        output_dir=tmp_path / "out",
+        read_layout="single_end",
+        library_type=LibraryType.LEXOGEN_QUANTSEQ_3UTR_FWD,
+        strandedness=2,  # Contradicts FWD (-s 1)
+    )
+    ref = ReferenceConfig(
+        species="Homo sapiens",
+        genome_fasta=tmp_path / "genome.fa",
+        gtf_annotation=tmp_path / "genes.gtf",
+    )
+    ref.genome_fasta.write_text(">chr1\nACGT\n")
+    ref.gtf_annotation.write_text('chr1\tHAVANA\texon\t1\t4\t.\t+\t.\tgene_id "G1";\n')
+
+    fq = tmp_path / "s1.fq.gz"
+    make_dummy_fastq(fq, ["r1"], is_gz=True)
+    s = SampleInput(sample_id="S1", r1_path=fq, read_layout="single_end")
+
+    pipeline = UniversalFastqPipeline(config=cfg, references=ref, samples=[s])
+    preflight = pipeline.validate_inputs()
+    codes = [f.code for f in preflight.findings]
+    assert "CONFIGURED_STRANDEDNESS_CONFLICT_WITH_DECLARED_LIBRARY" in codes
     assert preflight.has_fatal_errors is True
 
 

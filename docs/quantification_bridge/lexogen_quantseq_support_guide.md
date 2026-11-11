@@ -12,13 +12,15 @@ This document details the extension of the universal RNA-seq ingestion pipeline 
 
 The system defines the `LibraryType` enumeration in `src/quantification_bridge/library_type.py`:
 
-| LibraryType Enum | Common Aliases / Identifiers | Default Strandedness | Description |
+| LibraryType Enum | Common Aliases / Identifiers | Strandedness Policy | Description |
 |---|---|---|---|
-| `CONVENTIONAL_BULK` | `conventional`, `standard_bulk`, `polyA`, `TruSeq` | Empirical (0 or 2) | Standard full-length RNA-seq (unstranded, dUTP reverse-stranded, or directional forward). |
-| `LEXOGEN_QUANTSEQ_3UTR_FWD` | `quantseq_fwd`, `QuantSeq 3' mRNA-Seq FWD` | Forward (`-s 1`) | Sense strand; Read 1 points toward poly(A) tail. |
-| `LEXOGEN_QUANTSEQ_3UTR_REV` | `quantseq_rev`, `QuantSeq 3' mRNA-Seq REV` | Reverse (`-s 2`) | Antisense strand; Read 1 initiates from oligo(dT) primer. |
-| `LEXOGEN_QUANTSEQ_3UTR_FWD_UMI` | `QuantSeq FWD with UMI` | Forward (`-s 1`) | Sense strand with 6-bp or 10-bp Unique Molecular Identifiers. |
-| `LEXOGEN_QUANTSEQ_3UTR_REV_UMI` | `QuantSeq REV with UMI` | Reverse (`-s 2`) | Antisense strand with Unique Molecular Identifiers. |
+| `CONVENTIONAL_BULK` | `conventional`, `standard_bulk`, `polyA`, `TruSeq`, `CORALL` | Empirical (0 or 2) | Standard full-length RNA-seq (unstranded, dUTP reverse-stranded, or directional forward). |
+| `LEXOGEN_QUANTSEQ_3UTR_FWD` | `quantseq_fwd`, `QuantSeq 3' mRNA-Seq FWD` | Forward (`-s 1`) | Sense strand; Read 1 points toward poly(A) tail. Requires empirical confirmation. |
+| `LEXOGEN_QUANTSEQ_3UTR_REV` | `quantseq_rev`, `QuantSeq 3' mRNA-Seq REV` | Reverse (`-s 2`) | Antisense strand; Read 1 initiates from oligo(dT) primer. Requires empirical confirmation. |
+| `LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND` | `QuantSeq`, `QuantSeq 3' mRNA-Seq` (unspecified strand) | Empirical RSeQC required | QuantSeq 3' mRNA-seq with undocumented orientation; strictly resolved via empirical RSeQC. |
+| `LEXOGEN_QUANTSEQ_3UTR_FWD_UMI` | `QuantSeq FWD with UMI` | Blocked | Sense strand with UMIs. Blocked until validated UMI deduplication pipeline is implemented. |
+| `LEXOGEN_QUANTSEQ_3UTR_REV_UMI` | `QuantSeq REV with UMI` | Blocked | Antisense strand with UMIs. Blocked until validated UMI deduplication pipeline is implemented. |
+| `LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI` | `QuantSeq with UMI` (unspecified strand) | Blocked | Undocumented strand with UMIs. Blocked until validated UMI deduplication pipeline is implemented. |
 | `UNKNOWN` | `None`, `""`, unrecognized | Empirical review | Unspecified library kit; requires empirical RSeQC evidence. |
 
 ### Lossless Recognition
@@ -93,17 +95,18 @@ In conventional bulk RNA-seq, reads with identical 5′ and 3′ coordinates typ
 - **Rule:** Position-based deduplication (e.g. Picard MarkDuplicates) **must never be applied** to non-UMI QuantSeq, as it would systematically eliminate true high-abundance transcripts and collapse biological dynamic range.
 
 ### UMI Fail-Closed Safeguard
-For QuantSeq kits incorporating Unique Molecular Identifiers (`LEXOGEN_QUANTSEQ_3UTR_FWD_UMI`):
-- True deduplication requires UMI extraction (e.g. fastp `--umi` or `umi_tools extract`) and directional UMI deduplication (`umi_tools dedup`).
-- **Rule:** If a UMI library type is declared or detected and `enable_umi_pipeline=False`, the pipeline halts immediately with:
-  `status = "BLOCKED_UNVALIDATED_QUANTSEQ_UMI"`
-  to prevent naive coordinate-based deduplication or ignoring UMIs.
+For QuantSeq kits incorporating Unique Molecular Identifiers (`LEXOGEN_QUANTSEQ_3UTR_FWD_UMI`, `LEXOGEN_QUANTSEQ_3UTR_REV_UMI`, `LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND_UMI`):
+- True deduplication requires UMI extraction (e.g. `umi_tools extract`) and directional UMI deduplication (`umi_tools dedup`).
+- **Rule:** Because an end-to-end validated UMI extraction and deduplication workflow is not yet implemented in this bridge, **all UMI configurations remain strictly blocked** (`status = "BLOCKED_UNVALIDATED_QUANTSEQ_UMI"`).
+- Setting `enable_umi_pipeline = True` **cannot bypass this safety gate** until an integrated, scientifically verified UMI pipeline is implemented.
 
-### Transcript Length Normalization Guard
-Standard RNA-seq normalization metrics (such as TPM and RPKM) divide raw count values by gene length under the premise that longer transcripts generate proportionally more fragmented reads.
-- In QuantSeq 3′ mRNA-seq, **each sequenced molecule yields exactly one read, regardless of gene length.**
-- Dividing QuantSeq counts by transcript length introduces severe length bias, falsely deflating the apparent expression of long transcripts and inflating short ones.
-- **Rule:** Raw QuantSeq counts feed directly into differential expression models (e.g., DESeq2 median-of-ratios size factors), which scale by library sequencing depth and never divide by transcript length.
+### Count Matrix & Differential Expression Invariants (DESeq2)
+A common misconception is that conventional bulk RNA-seq requires transcript-length normalization before differential expression analysis. In fact:
+- **Both conventional bulk RNA-seq and QuantSeq 3′ mRNA-seq feed raw, unnormalized integer count matrices directly into DESeq2.**
+- DESeq2 estimates library size factors using median-of-ratios to correct for library sequencing depth and composition differences across samples. Gene length is constant across samples and is not divided out prior to DESeq2.
+- The fundamental difference between conventional bulk and QuantSeq is in **within-sample descriptive / abundance metrics**:
+  - In **conventional bulk RNA-seq**, fragmentation occurs across the entire transcript; longer transcripts generate proportionally more fragments. Therefore, comparing the relative expression of gene A to gene B within a sample requires transcript-length adjustment (e.g. **TPM** or **FPKM**).
+  - In **QuantSeq 3′ mRNA-seq**, exactly one read is generated per polyadenylated transcript molecule regardless of gene length. Therefore, relative within-sample abundance is already proportional to raw counts and library depth (**CPM**, counts per million), and **must not be divided by transcript length**. Dividing QuantSeq counts by gene length would falsely deflate long transcripts and inflate short ones.
 
 ---
 

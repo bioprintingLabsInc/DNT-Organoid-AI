@@ -42,6 +42,7 @@ class StrandednessDecision:
 def infer_strandedness_decision(
     metrics_or_summary: dict[str, Any],
     library_type: str | LibraryType | None = None,
+    configured_strandedness: int | None = None,
 ) -> StrandednessDecision:
     """Evaluate empirical RSeQC evidence to determine the featureCounts strandedness flag.
 
@@ -50,19 +51,22 @@ def infer_strandedness_decision(
        'mean_forward_fraction', 'mean_reverse_fraction', 'mean_unexplained_fraction'
     2. A dictionary mapping sample IDs to infer_experiment result dictionaries.
 
-    If library_type is specified (e.g. LEXOGEN_QUANTSEQ_3UTR_FWD), verifies empirical
-    consensus with declared library orientation and halts with CONFLICT (-1) if
-    empirical fractions contradict expected strandedness.
+    If configured_strandedness is provided by investigator/protocol, it is verified
+    against empirical RSeQC evidence and MUST NOT silently bypass conflicting observations.
+
+    If library_type orientation is unknown (e.g. LEXOGEN_QUANTSEQ_3UTR_UNKNOWN_STRAND),
+    verified empirical evidence is required to select counting orientation, halting
+    if evidence is ambiguous or non-stranded.
 
     Scientific Decision Invariants:
     - Reverse-stranded (featureCounts -s 2):
-      Dominant antisense reads (mean_rev >= 0.70) with low sense signal (mean_fwd <= 0.15).
+      Dominant antisense reads (mean_rev >= 0.70) with low sense signal (mean_fwd <= 0.20) or diff >= 0.50.
     - Forward-stranded (featureCounts -s 1):
-      Dominant sense reads (mean_fwd >= 0.70) with low antisense signal (mean_rev <= 0.15).
+      Dominant sense reads (mean_fwd >= 0.70) with low antisense signal (mean_rev <= 0.20) or diff >= 0.50.
     - Unstranded (featureCounts -s 0):
       Balanced forward/reverse fractions (|mean_fwd - mean_rev| <= 0.15, each >= 0.25).
     - Ambiguous / Conflict:
-      Neither criterion met, or empirical evidence conflicts with declared library prep;
+      Neither criterion met, or empirical evidence conflicts with declared library prep or configured flag;
       halts for investigator review (flag = -1).
     """
     lib_type = LibraryType.from_string(library_type) if library_type else LibraryType.UNKNOWN
@@ -97,10 +101,10 @@ def infer_strandedness_decision(
     # 1. Evaluate empirical signal
     empirical_flag: int
     empirical_mode: str
-    if mean_rev >= 0.70 and mean_fwd <= 0.15:
+    if (mean_rev >= 0.70 and mean_fwd <= 0.20) or (mean_rev - mean_fwd >= 0.50):
         empirical_flag = 2
         empirical_mode = "reverse"
-    elif mean_fwd >= 0.70 and mean_rev <= 0.15:
+    elif (mean_fwd >= 0.70 and mean_rev <= 0.20) or (mean_fwd - mean_rev >= 0.50):
         empirical_flag = 1
         empirical_mode = "forward"
     elif delta <= 0.15 and (mean_fwd >= 0.25 and mean_rev >= 0.25):
@@ -110,7 +114,105 @@ def infer_strandedness_decision(
         empirical_flag = -1
         empirical_mode = "ambiguous"
 
-    # 2. Consensus Gating against declared library type
+    # 2. Investigator-configured strandedness verification
+    if configured_strandedness is not None:
+        if configured_strandedness == 1:
+            is_conflict = (empirical_flag == 2) or (empirical_flag == 0 and mean_fwd >= 0.25 and mean_rev >= 0.25)
+            if is_conflict:
+                return StrandednessDecision(
+                    strandedness_flag=-1,
+                    strand_mode="ambiguous",
+                    confidence="CONFLICT",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication=f"CONFLICT_CONFIGURED_FORWARD_EMPIRICAL_{empirical_mode.upper()}",
+                    rationale=(
+                        f"Investigator configured forward strandedness (-s 1), but empirical RSeQC evidence "
+                        f"indicates {empirical_mode} (forward={mean_fwd:.1%}, reverse={mean_rev:.1%}). "
+                        "Halting downstream quantification because configured strandedness cannot silently bypass "
+                        "conflicting empirical observations."
+                    ),
+                )
+            else:
+                return StrandednessDecision(
+                    strandedness_flag=1,
+                    strand_mode="forward",
+                    confidence="HIGH",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication="CONSENSUS_VERIFIED_USER_CONFIGURED (featureCounts -s 1)",
+                    rationale=(
+                        f"Configured forward strandedness (-s 1) accepted and consistent with empirical observations "
+                        f"(forward={mean_fwd:.1%}, reverse={mean_rev:.1%})."
+                    ),
+                )
+        elif configured_strandedness == 2:
+            is_conflict = (empirical_flag == 1) or (empirical_flag == 0 and mean_fwd >= 0.25 and mean_rev >= 0.25)
+            if is_conflict:
+                return StrandednessDecision(
+                    strandedness_flag=-1,
+                    strand_mode="ambiguous",
+                    confidence="CONFLICT",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication=f"CONFLICT_CONFIGURED_REVERSE_EMPIRICAL_{empirical_mode.upper()}",
+                    rationale=(
+                        f"Investigator configured reverse strandedness (-s 2), but empirical RSeQC evidence "
+                        f"indicates {empirical_mode} (forward={mean_fwd:.1%}, reverse={mean_rev:.1%}). "
+                        "Halting downstream quantification because configured strandedness cannot silently bypass "
+                        "conflicting empirical observations."
+                    ),
+                )
+            else:
+                return StrandednessDecision(
+                    strandedness_flag=2,
+                    strand_mode="reverse",
+                    confidence="HIGH",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication="CONSENSUS_VERIFIED_USER_CONFIGURED (featureCounts -s 2)",
+                    rationale=(
+                        f"Configured reverse strandedness (-s 2) accepted and consistent with empirical observations "
+                        f"(forward={mean_fwd:.1%}, reverse={mean_rev:.1%})."
+                    ),
+                )
+        elif configured_strandedness == 0:
+            if empirical_flag in (1, 2):
+                return StrandednessDecision(
+                    strandedness_flag=-1,
+                    strand_mode="ambiguous",
+                    confidence="CONFLICT",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication=f"CONFLICT_CONFIGURED_UNSTRANDED_EMPIRICAL_{empirical_mode.upper()}",
+                    rationale=(
+                        f"Investigator configured unstranded setting (-s 0), but empirical RSeQC evidence "
+                        f"indicates {empirical_mode} (forward={mean_fwd:.1%}, reverse={mean_rev:.1%}). "
+                        "Halting downstream quantification because configured strandedness cannot silently bypass "
+                        "conflicting empirical observations."
+                    ),
+                )
+            else:
+                return StrandednessDecision(
+                    strandedness_flag=0,
+                    strand_mode="unstranded",
+                    confidence="HIGH",
+                    mean_forward=mean_fwd,
+                    mean_reverse=mean_rev,
+                    mean_unexplained=mean_unexp,
+                    consensus_indication="CONSENSUS_VERIFIED_USER_CONFIGURED (featureCounts -s 0)",
+                    rationale=(
+                        f"Configured unstranded setting (-s 0) accepted and consistent with empirical observations "
+                        f"(forward={mean_fwd:.1%}, reverse={mean_rev:.1%})."
+                    ),
+                )
+
+    # 3. Consensus Gating against declared library type
     if lib_type.is_fwd:
         # QuantSeq FWD requires forward sense reads (-s 1)
         if empirical_flag == 1:
@@ -177,7 +279,53 @@ def infer_strandedness_decision(
                 ),
             )
 
-    # Standard conventional / unspecified handling
+    # 4. QuantSeq with unknown orientation: requires verified empirical evidence
+    if lib_type.is_quantseq:
+        if empirical_flag == 1:
+            return StrandednessDecision(
+                strandedness_flag=1,
+                strand_mode="forward",
+                confidence="HIGH",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication="EMPIRICAL_QUANTSEQ_FORWARD (featureCounts -s 1)",
+                rationale=(
+                    f"QuantSeq 3' orientation was not documented in metadata; verified empirical RSeQC evidence "
+                    f"resolved orientation to forward/sense ({mean_fwd:.1%} forward vs {mean_rev:.1%} reverse)."
+                ),
+            )
+        elif empirical_flag == 2:
+            return StrandednessDecision(
+                strandedness_flag=2,
+                strand_mode="reverse",
+                confidence="HIGH",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication="EMPIRICAL_QUANTSEQ_REVERSE (featureCounts -s 2)",
+                rationale=(
+                    f"QuantSeq 3' orientation was not documented in metadata; verified empirical RSeQC evidence "
+                    f"resolved orientation to reverse/antisense ({mean_rev:.1%} reverse vs {mean_fwd:.1%} forward)."
+                ),
+            )
+        else:
+            return StrandednessDecision(
+                strandedness_flag=-1,
+                strand_mode="ambiguous",
+                confidence="CONFLICT",
+                mean_forward=mean_fwd,
+                mean_reverse=mean_rev,
+                mean_unexplained=mean_unexp,
+                consensus_indication=f"CONFLICT_QUANTSEQ_NON_STRANDED_EMPIRICAL_{empirical_mode.upper()}",
+                rationale=(
+                    f"QuantSeq 3' orientation was not documented in metadata, and empirical RSeQC fractions "
+                    f"indicate {empirical_mode} (forward={mean_fwd:.1%}, reverse={mean_rev:.1%}). QuantSeq libraries "
+                    "are strand-specific and cannot be unstranded. Halting quantification to prevent erroneous assignment."
+                ),
+            )
+
+    # 5. Standard conventional / unspecified handling
     if empirical_flag == 2:
         return StrandednessDecision(
             strandedness_flag=2,
