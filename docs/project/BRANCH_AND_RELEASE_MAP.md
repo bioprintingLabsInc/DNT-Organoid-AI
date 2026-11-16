@@ -24,6 +24,12 @@ This document explains the repository branching strategy, validated release mile
 
 ## 2. Immutable Release Tags
 
+### Release Tag: `stage7b-de-v1.0-freeze`
+* **Commit SHA**: Governed at Stage 7B freeze commit
+* **Tag Type**: Annotated Git Tag (`refs/tags/stage7b-de-v1.0-freeze`)
+* **Scientific Milestone**: Bulk Treatment-versus-Matched-Control Differential Expression v1 with independent direct R / DESeq2 numerical verification and zero-fabrication metadata invariants.
+* **Freeze Invariant**: This commit is immutable. No downstream feature work or refactoring may alter this tag or its referenced tree.
+
 ### Release Tag: `stage8c-v1-frozen`
 * **Commit SHA**: `7a69c259b9be1ea9cff55dd76b8db365df105b9f`
 * **Tag Type**: Annotated Git Tag (`refs/tags/stage8c-v1-frozen`)

@@ -425,27 +425,14 @@ def run_contrast_differential_expression(
     ordered_trt = sorted(contrast.treatment_sample_ids)
     ordered_samples = tuple(ordered_ctrl + ordered_trt)
 
-    # Resolve biological source mapping for coldata if needed
-    source_map: dict[str, str] = {}
-    if isinstance(sample_metadata, dict):
-        for sid, meta in sample_metadata.items():
-            if isinstance(meta, dict):
-                src = meta.get("biological_source_id") or meta.get("source_id") or meta.get("cell_line_id")
-                if src:
-                    source_map[sid] = str(src).strip()
-    elif isinstance(sample_metadata, Sequence):
-        for item in sample_metadata:
-            if isinstance(item, dict) and "sample_id" in item:
-                src = item.get("biological_source_id") or item.get("source_id") or item.get("cell_line_id")
-                if src:
-                    source_map[item["sample_id"]] = str(src).strip()
-
     coldata_rows: list[dict[str, str]] = []
     for sid in ordered_samples:
         cond = "control" if sid in ordered_ctrl else "treatment"
         row: dict[str, str] = {"sample_id": sid, "condition": cond}
         if "biological_source" in design_res.formula:
-            row["biological_source"] = source_map.get(sid, contrast.biological_source_ids[0] if contrast.biological_source_ids else "source_1")
+            row["biological_source"] = design_res.sample_source_assignments.get(sid, "source_1")
+        if "batch" in design_res.formula:
+            row["batch"] = design_res.sample_batch_assignments.get(sid, "batch_1")
         coldata_rows.append(row)
 
     # Extract raw count columns for contrast samples

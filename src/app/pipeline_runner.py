@@ -453,7 +453,7 @@ def parse_sample_info(
             f"Found: {len(trt_samples)} treatment, {len(ctrl_samples)} control."
         )
 
-    return active_df[["sample_id", "condition_type", "biological_replicate_id"]].reset_index(drop=True)
+    return active_df.reset_index(drop=True)
 
 
 def build_canonical_metadata(
@@ -466,24 +466,47 @@ def build_canonical_metadata(
 ) -> dict[str, Any]:
     """Construct a full canonical metadata dictionary adhering to schema and backend stage rules."""
     sample_records = []
+    unique_sources: set[str] = set()
+
     for _, row in samples_df.iterrows():
         sid = str(row["sample_id"]).strip()
         ctype = str(row["condition_type"]).strip().lower()
-        cid = "cond_treatment" if ctype == "treatment" else "cond_control"
+        if ctype == "treatment":
+            cid = "cond_treatment"
+        elif ctype == "control":
+            cid = "cond_control"
+        else:
+            cid = "cond_excluded"
         brep = str(row["biological_replicate_id"]).strip()
 
-        sample_records.append(
-            {
-                "sample_id": sid,
-                "experiment_id": "exp_app_01",
-                "condition_id": cid,
-                "biological_replicate_id": brep,
-                "biological_source_id": chemical_params.biological_source_id,
-                "organoid_context_id": chemical_params.organoid_context_id,
-                "developmental_age_or_stage_at_collection": chemical_params.developmental_age,
-                "developmental_age_or_stage_at_exposure": chemical_params.developmental_age,
-            }
-        )
+        # Resolve sample-level biological source ID if present
+        bio_src = None
+        for k in ("biological_source_id", "biological_source", "cell_line_id", "donor_id", "source_id"):
+            if k in row and pd.notna(row[k]) and str(row[k]).strip():
+                bio_src = str(row[k]).strip()
+                break
+        if not bio_src:
+            bio_src = chemical_params.biological_source_id or "source_01"
+        unique_sources.add(bio_src)
+
+        rec: dict[str, Any] = {
+            "sample_id": sid,
+            "experiment_id": "exp_app_01",
+            "condition_id": cid,
+            "biological_replicate_id": brep,
+            "biological_source_id": bio_src,
+            "organoid_context_id": chemical_params.organoid_context_id or "ctx_01",
+            "developmental_age_or_stage_at_collection": chemical_params.developmental_age,
+            "developmental_age_or_stage_at_exposure": chemical_params.developmental_age,
+        }
+
+        # Resolve sample-level batch ID if present
+        for k in ("experimental_batch_id", "batch_id", "batch", "sequencing_batch_id", "processing_batch_id"):
+            if k in row and pd.notna(row[k]) and str(row[k]).strip():
+                rec["experimental_batch_id"] = str(row[k]).strip()
+                break
+
+        sample_records.append(rec)
 
     all_sids = [s["sample_id"] for s in sample_records]
 
@@ -531,6 +554,12 @@ def build_canonical_metadata(
                 "treatment_control_status": "control",
                 "developmental_age_or_stage": chemical_params.developmental_age,
             },
+            {
+                "condition_id": "cond_excluded",
+                "experiment_id": "exp_app_01",
+                "treatment_control_status": "other",
+                "developmental_age_or_stage": chemical_params.developmental_age,
+            },
         ],
         "samples": sample_records,
         "organoid_contexts": [
@@ -542,9 +571,10 @@ def build_canonical_metadata(
         ],
         "biological_sources": [
             {
-                "biological_source_id": chemical_params.biological_source_id,
-                "species": chemical_params.species,
+                "biological_source_id": src_id,
+                "species": chemical_params.species or "Homo sapiens",
             }
+            for src_id in sorted(unique_sources)
         ],
         "exposures": [
             {
@@ -832,7 +862,9 @@ def run_full_analysis_pipeline(
 
         cr = de_dataset.contrast_results[0]
         if not cr.is_inferentially_eligible or cr.status != ContrastStatus.ELIGIBLE:
-            error_msgs = [f.message for f in cr.findings if f.severity.value == "ERROR"]
+            error_msgs = [f.message for f in cr.findings if f.severity.value in ("ERROR", "REVIEW")]
+            if not error_msgs:
+                error_msgs = [f"Contrast status is {cr.status} (is_inferentially_eligible={cr.is_inferentially_eligible})"]
             return PipelineRunResult(
                 is_success=False,
                 contrast_result=cr,

@@ -1,0 +1,26 @@
+{
+  "benchmark_name": "GSE232218_VPA_200uM",
+  "description": "Valproic Acid 200 µM in Human Cerebral Cortex Organoids (SOSR-CO)",
+  "source_accession": "GSE232218",
+  "counts_file_candidates": [
+    "C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt/GSE232218_gene_expected_count.txt",
+    "C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt.gz",
+    "data/raw/GSE232218_gene_expected_count.txt"
+  ],
+  "samples_file": "config/benchmarks/gse232218_samples.csv",
+  "chemical_parameters": {
+    "agent_name": "Valproic Acid",
+    "agent_identifier": "CID:3121",
+    "concentration_or_dose": 200.0,
+    "concentration_or_dose_unit": "uM",
+    "developmental_age": "Day 6",
+    "exposure_duration": 48.0,
+    "exposure_duration_unit": "h",
+    "vehicle": "water",
+    "organoid_context_id": "organoid_ctx_01",
+    "organoid_type": "Cerebral Cortex Organoid (SOSR-CO)",
+    "brain_region": "cerebral_cortex",
+    "biological_source_id": "WA09",
+    "species": "Homo sapiens"
+  }
+}

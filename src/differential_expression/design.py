@@ -6,7 +6,7 @@ and estimability to choose the correct statistical model formula or block execut
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from src.response_builder.models import ContrastStatus, Finding, MolecularResponseContrast, Severity
@@ -40,6 +40,84 @@ def matrix_rank(matrix: Sequence[Sequence[float]], tol: float = 1e-9) -> int:
     return rank
 
 
+def resolve_sample_biological_source(
+    sid: str,
+    sample_meta: dict[str, Any] | None,
+    contrast_sources: Sequence[str] = (),
+) -> tuple[str | None, Finding | None]:
+    """Resolve biological source identifier for a sample deterministically.
+
+    Inspects: biological_source_id, cell_line_id, donor_id, source_id.
+    Detects conflicts if multiple keys have conflicting non-empty values.
+    """
+    if sample_meta:
+        src_candidates: dict[str, str] = {}
+        for key in ("biological_source_id", "cell_line_id", "donor_id", "source_id"):
+            val = sample_meta.get(key)
+            if val is not None and str(val).strip() != "":
+                src_candidates[key] = str(val).strip()
+
+        unique_vals = set(src_candidates.values())
+        if len(unique_vals) > 1:
+            finding = Finding(
+                severity=Severity.ERROR,
+                rule_id="conflicting_biological_source_identifiers",
+                entity_type="sample",
+                entity_id=sid,
+                path=f"samples.{sid}",
+                message=(
+                    f"Sample '{sid}' has conflicting biological source identifiers across metadata fields: "
+                    f"{src_candidates}."
+                ),
+            )
+            return None, finding
+
+        if len(unique_vals) == 1:
+            return next(iter(unique_vals)), None
+
+    if len(contrast_sources) == 1:
+        return str(contrast_sources[0]).strip(), None
+
+    return None, None
+
+
+def resolve_sample_batch(
+    sid: str,
+    sample_meta: dict[str, Any] | None,
+) -> tuple[str | None, Finding | None]:
+    """Resolve experimental batch identifier for a sample deterministically.
+
+    Inspects: experimental_batch_id, batch_id, sequencing_batch_id, processing_batch_id, library_prep_batch_id.
+    Detects conflicts if multiple keys have conflicting non-empty values.
+    """
+    if sample_meta:
+        batch_candidates: dict[str, str] = {}
+        for key in ("experimental_batch_id", "batch_id", "sequencing_batch_id", "processing_batch_id", "library_prep_batch_id"):
+            val = sample_meta.get(key)
+            if val is not None and str(val).strip() != "":
+                batch_candidates[key] = str(val).strip()
+
+        unique_batches = set(batch_candidates.values())
+        if len(unique_batches) > 1:
+            finding = Finding(
+                severity=Severity.ERROR,
+                rule_id="conflicting_batch_identifiers",
+                entity_type="sample",
+                entity_id=sid,
+                path=f"samples.{sid}",
+                message=(
+                    f"Sample '{sid}' has conflicting batch identifiers across metadata fields: "
+                    f"{batch_candidates}."
+                ),
+            )
+            return None, finding
+
+        if len(unique_batches) == 1:
+            return next(iter(unique_batches)), None
+
+    return None, None
+
+
 @dataclass(frozen=True, slots=True)
 class DesignResolutionResult:
     """Outcome of model design resolution and estimability validation."""
@@ -52,6 +130,8 @@ class DesignResolutionResult:
     residual_degrees_of_freedom: int | None = None
     is_estimable: bool = False
     samples_used: tuple[str, ...] = ()
+    sample_source_assignments: dict[str, str] = field(default_factory=dict)
+    sample_batch_assignments: dict[str, str] = field(default_factory=dict)
 
 
 class DesignResolver:
@@ -127,22 +207,6 @@ class DesignResolver:
                     return str(contrast.control_biological_replicate_ids[idx]).strip()
             return sid
 
-        # Helper to get bio source ID
-        def get_bio_source(sid: str) -> str | None:
-            if sid in meta_by_id:
-                m = meta_by_id[sid]
-                src = (
-                    m.get("biological_source_id")
-                    or m.get("source_id")
-                    or m.get("cell_line_id")
-                    or m.get("donor_id")
-                )
-                if src:
-                    return str(src).strip()
-            if len(contrast.biological_source_ids) == 1:
-                return contrast.biological_source_ids[0]
-            return None
-
         # 1. Check technical replicates and biological replication
         trt_bio_reps = [get_bio_rep(s, is_trt=True) for s in trt_samples]
         ctrl_bio_reps = [get_bio_rep(s, is_trt=False) for s in ctrl_samples]
@@ -198,14 +262,52 @@ class DesignResolver:
             )
 
         # 2. Analyze biological sources
-        trt_sources = {get_bio_source(s) for s in trt_samples}
-        ctrl_sources = {get_bio_source(s) for s in ctrl_samples}
-        all_sources_set = trt_sources | ctrl_sources
+        sample_sources: dict[str, str | None] = {}
+        for s in all_samples:
+            s_meta = meta_by_id.get(s)
+            s_src, s_finding = resolve_sample_biological_source(s, s_meta, contrast.biological_source_ids)
+            if s_finding is not None:
+                findings.append(s_finding)
+                return DesignResolutionResult(
+                    formula="",
+                    rationale=s_finding.message,
+                    status=ContrastStatus.BLOCKED,
+                    findings=tuple(findings),
+                )
+            sample_sources[s] = s_src
 
-        # Clean None values if present
+        trt_sources = {sample_sources[s] for s in trt_samples}
+        ctrl_sources = {sample_sources[s] for s in ctrl_samples}
+
         clean_trt_sources = {s for s in trt_sources if s is not None}
         clean_ctrl_sources = {s for s in ctrl_sources if s is not None}
         clean_all_sources = sorted(clean_trt_sources | clean_ctrl_sources)
+
+        # Missing biological source detection when multiple sources are known
+        known_sources_count = max(len(clean_all_sources), len(contrast.biological_source_ids))
+        if known_sources_count > 1:
+            missing_sources = [s for s in all_samples if sample_sources[s] is None]
+            if missing_sources:
+                for s in missing_sources:
+                    findings.append(
+                        Finding(
+                            severity=Severity.ERROR,
+                            rule_id="missing_biological_source_identifier",
+                            entity_type="sample",
+                            entity_id=s,
+                            path=f"samples.{s}",
+                            message=(
+                                f"Sample '{s}' lacks a biological source identifier when multiple biological sources "
+                                f"exist in the contrast ({clean_all_sources or list(contrast.biological_source_ids)})."
+                            ),
+                        )
+                    )
+                return DesignResolutionResult(
+                    formula="",
+                    rationale="Missing biological source identifier when multiple sources exist in cohort/contrast.",
+                    status=ContrastStatus.BLOCKED,
+                    findings=tuple(findings),
+                )
 
         formula = "~ condition"
         rationale = ""
@@ -220,8 +322,7 @@ class DesignResolver:
             is_disjoint = clean_trt_sources.isdisjoint(clean_ctrl_sources)
             if is_disjoint:
                 # Check whether source IDs repeat within condition
-                all_source_assignments = [get_bio_source(s) for s in all_samples]
-                source_counts = Counter([s for s in all_source_assignments if s is not None])
+                source_counts = Counter([sample_sources[s] for s in all_samples if sample_sources[s] is not None])
                 has_repeating_source = any(cnt > 1 for cnt in source_counts.values())
 
                 if has_repeating_source:
@@ -254,10 +355,9 @@ class DesignResolver:
                     )
             elif clean_trt_sources == clean_ctrl_sources:
                 # Case B: Multiple paired / blocked biological sources represented in both arms
-                # Verify each source has both treatment and control
                 paired_all = all(
-                    any(get_bio_source(s) == src for s in trt_samples)
-                    and any(get_bio_source(s) == src for s in ctrl_samples)
+                    any(sample_sources[s] == src for s in trt_samples)
+                    and any(sample_sources[s] == src for s in ctrl_samples)
                     for src in clean_all_sources
                 )
                 if paired_all:
@@ -306,27 +406,109 @@ class DesignResolver:
                     findings=tuple(findings),
                 )
 
-        # 3. Construct model matrix and evaluate rank, degrees of freedom, estimability
+        # 3. Analyze batch covariates
+        sample_batches: dict[str, str | None] = {}
+        for s in all_samples:
+            s_meta = meta_by_id.get(s)
+            s_b, b_finding = resolve_sample_batch(s, s_meta)
+            if b_finding is not None:
+                findings.append(b_finding)
+                return DesignResolutionResult(
+                    formula="",
+                    rationale=b_finding.message,
+                    status=ContrastStatus.BLOCKED,
+                    findings=tuple(findings),
+                )
+            sample_batches[s] = s_b
+
+        has_any_batch = any(b is not None for b in sample_batches.values())
+        include_batch_covariate = False
+        clean_all_batches: list[str] = []
+
+        if has_any_batch:
+            missing_batches = [s for s in all_samples if sample_batches[s] is None]
+            if missing_batches:
+                findings.append(
+                    Finding(
+                        severity=Severity.ERROR,
+                        rule_id="missing_batch_identifier",
+                        entity_type="contrast",
+                        entity_id=contrast.contrast_id,
+                        path="samples.batch",
+                        message=(
+                            f"Sample(s) {missing_batches} lack experimental batch identifier while "
+                            "other contrast samples declare batch."
+                        ),
+                    )
+                )
+                return DesignResolutionResult(
+                    formula="",
+                    rationale="Incomplete batch metadata across contrast samples.",
+                    status=ContrastStatus.BLOCKED,
+                    findings=tuple(findings),
+                )
+
+            trt_batches = {sample_batches[s] for s in trt_samples}
+            ctrl_batches = {sample_batches[s] for s in ctrl_samples}
+            clean_all_batches = sorted(trt_batches | ctrl_batches)
+
+            if len(clean_all_batches) > 1:
+                # Check for treatment-batch confounding
+                if trt_batches.isdisjoint(ctrl_batches):
+                    findings.append(
+                        Finding(
+                            severity=Severity.ERROR,
+                            rule_id="treatment_batch_confounding",
+                            entity_type="contrast",
+                            entity_id=contrast.contrast_id,
+                            path="experimental_batch_id",
+                            message=(
+                                f"Treatment condition is completely confounded with experimental batch: "
+                                f"treatment batches {sorted(trt_batches)} vs control batches {sorted(ctrl_batches)}."
+                            ),
+                        )
+                    )
+                    return DesignResolutionResult(
+                        formula="",
+                        rationale="Treatment condition is completely confounded with experimental batch.",
+                        status=ContrastStatus.BLOCKED,
+                        findings=tuple(findings),
+                    )
+                include_batch_covariate = True
+
+        # Assemble formula and rationale
+        terms: list[str] = []
+        if include_source_covariate:
+            terms.append("biological_source")
+        if include_batch_covariate:
+            terms.append("batch")
+        terms.append("condition")
+        formula = "~ " + " + ".join(terms)
+
+        if include_source_covariate and include_batch_covariate:
+            rationale = "Multiple paired biological sources and experimental batches represented across arms; biological source and batch included as blocking factors."
+        elif include_batch_covariate:
+            rationale = "Experimental batch represented across arms; batch included as blocking factor."
+
+        # 4. Construct model matrix and evaluate rank, degrees of freedom, estimability
         x_rows: list[list[float]] = []
         n_samples = len(all_samples)
+        other_sources = clean_all_sources[1:] if include_source_covariate else []
+        other_batches = clean_all_batches[1:] if include_batch_covariate else []
 
-        if include_source_covariate:
-            # Columns: [intercept, (S-1 dummy columns for sources 1..S-1), condition_treatment]
-            ref_source = clean_all_sources[0]
-            other_sources = clean_all_sources[1:]
-            for s in all_samples:
-                row = [1.0]
-                s_source = get_bio_source(s)
+        for s in all_samples:
+            row = [1.0]
+            if include_source_covariate:
+                s_source = sample_sources[s]
                 for src in other_sources:
                     row.append(1.0 if s_source == src else 0.0)
-                is_trt = 1.0 if s in trt_samples else 0.0
-                row.append(is_trt)
-                x_rows.append(row)
-        else:
-            # Columns: [intercept, condition_treatment]
-            for s in all_samples:
-                is_trt = 1.0 if s in trt_samples else 0.0
-                x_rows.append([1.0, is_trt])
+            if include_batch_covariate:
+                s_batch = sample_batches[s]
+                for b in other_batches:
+                    row.append(1.0 if s_batch == b else 0.0)
+            is_trt = 1.0 if s in trt_samples else 0.0
+            row.append(is_trt)
+            x_rows.append(row)
 
         p_cols = len(x_rows[0])
         rank = matrix_rank(x_rows)
@@ -400,6 +582,15 @@ class DesignResolver:
                 is_estimable=False,
             )
 
+        sample_sources_dict = {
+            s: sample_sources[s] or (clean_all_sources[0] if clean_all_sources else "source_1")
+            for s in all_samples
+        }
+        sample_batches_dict = {
+            s: sample_batches[s] or (clean_all_batches[0] if clean_all_batches else "batch_1")
+            for s in all_samples
+        }
+
         return DesignResolutionResult(
             formula=formula,
             rationale=rationale,
@@ -409,4 +600,6 @@ class DesignResolver:
             residual_degrees_of_freedom=resid_df,
             is_estimable=True,
             samples_used=all_samples,
+            sample_source_assignments=sample_sources_dict,
+            sample_batch_assignments=sample_batches_dict,
         )

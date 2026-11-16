@@ -1172,3 +1172,87 @@ def test_normalize_age_string_helper() -> None:
     assert normalize_age_string(None) is None
     assert normalize_age_string("unknown") is None
     assert normalize_age_string("missing_not_reported") is None
+
+
+def test_unit_canonicalization_helpers() -> None:
+    from src.response_builder.builder import canonicalize_concentration_unit, canonicalize_duration_unit
+
+    assert canonicalize_concentration_unit("uM") == "uM"
+    assert canonicalize_concentration_unit("µM") == "uM"
+    assert canonicalize_concentration_unit("micromolar") == "uM"
+    assert canonicalize_concentration_unit("mM") == "mM"
+    assert canonicalize_concentration_unit("millimolar") == "mM"
+    assert canonicalize_concentration_unit("nM") == "nM"
+
+    assert canonicalize_duration_unit("h") == "h"
+    assert canonicalize_duration_unit("hours") == "h"
+    assert canonicalize_duration_unit("hr") == "h"
+    assert canonicalize_duration_unit("d") == "d"
+    assert canonicalize_duration_unit("days") == "d"
+
+
+def test_incompatible_exposure_conditions_blocked() -> None:
+    """Conflicting concentrations across samples in the treatment arm without exception -> BLOCKED."""
+    samples = [
+        {"sample_id": "s_t1", "experiment_id": "exp_001", "condition_id": "cond_treat", "biological_replicate_id": "r1", "developmental_age_or_stage_at_collection": "Day 30", "concentration_or_dose": 10.0, "concentration_or_dose_unit": "uM"},
+        {"sample_id": "s_t2", "experiment_id": "exp_001", "condition_id": "cond_treat", "biological_replicate_id": "r2", "developmental_age_or_stage_at_collection": "Day 30", "concentration_or_dose": 50.0, "concentration_or_dose_unit": "uM"},
+        {"sample_id": "s_c1", "experiment_id": "exp_001", "condition_id": "cond_ctrl", "biological_replicate_id": "cr1", "developmental_age_or_stage_at_collection": "Day 30"},
+        {"sample_id": "s_c2", "experiment_id": "exp_001", "condition_id": "cond_ctrl", "biological_replicate_id": "cr2", "developmental_age_or_stage_at_collection": "Day 30"},
+    ]
+    conditions = [
+        {"condition_id": "cond_treat", "experiment_id": "exp_001", "treatment_control_status": "treatment"},
+        {"condition_id": "cond_ctrl", "experiment_id": "exp_001", "treatment_control_status": "control"},
+    ]
+    relationships = [
+        {"relationship_id": "rel_01", "treatment_condition_ids": ["cond_treat"], "matched_control_condition_ids": ["cond_ctrl"]},
+    ]
+
+    norm, meta = create_normalized_dataset_and_metadata(samples, conditions, relationships)
+    res = build_response_contrasts(norm, meta)
+
+    contrast = res.contrasts[0]
+    assert contrast.status == ContrastStatus.BLOCKED
+    assert any(f.rule_id == "incompatible_exposure_conditions" for f in contrast.findings)
+
+
+def test_dnt_label_metadata_does_not_affect_contrast_building() -> None:
+    """Adding DNT labels or hazard annotations to metadata causes zero changes to contrast structure."""
+    samples_base = [
+        {"sample_id": "s_t1", "experiment_id": "exp_001", "condition_id": "cond_treat", "biological_replicate_id": "r1", "developmental_age_or_stage_at_collection": "Day 30"},
+        {"sample_id": "s_t2", "experiment_id": "exp_001", "condition_id": "cond_treat", "biological_replicate_id": "r2", "developmental_age_or_stage_at_collection": "Day 30"},
+        {"sample_id": "s_c1", "experiment_id": "exp_001", "condition_id": "cond_ctrl", "biological_replicate_id": "cr1", "developmental_age_or_stage_at_collection": "Day 30"},
+        {"sample_id": "s_c2", "experiment_id": "exp_001", "condition_id": "cond_ctrl", "biological_replicate_id": "cr2", "developmental_age_or_stage_at_collection": "Day 30"},
+    ]
+    conditions_base = [
+        {"condition_id": "cond_treat", "experiment_id": "exp_001", "treatment_control_status": "treatment"},
+        {"condition_id": "cond_ctrl", "experiment_id": "exp_001", "treatment_control_status": "control"},
+    ]
+    relationships = [
+        {"relationship_id": "rel_01", "treatment_condition_ids": ["cond_treat"], "matched_control_condition_ids": ["cond_ctrl"]},
+    ]
+
+    norm_base, meta_base = create_normalized_dataset_and_metadata(samples_base, conditions_base, relationships)
+    res_base = build_response_contrasts(norm_base, meta_base)
+
+    # Now add DNT label annotations to conditions and samples
+    conditions_dnt = [
+        {"condition_id": "cond_treat", "experiment_id": "exp_001", "treatment_control_status": "treatment", "dnt_hazard": "positive", "dnt_label": "DNT_positive"},
+        {"condition_id": "cond_ctrl", "experiment_id": "exp_001", "treatment_control_status": "control", "dnt_hazard": "negative", "dnt_label": "Vehicle_control"},
+    ]
+    samples_dnt = [
+        dict(s, dnt_annotation="positive" if "treat" in s["condition_id"] else "negative")
+        for s in samples_base
+    ]
+
+    norm_dnt, meta_dnt = create_normalized_dataset_and_metadata(samples_dnt, conditions_dnt, relationships)
+    res_dnt = build_response_contrasts(norm_dnt, meta_dnt)
+
+    c_base = res_base.contrasts[0]
+    c_dnt = res_dnt.contrasts[0]
+
+    assert c_base.contrast_id == c_dnt.contrast_id
+    assert c_base.status == c_dnt.status
+    assert c_base.treatment_sample_ids == c_dnt.treatment_sample_ids
+    assert c_base.control_sample_ids == c_dnt.control_sample_ids
+    assert c_base.treatment_biological_replicate_ids == c_dnt.treatment_biological_replicate_ids
+    assert c_base.control_biological_replicate_ids == c_dnt.control_biological_replicate_ids
