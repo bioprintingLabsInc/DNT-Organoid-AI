@@ -258,11 +258,29 @@ def run_independent_verification(
             row_dict: dict[str, str] = {"sample_id": sid, "condition": cond}
             sm = sample_meta_map.get(sid, {})
             if "biological_source" in selected_design:
-                src_id, _ = resolve_sample_biological_source(sid, sm, contrast_res.biological_source_ids)
-                row_dict["biological_source"] = src_id or "source_1"
+                src_id, src_finding = resolve_sample_biological_source(sid, sm, contrast_res.biological_source_ids)
+                if src_finding is not None:
+                    raise ValueError(
+                        f"Sample '{sid}' biological source error: {src_finding.message}"
+                    )
+                if not src_id or not str(src_id).strip() or str(src_id).strip().lower() in ("nan", "none", ""):
+                    raise ValueError(
+                        f"Statistical design '{selected_design}' requires 'biological_source', "
+                        f"but sample '{sid}' lacks an explicit biological source identifier."
+                    )
+                row_dict["biological_source"] = str(src_id).strip()
             if "batch" in selected_design:
-                batch_id, _ = resolve_sample_batch(sid, sm)
-                row_dict["batch"] = batch_id or "batch_1"
+                batch_id, batch_finding = resolve_sample_batch(sid, sm)
+                if batch_finding is not None:
+                    raise ValueError(
+                        f"Sample '{sid}' batch error: {batch_finding.message}"
+                    )
+                if not batch_id or not str(batch_id).strip() or str(batch_id).strip().lower() in ("nan", "none", ""):
+                    raise ValueError(
+                        f"Statistical design '{selected_design}' requires 'batch', "
+                        f"but sample '{sid}' lacks an explicit batch identifier."
+                    )
+                row_dict["batch"] = str(batch_id).strip()
             coldata_rows.append(row_dict)
 
         coldata_df = pd.DataFrame(coldata_rows)

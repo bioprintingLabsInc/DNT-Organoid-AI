@@ -13,8 +13,12 @@ Validates that:
 10. Design formula or rank mismatches between pipeline and direct R are rejected.
 11. Treatment-vs-control directionality mismatches are caught and rejected.
 12. Arbitrary custom valid datasets pass verification cleanly without source modifications.
+13. Missing biological source identifiers when required by design are strictly rejected.
+14. Missing batch identifiers when required by design are strictly rejected.
+15. Conflicting metadata identifiers across fields are strictly rejected.
 """
 
+import dataclasses
 import json
 from pathlib import Path
 import subprocess
@@ -511,3 +515,98 @@ def test_custom_valid_dataset_passes():
         assert (out_dir / "direct_r_results.csv").exists()
         assert (out_dir / "pipeline_results.csv").exists()
         assert (out_dir / "verification_report.json").exists()
+
+
+# 13. Missing Biological Source Identifier Rejected When Required
+def test_missing_biological_source_identifier_rejected_when_required():
+    """Missing biological source identifier when design requires biological_source must raise ValueError."""
+    samples = ["c_A1", "c_A2", "c_B1", "c_B2", "t_A1", "t_A2", "t_B1", "t_B2"]
+    counts_df = _make_counts_df(samples, trt_sids=["t_A1", "t_A2", "t_B1", "t_B2"])
+    sources = ["donor_A", "donor_A", "donor_B", "donor_B"] * 2
+    sources[0] = ""  # sample c_A1 lacks explicit biological source
+    samples_df = pd.DataFrame(
+        {
+            "sample_id": samples,
+            "condition_type": ["control"] * 4 + ["treatment"] * 4,
+            "biological_replicate_id": [f"mock_rep_{i}" for i in range(1, 9)],
+            "biological_source_id": sources,
+        }
+    )
+    chem_params = dataclasses.replace(_make_valid_chem_params(), biological_source_id="donor_A")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        counts_csv = Path(tmpdir) / "counts.csv"
+        counts_df.to_csv(counts_csv, index=False)
+        with pytest.raises(ValueError, match="requires 'biological_source'"):
+            run_independent_verification(
+                counts_path=counts_csv,
+                samples_df=samples_df,
+                chemical_params=chem_params,
+            )
+
+
+# 14. Missing Batch Identifier Rejected When Required
+def test_missing_batch_identifier_rejected_when_required(monkeypatch):
+    """Missing batch identifier when design requires batch must raise ValueError."""
+    samples = ["c_b1_1", "c_b1_2", "c_b2_1", "c_b2_2", "t_b1_1", "t_b1_2", "t_b2_1", "t_b2_2"]
+    counts_df = _make_counts_df(samples, trt_sids=["t_b1_1", "t_b1_2", "t_b2_1", "t_b2_2"])
+    batches = ["batch_1", "batch_1", "batch_2", "batch_2"] * 2
+    samples_df = pd.DataFrame(
+        {
+            "sample_id": samples,
+            "condition_type": ["control"] * 4 + ["treatment"] * 4,
+            "biological_replicate_id": [f"mock_rep_{i}" for i in range(1, 9)],
+            "biological_source_id": ["donor_1"] * 8,
+            "experimental_batch_id": batches,
+        }
+    )
+    import scripts.independent_deseq2_verification as idv
+    real_run_pipeline = idv.run_full_analysis_pipeline
+
+    def mock_run_pipeline(*args, **kwargs):
+        kwargs_copy = dict(kwargs)
+        kwargs_copy["samples_input"] = samples_df.copy()
+        return real_run_pipeline(*args, **kwargs_copy)
+
+    monkeypatch.setattr(idv, "run_full_analysis_pipeline", mock_run_pipeline)
+
+    samples_df_missing = samples_df.copy()
+    samples_df_missing.loc[0, "experimental_batch_id"] = ""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        counts_csv = Path(tmpdir) / "counts.csv"
+        counts_df.to_csv(counts_csv, index=False)
+        with pytest.raises(ValueError, match="requires 'batch'"):
+            run_independent_verification(
+                counts_path=counts_csv,
+                samples_df=samples_df_missing,
+                chemical_params=_make_valid_chem_params(),
+            )
+
+
+# 15. Conflicting Metadata Identifiers Rejected
+def test_conflicting_metadata_identifiers_rejected():
+    """Conflicting biological source or batch identifiers in sample metadata must raise ValueError."""
+    samples = ["c_A1", "c_A2", "c_B1", "c_B2", "t_A1", "t_A2", "t_B1", "t_B2"]
+    counts_df = _make_counts_df(samples, trt_sids=["t_A1", "t_A2", "t_B1", "t_B2"])
+    sources = ["donor_A", "donor_A", "donor_B", "donor_B"] * 2
+    cell_lines = ["line_conflict"] + sources[1:]
+    samples_df = pd.DataFrame(
+        {
+            "sample_id": samples,
+            "condition_type": ["control"] * 4 + ["treatment"] * 4,
+            "biological_replicate_id": [f"mock_rep_{i}" for i in range(1, 9)],
+            "biological_source_id": sources,
+            "cell_line_id": cell_lines,
+        }
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        counts_csv = Path(tmpdir) / "counts.csv"
+        counts_df.to_csv(counts_csv, index=False)
+        with pytest.raises(ValueError, match="conflicting biological source"):
+            run_independent_verification(
+                counts_path=counts_csv,
+                samples_df=samples_df,
+                chemical_params=_make_valid_chem_params(),
+            )
+
