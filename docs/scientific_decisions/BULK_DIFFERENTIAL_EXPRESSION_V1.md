@@ -256,7 +256,7 @@ All execution provenance records input matrix hashes, coldata hashes, size facto
 
 ---
 
-## 19. Real-Data Benchmark and Freeze Verification
+## 19. Real-Data Benchmark and Independent Verification
 
 Stage 7B was validated against the real human cortical organoid dataset GSE232218 (Valproic Acid 200 µM vs Vehicle control, $N=4$ treatment vs $N=4$ control):
 - **Raw Matrix Dimensions:** 60,628 input rows $\times$ 15 samples.
@@ -264,10 +264,14 @@ Stage 7B was validated against the real human cortical organoid dataset GSE23221
 - **Excluded Features:** 421 non-canonical/unmapped features (100% audited).
 - **Gene Universe Conservation:** Conserved exactly ($60,207 + 421 = 60,628$).
 - **Significant Differentially Expressed Genes:** 111 upregulated, 16 downregulated (FDR $< 0.05$).
-- **Numerical Reproducibility:** Exact agreement against verified baseline registry across all 60,207 genes:
-  - Max $\log_2\text{FC}$ difference: $0.000000 \times 10^0$
-  - Max Wald statistic difference: $0.000000 \times 10^0$
-- **Total Repository Test Suite:** 280 / 280 automated tests passing.
+- **Independent Direct R / DESeq2 Execution Agreement:**
+  - Max $\log_2\text{FC}$ difference: $4.9998 \times 10^{-9}$
+  - Max Wald statistic difference: $4.9999 \times 10^{-9}$
+  - Max p-value difference: $4.9995 \times 10^{-9}$
+  - Max adjusted p-value difference: $4.9948 \times 10^{-9}$
+  - Direction agreement: $32,227 / 32,227$ ($100.0\%$)
+- **Numerical Reproducibility:** Exact agreement against verified baseline registry across all 60,207 genes ($0.000000 \times 10^0$ max diff).
+- **Total Repository Test Suite:** 344 / 344 automated tests passing.
 
 ---
 
@@ -276,3 +280,75 @@ Stage 7B was validated against the real human cortical organoid dataset GSE23221
 1. **Unbalanced Complex Designs:** Multi-factorial experiments involving partially crossed cell lines or fractional factorial designs require expert review (`NEEDS_REVIEW`) rather than automatic resolution.
 2. **Unbalanced Batch Effects:** Complex fractional batch designs without balance across arms require manual review.
 3. **Small Sample Sizes:** While $N \ge 2$ per arm is inferentially admissible, power to detect small effect sizes remains constrained at $N=2$.
+4. **Real-Data Multi-Batch Validation:** While batch-blocking formulas (`~ batch + condition` and `~ biological_source + batch + condition`) and confounding safeguards are mathematically and programmatically verified via automated tests, empirical validation on real multi-batch human organoid datasets remains to be conducted when an authenticated multi-batch dataset is ingested.
+
+---
+
+## 21. Researcher User Guide: Installation, Input Formats, and Verification
+
+### 21.1 Environment Setup and Dependencies
+Stage 7B requires:
+- **Python:** 3.11+ (verified on 3.14.6) with packages: `pandas`, `pytest`, `pyyaml`.
+- **R:** 4.4.3 with Bioconductor 3.20 and `DESeq2` 1.46.0.
+- Verify R/Bioconductor setup:
+  ```powershell
+  Rscript -e "library(DESeq2); cat(as.character(packageVersion('DESeq2')))"
+  # Output must report: 1.46.0
+  ```
+
+### 21.2 Raw Integer Counts vs. Processed Expression Routes
+- **Raw Count Route (Stage 7B):** Stage 7B operates exclusively on unnormalized non-negative integer count matrices (HTSeq, featureCounts, STAR gene counts, RSEM expected counts rounded to integer). It estimates dispersion and fits negative-binomial generalized linear models.
+- **Processed Expression Route (TPM, FPKM, CPM):** Processed expression matrices containing normalized, fractional, or log-transformed values cannot be modeled using DESeq2's negative-binomial distribution. They are routed upstream to the processed-expression pipeline (e.g. Stage 8A limma-trend / limma-voom) and are strictly rejected by Stage 7B.
+
+### 21.3 Providing Sample Metadata
+Sample metadata must be supplied as a CSV or TSV file containing at minimum:
+- `sample_id`: Exact string matching the count matrix sample column header.
+- `condition_type` (or `condition` / `treatment_control_status`): `"treatment"`, `"control"`, or `"exclude"`.
+- `biological_replicate_id`: Distinct identifier per true biological replicate (e.g. `rep_trt_1`, `rep_ctrl_1`).
+- `biological_source_id` (optional): Donor / cell line identifier (e.g. `WA09`, `donor_A`).
+- `batch_id` (optional): Experimental / sequencing batch identifier (e.g. `batch_1`, `batch_2`).
+
+Example template:
+```csv
+sample_id,condition_type,biological_replicate_id,biological_source_id,batch_id
+Sample_1,control,rep_ctrl_1,line_A,batch_1
+Sample_2,control,rep_ctrl_2,line_A,batch_2
+Sample_3,treatment,rep_trt_1,line_A,batch_1
+Sample_4,treatment,rep_trt_2,line_A,batch_2
+```
+
+### 21.4 Running Independent Direct R / DESeq2 Verification
+The reusable verification engine can be executed via CLI:
+```powershell
+# Option A: Run using a benchmark configuration file
+python scripts/independent_deseq2_verification.py --config config/benchmarks/gse232218_vpa_200um.json
+
+# Option B: Run on custom RNA-seq count matrix and sample table
+python scripts/independent_deseq2_verification.py `
+  --counts path/to/raw_counts.tsv `
+  --samples path/to/samples.csv `
+  --agent-name "Compound_X" `
+  --concentration 10.0 `
+  --concentration-unit "uM" `
+  --developmental-age "Day 30" `
+  --exposure-duration 48.0 `
+  --output-dir path/to/verification_artifacts
+```
+
+### 21.5 Gating and Status Taxonomy
+Contrasts are evaluated against strict scientific invariants:
+
+| Condition Encountered | Emitted Rule ID | Status | Rationale |
+| :--- | :--- | :--- | :--- |
+| Insufficient replicates ($N < 2$) | `insufficient_biological_replicates` | `BLOCKED` | Empirical variance unestimable |
+| Developmental age mismatch | `developmental_age_mismatch` | `BLOCKED` | Cross-developmental comparisons invalid |
+| Confounded treatment & source | `treatment_source_confounding` | `BLOCKED` | Treatment inseparable from genetics |
+| Confounded treatment & batch | `treatment_batch_confounding` | `BLOCKED` | Treatment inseparable from batch |
+| Conflicting source IDs | `conflicting_biological_source_identifiers` | `BLOCKED` | Inconsistent sample metadata |
+| Conflicting batch IDs | `conflicting_batch_identifiers` | `BLOCKED` | Inconsistent sample metadata |
+| Incompatible exposures in arm | `incompatible_exposure_conditions` | `BLOCKED` | Mixed doses/durations without exception |
+| Rank deficient design matrix | `rank_deficient_design` | `BLOCKED` | Linear collinearity among covariates |
+| Zero residual degrees of freedom | `insufficient_residual_degrees_of_freedom` | `BLOCKED` | Model saturated |
+| Technical replicates present | `unresolved_technical_replicates` | `NEEDS_REVIEW` | Pseudoreplication avoidance |
+| Partially crossed sources | `partially_crossed_biological_sources` | `NEEDS_REVIEW` | Unbalanced multi-source structure |
+| Ambiguous developmental age | `unresolved_developmental_age_equivalence` | `NEEDS_REVIEW` | Missing or non-canonical age token |
