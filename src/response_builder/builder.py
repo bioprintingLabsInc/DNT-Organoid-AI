@@ -118,6 +118,62 @@ def normalize_age_string(val: Any) -> str | None:
     return None
 
 
+def canonicalize_concentration_unit(unit: str | None) -> str | None:
+    """Canonicalize concentration/dose unit without altering scientific meaning."""
+    if not unit:
+        return None
+    u = str(unit).strip().lower()
+    mapping = {
+        "um": "uM",
+        "µm": "uM",
+        "micromolar": "uM",
+        "micromole/l": "uM",
+        "umol/l": "uM",
+        "nm": "nM",
+        "nanomolar": "nM",
+        "nmol/l": "nM",
+        "mm": "mM",
+        "millimolar": "mM",
+        "mmol/l": "mM",
+        "m": "M",
+        "molar": "M",
+        "mol/l": "M",
+        "ug/ml": "ug/mL",
+        "µg/ml": "ug/mL",
+        "ug/ml": "ug/mL",
+        "mg/ml": "mg/mL",
+        "ng/ml": "ng/mL",
+    }
+    return mapping.get(u, str(unit).strip())
+
+
+def canonicalize_duration_unit(unit: str | None) -> str | None:
+    """Canonicalize exposure duration unit without altering scientific meaning."""
+    if not unit:
+        return None
+    u = str(unit).strip().lower()
+    mapping = {
+        "h": "h",
+        "hr": "h",
+        "hrs": "h",
+        "hour": "h",
+        "hours": "h",
+        "d": "d",
+        "day": "d",
+        "days": "d",
+        "w": "w",
+        "wk": "w",
+        "wks": "w",
+        "week": "w",
+        "weeks": "w",
+        "min": "min",
+        "mins": "min",
+        "minute": "min",
+        "minutes": "min",
+    }
+    return mapping.get(u, str(unit).strip())
+
+
 def resolve_developmental_age(val_rec: Any) -> tuple[str | None, str | None, bool]:
     """Resolve developmental age/stage preferring governed normalized values.
 
@@ -371,13 +427,13 @@ class ResponseContrastBuilder:
             agent_id = extract_metadata_value(exp.get("agent_identifier"))
             vehicle = extract_metadata_value(exp.get("vehicle"))
             dose = extract_metadata_value(exp.get("concentration_or_dose"))
-            dose_unit = extract_metadata_value(exp.get("concentration_or_dose_unit"))
+            dose_unit = canonicalize_concentration_unit(extract_metadata_value(exp.get("concentration_or_dose_unit")))
             exp_start = extract_metadata_value(exp.get("exposure_start_time_or_stage"))
             exp_age = extract_metadata_value(exp.get("developmental_age_or_stage_at_exposure"))
             exp_dur = extract_metadata_value(exp.get("exposure_duration"))
-            exp_dur_unit = extract_metadata_value(exp.get("exposure_duration_unit"))
+            exp_dur_unit = canonicalize_duration_unit(extract_metadata_value(exp.get("exposure_duration_unit")))
             washout_dur = extract_metadata_value(exp.get("washout_or_recovery_duration"))
-            washout_unit = extract_metadata_value(exp.get("washout_or_recovery_duration_unit"))
+            washout_unit = canonicalize_duration_unit(extract_metadata_value(exp.get("washout_or_recovery_duration_unit")))
 
             planned_exps.append(
                 ContrastExposure(
@@ -1174,6 +1230,80 @@ class ResponseContrastBuilder:
         # 10. Exposure Metadata Extraction (Never influenced by DNT labels; all planned records preserved)
         treat_exposures, deviations, exp_findings = self._extract_treatment_exposures(treat_cid, treat_sample_ids)
         findings.extend(exp_findings)
+
+        # Check for mixed or incompatible exposure conditions across treatment samples
+        sample_concs: dict[str, Any] = {}
+        sample_durs: dict[str, Any] = {}
+        sample_agents: dict[str, Any] = {}
+
+        for sid in treat_sample_ids:
+            s_obj = self.samples_by_id.get(sid, {})
+            devs = self.exposure_deviations_by_sample.get(sid, [])
+            if devs:
+                dev = devs[0]
+                c_val = extract_metadata_value(dev.get("concentration_or_dose"))
+                c_unit = canonicalize_concentration_unit(extract_metadata_value(dev.get("concentration_or_dose_unit")))
+                d_val = extract_metadata_value(dev.get("exposure_duration"))
+                d_unit = canonicalize_duration_unit(extract_metadata_value(dev.get("exposure_duration_unit")))
+                a_val = extract_metadata_value(dev.get("agent_name")) or extract_metadata_value(dev.get("agent_identifier"))
+            else:
+                c_val = extract_metadata_value(s_obj.get("concentration_or_dose"))
+                c_unit = canonicalize_concentration_unit(extract_metadata_value(s_obj.get("concentration_or_dose_unit")))
+                d_val = extract_metadata_value(s_obj.get("exposure_duration"))
+                d_unit = canonicalize_duration_unit(extract_metadata_value(s_obj.get("exposure_duration_unit")))
+                a_val = extract_metadata_value(s_obj.get("agent_name")) or extract_metadata_value(s_obj.get("agent_identifier"))
+
+            if c_val is not None:
+                sample_concs[sid] = (str(c_val), c_unit)
+            if d_val is not None:
+                sample_durs[sid] = (str(d_val), d_unit)
+            if a_val is not None:
+                sample_agents[sid] = str(a_val).strip()
+
+        distinct_sample_concs = set(sample_concs.values())
+        distinct_sample_durs = set(sample_durs.values())
+        distinct_sample_agents = set(sample_agents.values())
+
+        has_sample_incompatibility = (
+            len(distinct_sample_concs) > 1
+            or len(distinct_sample_durs) > 1
+            or len(distinct_sample_agents) > 1
+        )
+        if has_sample_incompatibility and not applied_exception_ids:
+            findings.append(
+                Finding(
+                    severity=Severity.ERROR,
+                    rule_id="incompatible_exposure_conditions",
+                    entity_type="contrast",
+                    entity_id=treat_cid,
+                    path="exposures",
+                    message=(
+                        f"Treatment condition '{treat_cid}' has conflicting or incompatible exposure conditions across samples "
+                        f"without an approved sample comparison exception: concentrations {sorted(distinct_sample_concs)}, "
+                        f"durations {sorted(distinct_sample_durs)}, agents {sorted(distinct_sample_agents)}."
+                    ),
+                )
+            )
+            status = ContrastStatus.BLOCKED
+
+        if len(treat_exposures) > 1 and not applied_exception_ids:
+            planned_concs = {(str(e.concentration_or_dose), e.concentration_or_dose_unit) for e in treat_exposures if e.concentration_or_dose is not None}
+            planned_durs = {(str(e.exposure_duration), e.exposure_duration_unit) for e in treat_exposures if e.exposure_duration is not None}
+            if len(planned_concs) > 1 or len(planned_durs) > 1:
+                findings.append(
+                    Finding(
+                        severity=Severity.ERROR,
+                        rule_id="incompatible_exposure_conditions",
+                        entity_type="contrast",
+                        entity_id=treat_cid,
+                        path="exposures",
+                        message=(
+                            f"Treatment condition '{treat_cid}' declares multiple conflicting planned exposure conditions "
+                            f"(concentrations {sorted(planned_concs)}, durations {sorted(planned_durs)}) without an approved exception."
+                        ),
+                    )
+                )
+                status = ContrastStatus.BLOCKED
 
         single_exp = treat_exposures[0] if len(treat_exposures) == 1 else None
 

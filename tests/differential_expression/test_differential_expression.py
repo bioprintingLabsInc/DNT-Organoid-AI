@@ -927,3 +927,32 @@ def test_acceptance_27_python_wrapper_agrees_with_direct_r_deseq2():
         assert pytest.approx(py_gene1.log2_fold_change, abs=1e-4) == r_lfc
         assert pytest.approx(py_gene1.wald_statistic, abs=1e-4) == r_stat
         assert pytest.approx(py_gene1.p_value, rel=1e-3) == r_pval
+
+
+def test_acceptance_batch_adjusted_de_execution():
+    """Verify DESeq2 executes end-to-end with ~ batch + condition."""
+    contrast, norm_ds, harm_ds, meta = create_synthetic_de_fixtures(
+        n_treatment=3,
+        n_control=3,
+        n_genes=25,
+    )
+    ctrls = list(contrast.control_sample_ids)
+    trts = list(contrast.treatment_sample_ids)
+    meta[ctrls[0]]["batch_id"] = "batch_1"
+    meta[ctrls[1]]["batch_id"] = "batch_1"
+    meta[ctrls[2]]["batch_id"] = "batch_2"
+    meta[trts[0]]["batch_id"] = "batch_1"
+    meta[trts[1]]["batch_id"] = "batch_2"
+    meta[trts[2]]["batch_id"] = "batch_2"
+
+    res = run_contrast_differential_expression(
+        contrast=contrast,
+        normalized_dataset=norm_ds,
+        harmonized_dataset=harm_ds,
+        sample_metadata=meta,
+    )
+
+    assert res.status == ContrastStatus.ELIGIBLE
+    assert res.design_formula == "~ batch + condition"
+    assert res.is_inferentially_eligible is True
+    assert len(res.gene_results) == 25
