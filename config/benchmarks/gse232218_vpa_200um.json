@@ -7,18 +7,7 @@
     "C:/Users/chari/Downloads/GSE232218_gene_expected_count.txt.gz",
     "data/raw/GSE232218_gene_expected_count.txt"
   ],
-  "treatment_sample_ids": [
-    "Sample_3901-AT-3",
-    "Sample_3901-AT-7",
-    "Sample_3901-AT-12",
-    "Sample_3901-AT-17"
-  ],
-  "control_sample_ids": [
-    "Sample_3901-AT-1",
-    "Sample_3901-AT-5",
-    "Sample_3901-AT-10",
-    "Sample_3901-AT-15"
-  ],
+  "samples_file": "config/benchmarks/gse232218_samples.csv",
   "chemical_parameters": {
     "agent_name": "Valproic Acid",
     "agent_identifier": "CID:3121",

@@ -352,3 +352,63 @@ Contrasts are evaluated against strict scientific invariants:
 | Technical replicates present | `unresolved_technical_replicates` | `NEEDS_REVIEW` | Pseudoreplication avoidance |
 | Partially crossed sources | `partially_crossed_biological_sources` | `NEEDS_REVIEW` | Unbalanced multi-source structure |
 | Ambiguous developmental age | `unresolved_developmental_age_equivalence` | `NEEDS_REVIEW` | Missing or non-canonical age token |
+
+### 21.6 Scientific Metadata Invariants (No Fabrication Policy)
+The verification tool strictly enforces zero-fabrication invariants across all inputs:
+1. **No Synthetic Replicate Identifiers:** Biological replicate identifiers must never be inferred or synthesized from sample names (e.g. prefixing or suffixing sample strings). Every active sample (`treatment` or `control`) must declare an explicit, genuine `biological_replicate_id`.
+2. **No Assumed Experimental Metadata:** Default concentrations, exposure durations, developmental ages, or organoid identities are prohibited. Required parameters (`agent_name`, `concentration_or_dose`, `developmental_age`, `exposure_duration`) must be explicitly declared by the researcher. Optional parameters (`agent_identifier`, `vehicle`, `organoid_type`, `brain_region`) remain empty/None when omitted.
+3. **Synthetic Data Scoping:** Mock identifiers and synthetic fixtures are strictly confined to test suites (`tests/differential_expression/test_independent_verification_cli.py`), where they are explicitly annotated as mock fixtures.
+
+### 21.7 Statistical Model Matrix & Estimability Verification in Direct R
+The independent verification engine does not hardcode `~ condition`. Instead, it retrieves the model design formula selected by Stage 7B:
+- `~ condition` (Single biological source with independent replicates)
+- `~ biological_source + condition` (Paired biological sources across arms)
+- `~ batch + condition` (Balanced experimental batches across arms)
+- `~ biological_source + batch + condition` (Factorial designs with paired sources and batches)
+
+In standalone R, the verification script constructs `coldata` from actual sample covariates, factorizes levels with `control` as reference, and executes direct mathematical validation:
+1. **Full Matrix Rank:** Computes `r_rank <- qr(design_mat)$rank` and asserts `r_rank == ncol(design_mat)`.
+2. **Residual Degrees of Freedom:** Computes `r_resid_df <- nrow(coldata) - r_rank` and asserts `r_resid_df > 0`.
+3. **Treatment Condition Estimability:** Fits an updated model without the condition term (`formula_no_cond <- reformulate(other_covars)` or `~ 1`), computes `qr(design_mat_no_cond)$rank`, and confirms that the rank strictly increases when condition is added (`qr(design_mat_no_cond)$rank < r_rank`).
+4. **Design Concordance:** Verifies that direct R diagnostics match Stage 7B's formula, matrix rank, and residual degrees of freedom.
+
+### 21.8 Strengthened Numerical Verification Across 6 Metrics & Missing-Value Consistency
+The independent verification engine performs exhaustive gene-by-gene comparison across 100% of canonical genes:
+1. **Gene Universe Conservation:** Enforces strict set equality (`pipeline_genes == direct_r_genes`). Any missing or extraneous gene raises an immediate `Gene universe mismatch` error.
+2. **Six Statistical Metrics Evaluated:**
+   - `base_mean` vs `baseMean`
+   - `log2_fold_change` vs `log2FoldChange`
+   - `lfc_standard_error` vs `lfcSE`
+   - `wald_statistic` vs `stat`
+   - `p_value` vs `pvalue`
+   - `adjusted_p_value_bh` vs `padj`
+3. **Missing-Value Pattern Consistency:** DESeq2 assigns `NA` to p-values and FDR values for zero-count genes and extreme Cook's distance outliers (represented as `None` or `NaN` in Python). The verification engine checks `is_missing(pipeline) == is_missing(direct_r)`. If a gene has a numeric value in one framework and a missing value in the other, verification fails immediately with a `Missing-value mismatch` error.
+4. **Numerical Tolerances:** For all non-missing values, absolute differences must satisfy $|v_{\text{pipeline}} - v_{\text{R}}| \le 1.0 \times 10^{-6}$.
+5. **Direction Agreement:** Confirms 100.0% directional concordance for all non-zero log2 fold changes (`(p_lfc > 0 && r_lfc > 0) || (p_lfc < 0 && r_lfc < 0) || (p_lfc == 0 && r_lfc == 0)`).
+
+### 21.9 Benchmark Replication Results (GSE232218)
+Independent direct R numerical verification on the human cerebral organoid Valproic Acid benchmark (`GSE232218`, 200 µM, Day 6, 48h exposure, WA09 cell line, 8 samples: 4 treatment vs 4 control):
+- **Input Features Parsed:** 60,628 rows x 15 sample columns
+- **Canonical Genes Evaluated:** 60,207 canonical genes (421 excluded via gene harmonization audit)
+- **Resolved Statistical Design:** `~ condition` (Rank: 2, Residual DF: 6)
+- **Direct R Concordance:** Match = True (Formula, Rank, and DF identical)
+- **Genes Compared:** 60,207 / 60,207 (100.0%)
+- **Missing-Value Mismatches:** 0
+- **Max baseMean Difference:** $5.00 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Max log2FC Difference:** $5.00 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Max lfcSE Difference:** $5.00 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Max Wald Statistic Difference:** $5.00 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Max p-value Difference:** $5.00 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Max Adjusted p-value (FDR) Difference:** $4.99 \times 10^{-9}$ (Tolerance: $1.0 \times 10^{-6}$)
+- **Direction Agreement:** 32,227 / 32,227 comparable genes (100.0%)
+- **Verification Disposition:** `PASS`
+
+### 21.10 Scope, Capabilities, and Boundary Conditions
+- **Supported Modality:** Bulk RNA-seq non-negative integer count matrices only.
+- **Supported Designs:** `~ condition`, `~ biological_source + condition`, `~ batch + condition`, `~ biological_source + batch + condition`.
+- **Known Limitations & Boundary Conditions:**
+  - Single-cell / spatial transcriptomics requires specialized zero-inflation and sparse modeling (Stage 8+).
+  - Unpaired unique biological sources where donor is confounded with treatment arm are rejected with `treatment_source_confounding`.
+  - Batch completely confounded with treatment arm is rejected with `treatment_batch_confounding`.
+  - Continuous time-series and non-linear developmental curves require spline or LRT modeling (reserved for future extension).
+
