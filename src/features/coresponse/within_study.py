@@ -56,6 +56,7 @@ def validate_coexpression_matrix_eligibility(
     sample_metadata: pd.DataFrame | None = None,
     min_independent_samples: int = 10,
     biological_replicate_col: str = "biological_replicate_id",
+    condition_cols: Sequence[str] = ("group", "condition", "compound", "treatment", "treatment_status"),
 ) -> tuple[bool, int, str]:
     """Validate whether an expression matrix is statistically eligible for co-expression analysis.
 
@@ -64,6 +65,7 @@ def validate_coexpression_matrix_eligibility(
         sample_metadata: Optional DataFrame indexing samples with biological metadata.
         min_independent_samples: Minimum independent biological observations required (default 10).
         biological_replicate_col: Column indicating biological replicate / donor ID.
+        condition_cols: Column names to inspect for condition homogeneity to prevent Simpson's paradox.
 
     Returns:
         tuple of (is_eligible: bool, independent_n: int, reason: str)
@@ -77,6 +79,25 @@ def validate_coexpression_matrix_eligibility(
     numeric_vals = expression_matrix.select_dtypes(include=[np.number]).values
     if np.any(numeric_vals < 0):
         return False, n_samples, "Expression matrix contains negative values; continuous scale invalid."
+
+    # Guard against multi-condition pooling / Simpson's paradox
+    if sample_metadata is not None:
+        valid_samples = [s for s in expression_matrix.columns if s in sample_metadata.index]
+        if valid_samples:
+            sub_meta = sample_metadata.loc[valid_samples]
+            for col in condition_cols:
+                if col in sub_meta.columns:
+                    unique_conds = sorted({str(v) for v in sub_meta[col].dropna()})
+                    if len(unique_conds) > 1:
+                        return (
+                            False,
+                            n_samples,
+                            f"Heterogeneous experimental conditions detected in metadata column '{col}': {unique_conds}. "
+                            f"Within-study co-expression must be evaluated within a single homogeneous condition/arm. "
+                            f"Pooling across distinct perturbation/control groups induces severe Simpson's paradox and "
+                            f"bimodal mean-shift confounding, falsely attributing treatment-response shifts to gene co-expression. "
+                            f"For multi-condition response coordination, use cross-condition co-response analysis."
+                        )
 
     # Validate biological independence vs. technical replicate inflation
     if sample_metadata is not None and biological_replicate_col in sample_metadata.columns:
@@ -114,11 +135,12 @@ def analyze_within_study_coexpression(
     max_fdr: float = 0.05,
     max_evaluated_genes: int | None = 2000,
     biological_replicate_col: str = "biological_replicate_id",
+    condition_cols: Sequence[str] = ("group", "condition", "compound", "treatment", "treatment_status"),
 ) -> tuple[BiologicalNetwork, CoresponseEvaluationSummary]:
     """Execute within-study gene co-expression analysis with strict statistical gating.
 
-    If sample size is insufficient (N < min_independent_samples), honestly halts inference
-    and returns an empty network with INSUFFICIENT_SAMPLES status.
+    If sample size is insufficient (N < min_independent_samples) or conditions are heterogeneous,
+    honestly halts inference and returns an empty network with appropriate gating status.
 
     Args:
         expression_matrix: DataFrame with canonical Ensembl gene IDs as index, sample IDs as columns.
@@ -131,6 +153,7 @@ def analyze_within_study_coexpression(
         max_fdr: Maximum Benjamini-Hochberg adjusted p-value cutoff (default 0.05).
         max_evaluated_genes: Limit on genes to evaluate (sorted by variance) to avoid quadratic blowup.
         biological_replicate_col: Column indicating biological replicate / donor identity.
+        condition_cols: Column names to inspect for condition homogeneity to prevent Simpson's paradox.
 
     Returns:
         tuple of (BiologicalNetwork, CoresponseEvaluationSummary)
@@ -143,11 +166,17 @@ def analyze_within_study_coexpression(
         sample_metadata=sample_metadata,
         min_independent_samples=min_independent_samples,
         biological_replicate_col=biological_replicate_col,
+        condition_cols=condition_cols,
     )
 
     if not is_eligible:
+        qc_status = (
+            CoresponseQCStatus.INSUFFICIENT_EVIDENCE
+            if "Heterogeneous experimental conditions detected" in reason
+            else CoresponseQCStatus.INSUFFICIENT_SAMPLES
+        )
         summary = CoresponseEvaluationSummary(
-            status=CoresponseQCStatus.INSUFFICIENT_SAMPLES,
+            status=qc_status,
             is_eligible=False,
             evaluated_genes_count=len(expression_matrix),
             evaluated_conditions_count=1,
@@ -166,9 +195,9 @@ def analyze_within_study_coexpression(
             taxon_id=9606,
             source_database=study_id,
             database_version="empirical_v1",
-            qc_status=CoresponseQCStatus.INSUFFICIENT_SAMPLES,
+            qc_status=qc_status,
             scientific_limitations=reason,
-            provenance={"study_id": study_id, "independent_samples": n_bio, "status": "INSUFFICIENT_SAMPLES"},
+            provenance={"study_id": study_id, "independent_samples": n_bio, "status": qc_status.value},
         )
         return empty_net, summary
 

@@ -133,3 +133,115 @@ def test_benjamini_hochberg_fdr_computation() -> None:
     assert abs(fdr[0] - 0.005) < 1e-6
     # Monotonicity preserved
     assert fdr[0] <= fdr[1] <= fdr[2] <= fdr[3] <= fdr[4]
+
+
+def test_multi_condition_heterogeneity_rejected_to_prevent_simpsons_paradox() -> None:
+    """Test that pooling samples across heterogeneous perturbation conditions is rejected.
+
+    Simpson's Paradox / Bimodal Mean-Shift Confounding:
+    When genes X and Y both shift up in response to treatment, pooling controls and treated
+    samples creates an artificial positive correlation even when the genes are uncorrelated
+    within each condition. Within-study co-expression must reject multi-condition pooling.
+    """
+    np.random.seed(101)
+    ctrl_samples = [f"Ctrl_rep_{i}" for i in range(6)]
+    trt_samples = [f"VPA_rep_{i}" for i in range(6)]
+    all_samples = ctrl_samples + trt_samples
+
+    # Two genes with zero within-group correlation (pure independent noise)
+    g1_ctrl = np.random.normal(5.0, 0.2, size=6)
+    g2_ctrl = np.random.normal(5.0, 0.2, size=6)
+    # Both shift upward by +3.0 under treatment
+    g1_trt = np.random.normal(8.0, 0.2, size=6)
+    g2_trt = np.random.normal(8.0, 0.2, size=6)
+
+    g1_all = np.concatenate([g1_ctrl, g1_trt])
+    g2_all = np.concatenate([g2_ctrl, g2_trt])
+
+    # In pooled data, correlation is extremely high (> 0.90) due purely to the treatment mean shift
+    pooled_r = float(np.corrcoef(g1_all, g2_all)[0, 1])
+    assert pooled_r > 0.90
+
+    # Within control and within treatment, correlation is negligible (< 0.50)
+    ctrl_r = float(np.corrcoef(g1_ctrl, g2_ctrl)[0, 1])
+    trt_r = float(np.corrcoef(g1_trt, g2_trt)[0, 1])
+    assert abs(ctrl_r) < 0.50
+    assert abs(trt_r) < 0.50
+
+    expr = pd.DataFrame(
+        [g1_all, g2_all],
+        index=["ENSG00000000001", "ENSG00000000002"],
+        columns=all_samples,
+    )
+
+    metadata = pd.DataFrame({
+        "sample_id": all_samples,
+        "group": ["control"] * 6 + ["treatment"] * 6,
+        "compound": ["Vehicle"] * 6 + ["Valproic Acid"] * 6,
+    }).set_index("sample_id")
+
+    # When metadata indicates heterogeneous conditions, eligibility check must reject pooling
+    is_eligible, n_obs, reason = validate_coexpression_matrix_eligibility(
+        expression_matrix=expr,
+        sample_metadata=metadata,
+        min_independent_samples=10,
+    )
+
+    assert is_eligible is False
+    assert "Heterogeneous experimental conditions detected" in reason
+    assert "Simpson's paradox" in reason
+
+    # Within-study analysis should return empty network with INSUFFICIENT_EVIDENCE
+    net, summary = analyze_within_study_coexpression(
+        expression_matrix=expr,
+        study_id="PRJNA802072_pooled_simulation",
+        sample_metadata=metadata,
+        min_independent_samples=10,
+    )
+
+    assert summary.is_eligible is False
+    assert summary.status == CoresponseQCStatus.INSUFFICIENT_EVIDENCE
+    assert net.edge_count == 0
+    assert "Simpson's paradox" in summary.scientific_limitations
+
+
+def test_prjna802072_under_replicated_arms_honestly_rejected() -> None:
+    """Test that PRJNA802072 control and treatment arms (N=6 each) honestly emit INSUFFICIENT_SAMPLES."""
+    np.random.seed(42)
+    # Control arm: N=6 samples
+    ctrl_expr = pd.DataFrame(
+        np.random.lognormal(3.0, 0.5, size=(50, 6)),
+        index=[f"ENSG{i:06d}" for i in range(50)],
+        columns=[f"SRR_ctrl_{i}" for i in range(6)],
+    )
+
+    net_ctrl, summary_ctrl = analyze_within_study_coexpression(
+        expression_matrix=ctrl_expr,
+        study_id="PRJNA802072_control_arm",
+        min_independent_samples=10,
+    )
+
+    assert summary_ctrl.is_eligible is False
+    assert summary_ctrl.status == CoresponseQCStatus.INSUFFICIENT_SAMPLES
+    assert summary_ctrl.inferred_edges_count == 0
+    assert net_ctrl.edge_count == 0
+    assert "found N=6, but minimum required is min_independent_samples=10" in summary_ctrl.reasons[0]
+
+    # Treatment arm: N=6 samples
+    trt_expr = pd.DataFrame(
+        np.random.lognormal(3.0, 0.5, size=(50, 6)),
+        index=[f"ENSG{i:06d}" for i in range(50)],
+        columns=[f"SRR_trt_{i}" for i in range(6)],
+    )
+
+    net_trt, summary_trt = analyze_within_study_coexpression(
+        expression_matrix=trt_expr,
+        study_id="PRJNA802072_treatment_arm",
+        min_independent_samples=10,
+    )
+
+    assert summary_trt.is_eligible is False
+    assert summary_trt.status == CoresponseQCStatus.INSUFFICIENT_SAMPLES
+    assert summary_trt.inferred_edges_count == 0
+    assert net_trt.edge_count == 0
+
