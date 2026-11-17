@@ -1,0 +1,69 @@
+{
+  "benchmark_name": "GSE232218_VPA_200uM",
+  "source_accession": "GSE232218",
+  "validated_commit": "deb96dd27405c1ed85bbde78bda4704bf22e770c",
+  "status": "PASS",
+  "tolerance": 1e-06,
+  "statistical_design": {
+    "stage7b_design_formula": "~ condition",
+    "direct_r_design_formula": "~ condition",
+    "design_matches": true,
+    "stage7b_model_matrix_rank": 2,
+    "direct_r_model_matrix_rank": 2,
+    "rank_matches": true,
+    "stage7b_residual_degrees_of_freedom": 6,
+    "direct_r_residual_degrees_of_freedom": 6,
+    "df_matches": true
+  },
+  "sample_cohort": {
+    "treatment_sample_count": 4,
+    "control_sample_count": 4,
+    "treatment_sample_ids": [
+      "Sample_3901-AT-12",
+      "Sample_3901-AT-17",
+      "Sample_3901-AT-3",
+      "Sample_3901-AT-7"
+    ],
+    "control_sample_ids": [
+      "Sample_3901-AT-1",
+      "Sample_3901-AT-10",
+      "Sample_3901-AT-15",
+      "Sample_3901-AT-5"
+    ]
+  },
+  "gene_accounting": {
+    "canonical_genes_evaluated": 60207,
+    "canonical_genes_compared": 60207,
+    "gene_universe_match_pct": 100.0,
+    "missing_genes_count": 0,
+    "missing_value_mismatches_count": 0,
+    "direction_comparable_genes": 32227,
+    "direction_matching_genes": 32227,
+    "direction_agreement_pct": 100.0
+  },
+  "numerical_comparison": {
+    "max_base_mean_diff": 5.00040187e-09,
+    "max_log2fc_diff": 4.99984498e-09,
+    "max_lfc_se_diff": 4.99977199e-09,
+    "max_wald_stat_diff": 4.999967e-09,
+    "max_pvalue_diff": 4.99954e-09,
+    "max_padj_diff": 4.99479896e-09,
+    "all_metrics_within_tolerance": true
+  },
+  "execution_metrics": {
+    "pipeline_duration_seconds": 451.17,
+    "direct_r_duration_seconds": 26.34,
+    "total_input_matrix_rows": 60628,
+    "total_input_matrix_columns": 15
+  },
+  "environment": {
+    "python_version": "3.14.6",
+    "pandas_version": "3.0.3",
+    "numpy_version": "2.5.1",
+    "scipy_version": "1.18.0",
+    "pytest_version": "9.1.1",
+    "r_version": "R version 4.4.3 (2025-02-28 ucrt)",
+    "bioconductor_version": "3.20",
+    "deseq2_version": "1.46.0"
+  }
+}

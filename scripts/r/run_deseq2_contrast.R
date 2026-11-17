@@ -206,6 +206,10 @@ if ("biological_source" %in% colnames(coldata_df)) {
   coldata_df$biological_source <- factor(coldata_df$biological_source)
 }
 
+if ("batch" %in% colnames(coldata_df)) {
+  coldata_df$batch <- factor(coldata_df$batch)
+}
+
 # Check design formula and model matrix
 formula_obj <- as.formula(params$design)
 design_mat <- tryCatch({

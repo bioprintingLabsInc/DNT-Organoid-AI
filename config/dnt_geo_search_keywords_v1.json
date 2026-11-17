@@ -1,0 +1,104 @@
+{
+  "protocol_id": "DNT-GEO-SEARCH-v1.0",
+  "status": "PLANNED_NOT_EXECUTED",
+  "database": "NCBI GEO via NCBI E-utilities, db=gds, Series only",
+  "scope": "Human biological models, chemical-exposure and transcriptomics discovery. Terms are candidates, not independent per-term result counts.",
+  "original_11_terms": [
+    "Brain organoid",
+    "Cerebral organoid",
+    "Cortical organoid",
+    "Forebrain organoid",
+    "Midbrain organoid",
+    "Neural organoid",
+    "Brain spheroid",
+    "Neural spheroid",
+    "BrainSphere",
+    "3D brain",
+    "3D neural"
+  ],
+  "groups": {
+    "organoid_3d": [
+      "Brain organoid",
+      "Cerebral organoid",
+      "Cortical organoid",
+      "Forebrain organoid",
+      "Midbrain organoid",
+      "Neural organoid",
+      "Brain spheroid",
+      "Neural spheroid",
+      "BrainSphere",
+      "3D brain",
+      "3D neural",
+      "Neural assembloid",
+      "Cortical spheroid",
+      "Neurosphere",
+      "Neural rosette",
+      "Brain organ-on-chip"
+    ],
+    "neural_cells": [
+      "Neural progenitor cells",
+      "Neural stem cells",
+      "iPSC-derived neurons",
+      "Human neural cells",
+      "Neural differentiation",
+      "Cortical neurons",
+      "Dopaminergic neurons",
+      "Neural precursor cells",
+      "iPSC-derived neural cells",
+      "Neurodevelopment"
+    ],
+    "exposure": [
+      "Developmental neurotoxicity",
+      "Neurodevelopmental toxicity",
+      "Neurotoxicity",
+      "Developmental toxicology",
+      "Chemical-induced neurotoxicity",
+      "Chemical exposure",
+      "Drug-induced neurotoxicity",
+      "Environmental toxicants",
+      "Pesticide exposure",
+      "Heavy metal exposure",
+      "Prenatal exposure",
+      "Neurotoxic compounds"
+    ],
+    "transcriptomics": [
+      "RNA sequencing",
+      "RNA-seq",
+      "Transcriptomics",
+      "Bulk RNA-seq",
+      "Single-cell RNA-seq",
+      "snRNA-seq",
+      "Gene expression profiling"
+    ]
+  },
+  "queries": [
+    {
+      "id": "Q1_BIO_EXPOSURE",
+      "join": [
+        "organoid_3d",
+        "neural_cells"
+      ],
+      "with": "exposure"
+    },
+    {
+      "id": "Q2_BIO_TRANSCRIPTOMICS",
+      "join": [
+        "organoid_3d",
+        "neural_cells"
+      ],
+      "with": "transcriptomics"
+    },
+    {
+      "id": "Q3_EXPOSURE_TRANSCRIPTOMICS",
+      "join": [
+        "exposure"
+      ],
+      "with": "transcriptomics"
+    }
+  ],
+  "filters": [
+    "Homo sapiens[Organism]",
+    "gse[Entry Type]"
+  ],
+  "caution": "Q3 can return studies outside neural models; eligibility requires independent screening. No claim of exhaustive recall."
+}

@@ -49,6 +49,11 @@ This document records the chronological development milestones of the DNT Organo
 * Evaluated 4,893 GO BP pathways (1,151 significant) and 348 KEGG pathways (129 significant).
 * Formally frozen with immutable annotated release tag: [`stage8c-v1-frozen`](https://github.com/bioprintingLabsInc/DNT-Organoid-AI/tree/stage8c-v1-frozen) at commit `7a69c259b9be1ea9cff55dd76b8db365df105b9f`.
 
-### Milestone 6: Repository Organization & Handoff Documentation (Current)
+### Milestone 6: Repository Organization & Handoff Documentation
 * Created comprehensive `docs/project/` documentation suite and standardized scientific module nomenclature.
 * Mapped failure domains, runbooks, and lineages for new researchers and autonomous agents with zero runtime code modifications.
+
+### Milestone 7: Stage 7B Differential Expression Validation Freeze
+* Completed independent numerical verification of Stage 7B DESeq2 results against standalone Bioconductor DESeq2 on GSE232218 (100% agreement across all 60,207 genes, tolerance $\le 5.0004 \times 10^{-9}$).
+* Enforced strict zero-fabrication metadata policies (no synthetic replicate IDs, no default concentrations/durations, no `"source_1"` or `"batch_1"` covariate fallbacks).
+* Formally frozen with immutable annotated release tag: `stage7b-de-v1.0-freeze`.
